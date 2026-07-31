@@ -34,6 +34,11 @@ class AgentRunner:
             "run_start",
             {"task_id": task.id, "model_id": context.model_id, "harness_id": context.harness_id},
         )
+        warm_state = context.extra.get("warm_state", "model")
+        recorder.record(
+            "telemetry_marker",
+            {"phase": "run_start", "warm_state": warm_state, "cold_start": warm_state == "cold"},
+        )
 
         # Build prompt from instruction file text.
         prompt = context.extra.get("prompt")

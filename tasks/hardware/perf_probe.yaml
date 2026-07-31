@@ -1,0 +1,35 @@
+schema_version: "1.0"
+id: hardware.perf.probe.001
+name: Performance probe
+description: Deterministic generation used to measure TTFT, decode throughput and hardware telemetry.
+version: 1
+level: model
+status: active
+
+labels:
+  domains: [hardware]
+  capabilities: [instruction_following]
+  modalities: [text]
+  difficulty: trivial
+  trajectory_stages: []
+  failure_modes_targeted: []
+
+input:
+  instruction_file: prompt.md
+  attachments: []
+
+execution:
+  runner: direct
+  sandbox: null
+  timeout_seconds: 60
+  seeds: [0]
+
+oracle:
+  - type: regex
+    config: {pattern: "deterministic-reply"}
+    weight: 1.0
+    required: true
+
+repetitions:
+  default: 3
+  seeds: [0]

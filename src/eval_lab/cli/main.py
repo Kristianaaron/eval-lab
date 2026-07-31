@@ -217,6 +217,71 @@ def run_command(
     raise typer.Exit(code=0)
 
 
+@app.command("perf")
+def perf_command(
+    target: str = typer.Option(
+        "configs/suites/hardware_perf.yaml", "--suite", help="suite YAML path"
+    ),
+    tasks_dir: str = typer.Option("tasks", "--tasks-dir"),
+    runs_root: str = typer.Option("runs", "--runs-root"),
+    db: str = typer.Option("runs/runstore.db", "--db"),
+    interval_s: float = typer.Option(
+        0.05, "--interval", help="telemetry sample interval (seconds)"
+    ),
+    node_id: str = typer.Option(None, "--node", help="node id for correlation"),
+    warm: bool = typer.Option(True, "--warm/--cold", help="mark the run warm or cold"),
+    json_out: bool = typer.Option(False, "--json"),
+) -> None:
+    """Run the hardware/performance suite under telemetry (Phase 3).
+
+    Uses a deterministic streaming adapter that reports first-token delay and
+    decode rate, so TTFT and decode throughput can be verified against raw
+    token timestamps recorded in each run's trace.
+    """
+    from eval_lab.adapters.timing import TimedMockAdapter
+    from eval_lab.runners.perf import PerfRunner
+
+    adapter = TimedMockAdapter()
+    store = RunStore(db)
+    runner = PerfRunner(
+        interval_s=interval_s,
+        node_id=node_id,
+        warm_state="warm" if warm else "cold",
+        cold_start=not warm,
+    )
+    try:
+        suite = _resolve_suite(target, tasks_dir)
+        tasks_by_id = _index_tasks(tasks_dir)
+        results = run_suite(
+            runner,
+            suite,
+            tasks_by_id,
+            lambda t: RunContext(
+                task=t, model=adapter, model_id="mock-timed", runs_root=runs_root, store=store
+            ),
+        )
+    finally:
+        store.close()
+
+    for r in results:
+        write_run_report(r.run_dir)
+    if json_out:
+        _emit_json([_result_summary(r) for r in results])
+    else:
+        for r in results:
+            m = r.manifest
+            timing = m.get("timing")
+            ttft = timing.get("ttft_s") if isinstance(timing, dict) else None
+            decode_tps = timing.get("decode_tokens_per_s") if isinstance(timing, dict) else None
+            status = "pass" if r.aggregate and r.aggregate.passed else "fail"
+            typer.echo(
+                f"{r.run_id}  {m.get('task_id')}  {status}  "
+                f"ttft={ttft}s  decode_tps={decode_tps}  "
+                f"{r.duration_s:.2f}s"
+            )
+    raise typer.Exit(code=0)
+
+
 @app.command("score")
 def score_command(
     run_id: str = typer.Argument(...),

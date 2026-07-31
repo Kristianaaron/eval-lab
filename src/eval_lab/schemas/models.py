@@ -251,6 +251,8 @@ class RunManifest(EvalBase):
     sampling: dict[str, Any] = Field(default_factory=dict)
     budgets: dict[str, Any] = Field(default_factory=dict)
     warm_state: str | None = None
+    telemetry_stream: str | None = None
+    timing: dict[str, Any] = Field(default_factory=dict)
     repetition_index: int | None = None
     result_status: str | None = None
 

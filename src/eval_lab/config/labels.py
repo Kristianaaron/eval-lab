@@ -28,6 +28,7 @@ _DOMAINS = {
     "creative_writing",
     "product_thinking",
     "knowledge_work",
+    "hardware",
 }
 
 _CAPABILITIES = {
