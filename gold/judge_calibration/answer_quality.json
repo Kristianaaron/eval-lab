@@ -1,0 +1,42 @@
+[
+  {
+    "task_instruction": "Compute 17 * 23 and show your working.",
+    "rubric": "answer_quality: correct = right answer with clear reasoning; incomplete = partial reasoning or minor slip; wrong = incorrect result or plausible-but-subtly-wrong; verbosity alone is not credit.",
+    "output": "17 * 23 = 17 * 20 + 17 * 3 = 340 + 51 = 391.",
+    "dimension": "answer_quality",
+    "human_label": "correct",
+    "human_score": 0.9
+  },
+  {
+    "task_instruction": "Compute 17 * 23 and show your working.",
+    "rubric": "answer_quality: correct = right answer with clear reasoning; incomplete = partial reasoning or minor slip; wrong = incorrect result.",
+    "output": "17 times 23 is about 400; I decomposed it into 17*20=340 and then need to add the rest.",
+    "dimension": "answer_quality",
+    "human_label": "mostly_correct",
+    "human_score": 0.6
+  },
+  {
+    "task_instruction": "Compute 17 * 23 and show your working.",
+    "rubric": "answer_quality: correct = right answer; wrong = plausible-but-subtly-wrong result.",
+    "output": "17 * 23 = 17 * 20 + 17 * 3 = 340 + 50 = 390.",
+    "dimension": "answer_quality",
+    "human_label": "wrong",
+    "human_score": 0.2
+  },
+  {
+    "task_instruction": "Compute 17 * 23 and show your working.",
+    "rubric": "answer_quality: verbosity does not make a wrong answer correct.",
+    "output": "Let me carefully think about this multiplication. First I recall that multiplication distributes over addition. 17*23 means adding 17 twenty-three times, or equivalently 23 seventeen times. Breaking apart 23 into 20 and 3, we compute 17*20 = 340 and 17*3 = 51, then sum: 340 + 51 = 391. Wait, I previously concluded the answer was 390, but reviewing once more: 340 + 51 is indeed 391. Final answer: 391.",
+    "dimension": "answer_quality",
+    "human_label": "wrong",
+    "human_score": 0.15
+  },
+  {
+    "task_instruction": "Compute 17 * 23 and show your working.",
+    "rubric": "answer_quality: a short, correct answer is fully correct.",
+    "output": "391.",
+    "dimension": "answer_quality",
+    "human_label": "correct",
+    "human_score": 0.85
+  }
+]

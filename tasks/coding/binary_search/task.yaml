@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: coding.binary_search.001
+name: 'Implement binary search'
+description: 'Implement binary search in the starter workspace and pass tests.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['coding']
+  capabilities: ['code_editing', 'code_generation', 'test_generation']
+  modalities: ['code']
+  difficulty: medium
+  trajectory_stages: ['inspect', 'plan', 'modify', 'execute', 'verify']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: 'workspace'
+  initial_state_hash: null
+
+execution:
+  runner: agent
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: 6
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: unit_test
+    weight: 1.0
+    required: true
+    config: {"command": "python tests/test_search.py", "workspace": "", "timeout_seconds": 60}
+repetitions:
+  default: 1
+  seeds: []

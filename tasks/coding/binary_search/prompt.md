@@ -1,0 +1,1 @@
+Implement the `binary_search(sorted_list, target)` function in `solution.py`. Return the index of the target if present, else -1. You may edit only `solution.py`. Run the test command and confirm a pass.

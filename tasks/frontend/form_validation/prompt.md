@@ -1,0 +1,1 @@
+Write a self-contained HTML <form> with one email input and one password input. Each input must have a matching <label> (via for/id), the email input must use type=email and the password field must require a minimum of 8 characters (minlength=8). Both must be required. Return only the form HTML.

@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: voxel.surface_voxels.001
+name: 'Count surface voxels'
+description: 'Compute how many voxels lie on the surface of a solid box.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['voxel', 'spatial_3d']
+  capabilities: ['voxel_construction', 'spatial_reasoning', 'mathematical_reasoning']
+  modalities: ['structured']
+  difficulty: medium
+  trajectory_stages: ['execute']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: null
+  initial_state_hash: null
+
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: null
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: regex
+    weight: 1.0
+    required: true
+    config: {"pattern": "^(52|53|54|55|56)$"}
+repetitions:
+  default: 1
+  seeds: []

@@ -1,0 +1,1 @@
+A voxel set is given in data.json as an array of [x,y,z]. Apply a +90 degree rotation about the Z axis, which maps (x,y,z) -> (-y, x, z), then return the resulting set as a JSON array, with coordinates sorted lexicographically.

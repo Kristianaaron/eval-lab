@@ -1,0 +1,26 @@
+schema_version: '1.0'
+id: suite.stress.001
+name: Stress
+description: Hardest multi-step agentic, frontend, and spatial tasks for robustness
+  under load.
+version: 1
+family: stress
+tasks:
+- task_id: agentic.multi_file_fix.001
+  weight: 1.0
+- task_id: agentic.debug_pipeline.001
+  weight: 1.0
+- task_id: agentic.api_migration.001
+  weight: 1.0
+- task_id: toolcall.json_query_autonomy.001
+  weight: 1.0
+- task_id: coding.refactor_legacy.001
+  weight: 1.0
+- task_id: frontend.accessibility_fix.001
+  weight: 1.0
+- task_id: voxel.symmetry_axis.001
+  weight: 1.0
+- task_id: voxel.lattice_path.001
+  weight: 1.0
+- task_id: longcontext.contract_obligations.001
+  weight: 1.0

@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: voxel.sphere.001
+name: 'Voxelize a sphere'
+description: 'Determine which voxels are inside a sphere of a given radius.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['voxel', 'spatial_3d']
+  capabilities: ['voxel_construction', 'spatial_reasoning', 'mathematical_reasoning']
+  modalities: ['structured']
+  difficulty: medium
+  trajectory_stages: ['execute']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: null
+  initial_state_hash: null
+
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: null
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: json_schema
+    weight: 1.0
+    required: true
+    config: {"schema": {"type": "array", "items": {"type": "array", "items": {"type": "integer"}, "minItems": 3, "maxItems": 3}}}
+repetitions:
+  default: 1
+  seeds: []

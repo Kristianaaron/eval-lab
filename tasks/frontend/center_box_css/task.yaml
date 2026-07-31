@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: frontend.center_box_css.001
+name: 'Centering with CSS'
+description: 'Return CSS that centers a box both horizontally and vertically.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['frontend', 'visual_design']
+  capabilities: ['code_generation', 'layout_fidelity']
+  modalities: ['code']
+  difficulty: easy
+  trajectory_stages: ['execute']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: null
+  initial_state_hash: null
+
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: null
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: regex
+    weight: 1.0
+    required: true
+    config: {"pattern": "(flex|grid)"}
+repetitions:
+  default: 1
+  seeds: []

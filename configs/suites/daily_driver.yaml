@@ -1,0 +1,23 @@
+schema_version: '1.0'
+id: suite.daily_driver.001
+name: Daily Driver
+description: Small everyday coding/reasoning tasks for fast routine regression checks.
+version: 1
+family: daily-driver
+tasks:
+- task_id: coding.json_output.001
+  weight: 1.0
+- task_id: coding.fizzbuzz.001
+  weight: 1.0
+- task_id: mathematics.basic.addition.001
+  weight: 1.0
+- task_id: reasoning.reverse_string.001
+  weight: 1.0
+- task_id: general.knowledge.capital_facts.001
+  weight: 1.0
+- task_id: frontend.semantic_markup.001
+  weight: 1.0
+- task_id: voxel.solid_box.001
+  weight: 1.0
+- task_id: hardware.perf.probe.001
+  weight: 1.0

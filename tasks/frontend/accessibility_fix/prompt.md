@@ -1,0 +1,1 @@
+In the workspace, `index.html` has accessibility defects: a color contrast below 3:1 on the body text and a search button missing an accessible name. Edit index.html: give the button an aria-label="Search" and change the text color to one that passes a 4.5:1 contrast ratio against the white background (e.g. #333333). Run the checker until it passes.

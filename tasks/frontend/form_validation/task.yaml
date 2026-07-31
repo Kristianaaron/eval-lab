@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: frontend.form_validation.001
+name: 'Accessible form with validation'
+description: 'Produce an accessible HTML form with input validation attributes.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['frontend', 'visual_design']
+  capabilities: ['code_generation', 'interaction_design']
+  modalities: ['code']
+  difficulty: medium
+  trajectory_stages: ['execute']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: null
+  initial_state_hash: null
+
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: null
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: regex
+    weight: 1.0
+    required: true
+    config: {"pattern": "<label[^>]*for=\"email\".*type=\"email\".*<label[^>]*for=\"pw\".*minlength=\"8\"", "flags": "s"}
+repetitions:
+  default: 1
+  seeds: []

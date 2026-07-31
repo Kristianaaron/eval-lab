@@ -1,0 +1,1 @@
+The workspace contains `query.py` (a script that reads inquiries from `input.txt` and prints one answer per line) and `data.json`. Run the script to answer each inquiry, then write the results to `answers.txt`. Confirm answers.txt contains one answer per inquiry line.

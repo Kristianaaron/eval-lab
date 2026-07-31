@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: general.knowledge.capital_facts.001
+name: 'World capital facts'
+description: 'Return the capital city of a named country.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['general_reasoning', 'knowledge_work']
+  capabilities: ['instruction_following']
+  modalities: ['text']
+  difficulty: easy
+  trajectory_stages: ['execute']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: null
+  initial_state_hash: null
+
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: null
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: exact
+    weight: 1.0
+    required: true
+    config: {"expected": "Paris"}
+repetitions:
+  default: 1
+  seeds: []

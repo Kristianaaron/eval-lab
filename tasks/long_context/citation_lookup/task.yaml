@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: longcontext.citation_lookup.001
+name: 'Exact citation retrieval'
+description: 'Locate an exact quoted sentence across a long document.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['long_context']
+  capabilities: ['long_context_retrieval', 'self_verification']
+  modalities: ['text']
+  difficulty: medium
+  trajectory_stages: ['inspect', 'execute']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: ['data/manual.txt']
+  workspace_fixture: null
+  initial_state_hash: null
+
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: null
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: exact
+    weight: 1.0
+    required: true
+    config: {"expected": "3"}
+repetitions:
+  default: 1
+  seeds: []

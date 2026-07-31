@@ -1,0 +1,1 @@
+In the workspace, `tests/` contains three failing tests. The bugs are spread across `src/order.py`, `src/tax.py`, and `src/main.py`. Diagnose each failure, fix the root causes (do not edit tests), and run the test command until all pass.

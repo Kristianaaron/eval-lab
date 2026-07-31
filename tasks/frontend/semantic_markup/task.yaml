@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: frontend.semantic_markup.001
+name: 'Semantic HTML structure'
+description: 'Produce a semantic HTML page skeleton using the right landmark elements.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['frontend', 'visual_design']
+  capabilities: ['code_generation', 'layout_fidelity', 'interaction_design']
+  modalities: ['code']
+  difficulty: easy
+  trajectory_stages: ['execute']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: null
+  initial_state_hash: null
+
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: null
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: regex
+    weight: 1.0
+    required: true
+    config: {"pattern": "<nav class=\"site-nav\">.*<main class=\"content\">.*<footer class=\"site-foot\">", "flags": "s"}
+repetitions:
+  default: 1
+  seeds: []

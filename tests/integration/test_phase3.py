@@ -16,7 +16,7 @@ TASKS = Path(__file__).parent.parent.parent / "tasks"
 
 
 def _perf_task():
-    return load_task_yaml(TASKS / "hardware" / "perf_probe.yaml")
+    return load_task_yaml(TASKS / "hardware" / "perf_probe" / "task.yaml")
 
 
 def _ctx(task, adapter, runs_root, **extra):

@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: agentic.multi_file_fix.001
+name: 'Multi-file test fix'
+description: 'Fix failing tests that span multiple files in a workspace.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['agentic', 'coding']
+  capabilities: ['repository_navigation', 'code_editing', 'debugging', 'test_generation', 'failure_recovery']
+  modalities: ['code']
+  difficulty: hard
+  trajectory_stages: ['inspect', 'plan', 'modify', 'execute', 'verify']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: 'workspace'
+  initial_state_hash: null
+
+execution:
+  runner: agent
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: 10
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: unit_test
+    weight: 1.0
+    required: true
+    config: {"command": "python tests/run_all.py", "workspace": "", "timeout_seconds": 120}
+repetitions:
+  default: 1
+  seeds: []

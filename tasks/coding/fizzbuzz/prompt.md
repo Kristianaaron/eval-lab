@@ -1,0 +1,1 @@
+Open the workspace. Implement the `fizzbuzz(n)` function in `solution.py`. It must return a list where each item i+1 (1-indexed) is replaced by 'Fizz' when divisible by 3, 'Buzz' when divisible by 5, and 'FizzBuzz' when divisible by both, otherwise the integer itself. Do not modify the test file. Finish by running the test command and confirming it passes.

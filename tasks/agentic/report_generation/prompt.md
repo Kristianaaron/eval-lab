@@ -1,0 +1,1 @@
+In the workspace, `data/q1.csv`, `data/q2.csv`, and `data/q3.csv` contain quarterly sales per region. Read all three, compute the total sales per region across the year, and write a markdown report `report.md` with a section "Totals" listing each region and its total (one per line, format "Region: N"). Verify the file exists.

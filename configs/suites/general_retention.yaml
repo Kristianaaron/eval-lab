@@ -1,0 +1,24 @@
+schema_version: '1.0'
+id: suite.general_retention.001
+name: General Retention
+description: Broad-coverage tasks spanning every domain to track capability retention
+  across interventions.
+version: 1
+family: general-retention
+tasks:
+- task_id: coding.json_output.001
+  weight: 1.0
+- task_id: coding.time_complexity.001
+  weight: 1.0
+- task_id: frontend.center_box_css.001
+  weight: 1.0
+- task_id: voxel.surface_voxels.001
+  weight: 1.0
+- task_id: mathematics.prime_factorization.001
+  weight: 1.0
+- task_id: reasoning.exists_statement.001
+  weight: 1.0
+- task_id: longcontext.document_retrieval.001
+  weight: 1.0
+- task_id: general.knowledge.capital_facts.001
+  weight: 1.0

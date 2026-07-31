@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: frontend.design_card.001
+name: 'Design fidelity card'
+description: 'Produce CSS matching a specified design (padding, radius, shadow, palette).'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['frontend', 'visual_design']
+  capabilities: ['code_generation', 'layout_fidelity', 'interaction_design']
+  modalities: ['code']
+  difficulty: medium
+  trajectory_stages: ['execute']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: null
+  initial_state_hash: null
+
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: null
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: regex
+    weight: 1.0
+    required: true
+    config: {"pattern": "border-radius:\\s*12px;.*box-shadow:.*0 4px 12px.*padding:\\s*24px", "flags": "s"}
+repetitions:
+  default: 1
+  seeds: []

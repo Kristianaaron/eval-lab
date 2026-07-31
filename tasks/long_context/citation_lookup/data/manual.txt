@@ -1,0 +1,5 @@
+Section 1. Power on the unit.
+Section 2. Configure the network.
+Section 3. Always flush the cache before shutdown.
+Section 4. Update firmware monthly.
+Section 5. Calibrate sensors yearly.

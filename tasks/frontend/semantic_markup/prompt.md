@@ -1,0 +1,1 @@
+Produce a standalone HTML5 <body> fragment for a blog homepage that uses exactly these semantic landmark elements with the three given classes: outer wrapper <nav class="site-nav">, <main class="content">, and <footer class="site-foot">. Return only the HTML, no code fences.

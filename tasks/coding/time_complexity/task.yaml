@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: coding.time_complexity.001
+name: 'Identify big-O complexity'
+description: 'Given a code snippet, identify its time complexity as a JSON literal.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['coding']
+  capabilities: ['code_generation', 'mathematical_reasoning']
+  modalities: ['code']
+  difficulty: medium
+  trajectory_stages: ['inspect', 'execute']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: null
+  initial_state_hash: null
+
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: null
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: json_schema
+    weight: 1.0
+    required: true
+    config: {"schema": {"type": "object", "properties": {"complexity": {"type": "string"}}, "required": ["complexity"]}}
+repetitions:
+  default: 1
+  seeds: []

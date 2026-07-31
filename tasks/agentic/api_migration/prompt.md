@@ -1,0 +1,1 @@
+The library `calculator` in the workspace has a new API: the old `add(a, b)` is now `add(x, y)` and returns an object with `.value`. Legacy call sites in `app.py` still use the old signature. Migrate `app.py` to the new API by reading `calculator.py` to learn the exact new interface, then run the test command.

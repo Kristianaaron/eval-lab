@@ -1,0 +1,26 @@
+schema_version: '1.0'
+id: suite.atlas.001
+name: Atlas
+description: Tasks instrumented for atlas intervention traces (router/expert routing,
+  precision tiers).
+version: 1
+family: atlas
+tasks:
+- task_id: coding.json_output.001
+  weight: 1.0
+- task_id: coding.time_complexity.001
+  weight: 1.0
+- task_id: frontend.design_card.001
+  weight: 1.0
+- task_id: frontend.responsive_breakpoint.001
+  weight: 1.0
+- task_id: voxel.sphere.001
+  weight: 1.0
+- task_id: voxel.rotate_90.001
+  weight: 1.0
+- task_id: agentic.report_generation.001
+  weight: 1.0
+- task_id: toolcall.dataset_query.001
+  weight: 1.0
+- task_id: longcontext.log_analysis.001
+  weight: 1.0

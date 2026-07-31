@@ -1,0 +1,1 @@
+Write CSS for a .card component: background #ffffff, border-radius 12px, box-shadow 0 4px 12px rgba(0,0,0,0.1), padding 24px, and a bottom accent border of #2563eb 4px. Return only the .card and .card::after or border rule set as CSS.

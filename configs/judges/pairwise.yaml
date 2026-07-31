@@ -1,0 +1,36 @@
+# Example pairwise judge config (dimension `pairwise`, spec 14.2).
+# Compares two agent outputs A/B with randomized, seeded presentation order and
+# hidden model identity. The same LLM endpoint pattern applies as for
+# answer_quality; pass `--offline` for the deterministic mock path.
+id: pairwise
+dimension: pairwise
+kind: llm
+model:
+  id: pairwise-judge
+  provider_type: openai_compatible
+  endpoint: http://localhost:8000/v1   # replace with your judge endpoint
+  model_name: judge-model
+  sampling_defaults:
+    temperature: 0.0
+rubric:
+  description: >-
+    Prefer the output that better satisfies the task instruction. Prefer neither
+    on a tie. Judge outputs A and B in the presented order without reference to
+    which model produced them.
+  scale:
+    - level: 1
+      label: a_better
+      min: 0.67
+    - level: 0
+      label: tie
+      min: 0.34
+    - level: -1
+      label: b_better
+      min: 0.0
+thresholds:
+  agreement_min: 0.75
+  kappa_min: 0.60
+  order_bias_pp: 5.0
+  malformed_max: 0.01
+  pass_threshold: 0.5
+notes: "Use with pairwise.order(seed, a, b) to randomize A/B presentation order."

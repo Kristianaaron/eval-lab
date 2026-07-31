@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: coding.output_prediction.001
+name: 'Predict program output'
+description: 'Predict exactly what a short program prints.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['coding']
+  capabilities: ['code_generation', 'debugging']
+  modalities: ['code']
+  difficulty: easy
+  trajectory_stages: ['execute']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: null
+  initial_state_hash: null
+
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: null
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: exact
+    weight: 1.0
+    required: true
+    config: {"expected": "4 [1, 2, 3, 4]"}
+repetitions:
+  default: 1
+  seeds: []

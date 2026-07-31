@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: longcontext.contract_obligations.001
+name: 'Contract obligation extraction'
+description: 'Extract a structured list of obligations from a contract.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['long_context', 'knowledge_work']
+  capabilities: ['long_context_retrieval', 'decomposition']
+  modalities: ['text']
+  difficulty: hard
+  trajectory_stages: ['inspect', 'execute']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: ['data/agreement.txt']
+  workspace_fixture: null
+  initial_state_hash: null
+
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: null
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: json_schema
+    weight: 1.0
+    required: true
+    config: {"schema": {"type": "array", "items": {"type": "object", "properties": {"party": {"type": "string"}, "action": {"type": "string"}}, "required": ["party", "action"]}}}
+repetitions:
+  default: 1
+  seeds: []

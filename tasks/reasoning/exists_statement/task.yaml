@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: reasoning.exists_statement.001
+name: 'Evaluate existence statement'
+description: 'Decide whether an existential statement is true or false.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['formal_reasoning', 'general_reasoning']
+  capabilities: ['mathematical_reasoning', 'proof_or_derivation']
+  modalities: ['text']
+  difficulty: medium
+  trajectory_stages: ['inspect', 'execute']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: null
+  initial_state_hash: null
+
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: null
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: exact
+    weight: 1.0
+    required: true
+    config: {"expected": "false"}
+repetitions:
+  default: 1
+  seeds: []

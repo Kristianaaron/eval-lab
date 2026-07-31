@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: longcontext.document_retrieval.001
+name: 'Long-document retrieval'
+description: 'Retrieve an exact fact buried in a long attached document.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['long_context', 'research']
+  capabilities: ['long_context_retrieval', 'self_verification']
+  modalities: ['text']
+  difficulty: medium
+  trajectory_stages: ['inspect', 'execute']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: ['data/policies.txt']
+  workspace_fixture: null
+  initial_state_hash: null
+
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: null
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: exact
+    weight: 1.0
+    required: true
+    config: {"expected": "7"}
+repetitions:
+  default: 1
+  seeds: []

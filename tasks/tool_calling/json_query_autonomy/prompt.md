@@ -1,0 +1,1 @@
+The workspace has `library.json`, a list of book records with fields title, author, year, rating. Produce a `summary.json` file containing: the total count of books, the oldest publication year, and the title of the highest-rated book (format: {"count": N, "oldest_year": Y, "best_title": "T"}). Plan the queries, run them, and verify the output file.

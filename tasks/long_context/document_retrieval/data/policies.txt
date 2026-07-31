@@ -1,0 +1,6 @@
+Policy 1. Onboarding records: retained for 3 years.
+Policy 2. Payroll records: retained for 6 years.
+Policy 3. Indemnity records: retained for 7 years.
+Policy 4. Tax records: retained for 5 years.
+Policy 5. Audit trails: retained for 2 years.
+Policy 6. HR referrals, if any, retained per policy 2.

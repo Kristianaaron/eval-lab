@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: agentic.report_generation.001
+name: 'Agentic report generation'
+description: 'Synthesize a summary report from multiple source data files.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['agentic', 'knowledge_work']
+  capabilities: ['repository_navigation', 'tool_result_grounding', 'creative_generation', 'state_tracking']
+  modalities: ['code', 'text']
+  difficulty: medium
+  trajectory_stages: ['inspect', 'plan', 'execute', 'verify']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: 'workspace'
+  initial_state_hash: null
+
+execution:
+  runner: agent
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: 8
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: artifact
+    weight: 1.0
+    required: true
+    config: {"path": "report.md", "min_size": 10}
+repetitions:
+  default: 1
+  seeds: []

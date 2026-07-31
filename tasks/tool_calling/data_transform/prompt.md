@@ -1,0 +1,1 @@
+In the workspace, `tool.py` is a CLI that reads `names.txt` and prints each name uppercased, but only for names present in `allowed.txt`. Discover its interface (run it with no args to see usage), then produce `out.txt` containing the transformed lines. Verify the file.

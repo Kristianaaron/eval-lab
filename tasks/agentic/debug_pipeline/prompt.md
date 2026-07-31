@@ -1,0 +1,1 @@
+The workspace contains a small ETL pipeline. Running `python pipeline.py` fails with an exception. Trace the error, fix the root cause (do not swallow exceptions), and make `python pipeline.py` exit 0 and print 'DONE'.

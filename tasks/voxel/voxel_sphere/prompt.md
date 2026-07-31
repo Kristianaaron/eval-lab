@@ -1,0 +1,1 @@
+A sphere of radius 2 is centered at voxel (0,0,0) in integer 3D space. A voxel at (x,y,z) is inside iff x^2 + y^2 + z^2 <= 4. Return a JSON array of all inside voxel coordinates [x,y,z] with each of x,y,z in the integer range [-2, 2].

@@ -1,0 +1,38 @@
+# Example LLM judge for dimension `answer_quality` (spec 14).
+# `kind: llm` builds a ModelAdapter from `model` (local endpoints supported);
+# pass `--offline` or set `kind: offline` to run the deterministic mock judge.
+id: answer_quality
+dimension: answer_quality
+kind: llm
+model:
+  id: answer-quality-judge
+  provider_type: openai_compatible
+  endpoint: http://localhost:8000/v1   # replace with your judge endpoint
+  model_name: judge-model
+  sampling_defaults:
+    temperature: 0.0
+rubric:
+  description: >-
+    Rate whether the agent's answer correctly addresses the task instruction,
+    is substantively complete, and avoids subtle errors. Verbose-but-wrong
+    answers are wrong; concise-but-correct answers are correct.
+  scale:
+    - level: 4
+      label: correct
+      min: 0.8
+    - level: 3
+      label: mostly_correct
+      min: 0.55
+    - level: 2
+      label: incomplete
+      min: 0.3
+    - level: 1
+      label: wrong
+      min: 0.0
+thresholds:
+  agreement_min: 0.75
+  kappa_min: 0.60
+  order_bias_pp: 5.0
+  malformed_max: 0.01
+  pass_threshold: 0.5
+notes: "Offline calibratable with: eval-lab calibrate-judge answer_quality --offline"

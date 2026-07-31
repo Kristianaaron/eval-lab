@@ -2,6 +2,41 @@
 
 All notable changes to eval-lab are documented here. Format: Keep a Changelog.
 
+## [0.5.0] - 2026-08-01
+
+Phase 4: advanced scorers + LLM judge calibration.
+
+- Advanced scorers (spec 13.3): `unit_test`, `artifact`, `trajectory`, `visual`
+  registered in the scorer registry. Errored scorers are excluded by
+  `aggregate()` and never silently zeroed.
+- Judge subsystem (spec 14): strict structured-output protocol, `LLMJudge`
+  over any `ModelAdapter` (local endpoints supported), a deterministic offline
+  mock judge, and seeded pairwise A/B ordering with self-preference guards.
+- Calibration (spec 14.3) against a human gold set: exact agreement, weighted
+  Cohen's kappa, FP/FN rates, order bias, verbosity bias, repeat consistency,
+  malformed-output rate, and a calibrated verdict, exported as markdown + JSON.
+- CLI `calibrate-judge <judge-id>` with `--offline` mock path.
+- Example judge YAMLs (`configs/judges/`) and a human-labeled gold set
+  (`gold/judge_calibration/`).
+- Tests: 44 new unit/integration tests covering scorer pass/fail/error paths,
+  calibration math, malformed-rate counting, and pairwise determinism.
+
+## [0.6.0] - 2026-08-01
+
+Phase 6: target-workload task catalogue (spec 9).
+
+- Grew the catalogue from 6 to 38 deterministically-scored tasks across coding (8),
+  frontend/visual (6), voxel/spatial (6), agentic (4) + tool-calling (4), reasoning/math (4+),
+  and long-context/research (4), plus retained general/hardware tasks.
+- Every task is a self-contained package (`tasks/<category>/<slug>/` with `task.yaml`,
+  `prompt.md` and committed fixtures), with valid controlled-vocabulary labels and
+  deterministic oracles (exact/regex/json_schema/unit_test/artifact).
+- Suite families (spec 8.1): `daily-driver`, `general-retention`, `stress`, `atlas`
+  (`configs/suites/*.yaml`), each referencing existing task ids.
+- Provenance/leakage documented in `PHASE_6_REPORT.md`: zero test tasks reused as
+  training or calibration data; fixtures original, self-contained, no network at eval time.
+- Tasks consolidated to the canonical package layout; tests updated to the new paths.
+
 ## [0.4.0] - 2026-07-31
 
 Phase 3: telemetry and performance.

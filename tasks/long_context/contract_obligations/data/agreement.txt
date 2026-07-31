@@ -1,0 +1,4 @@
+Section 1. The vendor must deliver monthly reports.
+Section 2. The client must pay within 30 days.
+Section 3. Either party may terminate with notice.
+Section 4. The vendor must keep data encrypted.

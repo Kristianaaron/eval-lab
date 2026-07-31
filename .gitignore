@@ -19,6 +19,7 @@ htmlcov/
 # Runtime data
 runs/*
 !runs/.gitkeep
+reports/
 
 # OS / editor
 .DS_Store

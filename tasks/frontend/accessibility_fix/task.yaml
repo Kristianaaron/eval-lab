@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: frontend.accessibility_fix.001
+name: 'Fix accessibility defects'
+description: 'Repair contrast and ARIA defects in a fixture HTML so a checker passes.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['frontend', 'visual_design']
+  capabilities: ['code_editing', 'interaction_design', 'visual_grounding']
+  modalities: ['code']
+  difficulty: hard
+  trajectory_stages: ['inspect', 'plan', 'modify', 'execute', 'verify']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: 'workspace'
+  initial_state_hash: null
+
+execution:
+  runner: agent
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: 8
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: unit_test
+    weight: 1.0
+    required: true
+    config: {"command": "python check.py", "workspace": "", "timeout_seconds": 60}
+repetitions:
+  default: 1
+  seeds: []

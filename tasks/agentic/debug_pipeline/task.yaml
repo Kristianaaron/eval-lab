@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: agentic.debug_pipeline.001
+name: 'Trace and fix data pipeline'
+description: 'Find the root cause of a pipeline failure and fix it.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['agentic', 'tool_calling']
+  capabilities: ['debugging', 'error_interpretation', 'failure_recovery', 'tool_result_grounding']
+  modalities: ['code']
+  difficulty: hard
+  trajectory_stages: ['inspect', 'plan', 'modify', 'execute', 'verify']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: 'workspace'
+  initial_state_hash: null
+
+execution:
+  runner: agent
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: 10
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: unit_test
+    weight: 1.0
+    required: true
+    config: {"command": "python pipeline.py", "workspace": "", "timeout_seconds": 120}
+repetitions:
+  default: 1
+  seeds: []

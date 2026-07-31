@@ -1,0 +1,1 @@
+Count the number of monotone paths (moving only +1 in exactly one of x, y, or z per step) from (0,0,0) to (2,2,1) that never pass through any voxel on the blocked list. The blocked voxels are [[1,0,0]] (all other coordinates in the box are free). Return only the integer count.

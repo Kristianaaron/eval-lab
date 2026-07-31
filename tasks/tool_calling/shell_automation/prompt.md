@@ -1,0 +1,1 @@
+In the workspace, the directory `logs/` holds several .log files. Each line looks like "LEVEL  [tag] message". Use shell tools to find every line tagged [eror] (typo) and write them, one per line, to `errors.txt`. Confirm the file contains the matching lines.

@@ -1,0 +1,1 @@
+Read the attached policy document (policies.txt). It contains many clauses; only one mentions the retention period for indemnity records. Answer: how many years (as an integer) are indemnity records retained? Return only the integer.

@@ -1,0 +1,1 @@
+In the workspace, `legacy.py` contains a slow, duplicated discount calculator. Refactor it into a single clear function `apply_discount(price, rate)` (rate as 0-1 fraction) and export it. The test file has explicit expectations including behavior for invalid rates (raise ValueError). Edit only source files, then run the test command until green.

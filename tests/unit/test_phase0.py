@@ -146,7 +146,7 @@ def test_all_in_contains_known():
 
 
 def test_load_valid_task():
-    task = load_task_yaml(TASKS / "mathematics" / "basic_addition.yaml")
+    task = load_task_yaml(TASKS / "mathematics" / "basic_addition" / "task.yaml")
     assert task.id == "mathematics.basic.addition.001"
     assert task.level == Level.model
     assert task.labels.domains == ["mathematics"]
@@ -222,7 +222,7 @@ def test_cli_doctor_json():
 
 def test_cli_validate_valid_task():
     result = runner.invoke(
-        app, ["validate", "task", str(TASKS / "mathematics" / "basic_addition.yaml")]
+        app, ["validate", "task", str(TASKS / "mathematics" / "basic_addition" / "task.yaml")]
     )
     assert result.exit_code == 0, result.output
 

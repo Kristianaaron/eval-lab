@@ -1,0 +1,1 @@
+A solid rectangular box of voxels has dimensions 5 x 3 x 4 (length along x, width along y, height along z). A voxel is on the surface if it touches the exterior. Count the number of surface voxels and return only the integer.

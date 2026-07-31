@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: toolcall.data_transform.001
+name: 'Transform data via CLI tool'
+description: 'Drive a CLI tool to transform a dataset and save the output.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['tool_calling']
+  capabilities: ['tool_selection', 'tool_argument_construction', 'tool_result_grounding']
+  modalities: ['code']
+  difficulty: medium
+  trajectory_stages: ['inspect', 'plan', 'execute', 'verify']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: 'workspace'
+  initial_state_hash: null
+
+execution:
+  runner: agent
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: 8
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: artifact
+    weight: 1.0
+    required: true
+    config: {"path": "out.txt", "min_size": 3}
+repetitions:
+  default: 1
+  seeds: []

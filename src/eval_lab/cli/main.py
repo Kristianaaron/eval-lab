@@ -340,6 +340,43 @@ def list_runs_command(
             )
 
 
+@app.command("calibrate-judge")
+def calibrate_judge(
+    judge_id: str = typer.Argument(..., help="judge id (configs/judges/<id>.yaml)"),
+    judges_dir: str = typer.Option("configs/judges", "--judges-dir"),
+    gold_dir: str = typer.Option("gold/judge_calibration", "--gold-dir"),
+    out_dir: str = typer.Option("reports", "--out-dir"),
+    offline: bool = typer.Option(
+        False, "--offline", help="use the deterministic offline mock judge (no endpoint)"
+    ),
+    json_out: bool = typer.Option(False, "--json"),
+) -> None:
+    """Calibrate a judge against the human gold set and print a VERDICT."""
+    from eval_lab.judges.adapter import build_judge
+    from eval_lab.judges.calibration import (
+        load_gold_set,
+        load_judge_config,
+        run_calibration,
+        write_calibration_report,
+    )
+
+    cfg_path = Path(judges_dir) / f"{judge_id}.yaml"
+    if not cfg_path.is_file():
+        _err(f"judge config not found: {cfg_path}")
+        raise typer.Exit(code=1)
+    config = load_judge_config(cfg_path)
+    judge = build_judge(config, offline=offline)
+    gold = load_gold_set(gold_dir, dimension=config.dimension)
+    report = run_calibration(judge, gold, thresholds=config.thresholds)
+    out_path = write_calibration_report(report, out_dir)
+    if json_out:
+        _emit_json(report.to_dict())
+    else:
+        typer.echo(f"VERDICT: {report.verdict}")
+        typer.echo(f"report: {out_path}")
+    raise typer.Exit(code=0)
+
+
 # -- resolution helpers -------------------------------------------------------
 
 

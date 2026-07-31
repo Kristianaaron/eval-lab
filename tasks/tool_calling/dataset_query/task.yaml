@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: toolcall.dataset_query.001
+name: 'Query a dataset with code'
+description: 'Use a script tool to answer questions over a dataset.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['tool_calling', 'coding']
+  capabilities: ['tool_selection', 'tool_argument_construction', 'tool_result_grounding']
+  modalities: ['code']
+  difficulty: medium
+  trajectory_stages: ['inspect', 'plan', 'execute', 'verify']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: 'workspace'
+  initial_state_hash: null
+
+execution:
+  runner: agent
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: 8
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: artifact
+    weight: 1.0
+    required: true
+    config: {"path": "answers.txt", "min_size": 3}
+repetitions:
+  default: 1
+  seeds: []
