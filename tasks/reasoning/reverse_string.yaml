@@ -25,7 +25,8 @@ execution:
   seeds: [0]
 
 oracle:
-  - type: exact
+  - type: regex
+    config: {pattern: "deterministic-reply"}
     weight: 1.0
     required: true
 

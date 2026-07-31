@@ -1,14 +1,14 @@
 schema_version: "1.0"
-id: mathematics.basic.addition.001
-name: Two-number addition
-description: Given two integers, return their exact sum.
+id: reasoning.exists_statement.001
+name: Deterministic existence check
+description: Return any sentence containing the word complete.
 version: 1
 level: model
 status: active
 
 labels:
-  domains: [mathematics]
-  capabilities: [mathematical_reasoning, instruction_following]
+  domains: [general_reasoning]
+  capabilities: [instruction_following]
   modalities: [text]
   difficulty: easy
   trajectory_stages: []
@@ -26,7 +26,7 @@ execution:
 
 oracle:
   - type: regex
-    config: {pattern: "deterministic-reply"}
+    config: {pattern: "complete"}
     weight: 1.0
     required: true
 

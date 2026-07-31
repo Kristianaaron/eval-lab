@@ -1,0 +1,18 @@
+schema_version: "1.0"
+id: suite.smoke.direct.001
+name: Direct smoke
+description: All five direct tasks for Phase 1 gate verification.
+version: 1
+family: smoke
+
+tasks:
+  - task_id: mathematics.basic.addition.001
+    weight: 1.0
+  - task_id: reasoning.reverse_string.001
+    weight: 1.0
+  - task_id: general.knowledge.capital_facts.001
+    weight: 1.0
+  - task_id: coding.json_output.001
+    weight: 1.0
+  - task_id: reasoning.exists_statement.001
+    weight: 1.0

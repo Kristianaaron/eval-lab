@@ -1,14 +1,14 @@
 schema_version: "1.0"
-id: mathematics.basic.addition.001
-name: Two-number addition
-description: Given two integers, return their exact sum.
+id: coding.json_output.001
+name: Produce JSON metadata
+description: Return a JSON object with id and accept fields.
 version: 1
 level: model
 status: active
 
 labels:
-  domains: [mathematics]
-  capabilities: [mathematical_reasoning, instruction_following]
+  domains: [coding]
+  capabilities: [instruction_following, self_verification]
   modalities: [text]
   difficulty: easy
   trajectory_stages: []
@@ -25,8 +25,10 @@ execution:
   seeds: [0]
 
 oracle:
-  - type: regex
-    config: {pattern: "deterministic-reply"}
+  - type: json_schema
+    config:
+      properties: {id: {type: "string"}, ok: {type: "boolean"}}
+      required: [id, ok]
     weight: 1.0
     required: true
 
