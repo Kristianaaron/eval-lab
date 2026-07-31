@@ -1,0 +1,21 @@
+schema_version: "1.0"
+id: invalid.unknown_label.001
+name: Task with an unknown capability label
+description: Used to verify that unknown labels fail validation.
+version: 1
+level: model
+status: active
+
+labels:
+  domains: [mathematics]
+  capabilities: [definitely_not_a_real_capability]
+  modalities: [text]
+  difficulty: easy
+
+input:
+  instruction_file: prompt.md
+  attachments: []
+
+execution:
+  runner: direct
+  timeout_seconds: 60

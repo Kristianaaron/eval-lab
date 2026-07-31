@@ -1,0 +1,23 @@
+schema_version: "1.0"
+id: invalid.missing_fixture.001
+name: Task referencing a nonexistent workspace fixture
+description: Used to verify broken fixture-path detection.
+version: 1
+level: system
+status: active
+
+labels:
+  domains: [coding]
+  capabilities: [repository_navigation]
+  modalities: [text]
+  difficulty: medium
+
+input:
+  instruction_file: prompt.md
+  attachments: []
+  workspace_fixture: does-not-exist.tar.zst
+
+execution:
+  runner: agent
+  sandbox: docker
+  timeout_seconds: 600

@@ -1,0 +1,34 @@
+schema_version: "1.0"
+id: general.knowledge.capital_facts.001
+name: Capital city trivia
+description: Return the capital city of a named country in a single line.
+version: 1
+level: model
+status: active
+
+labels:
+  domains: [knowledge_work]
+  capabilities: [instruction_following]
+  modalities: [text]
+  difficulty: easy
+  trajectory_stages: []
+  failure_modes_targeted: []
+
+input:
+  instruction_file: prompt.md
+  attachments: []
+
+execution:
+  runner: direct
+  sandbox: null
+  timeout_seconds: 60
+  seeds: [0]
+
+oracle:
+  - type: exact
+    weight: 1.0
+    required: true
+
+repetitions:
+  default: 1
+  seeds: [0]
