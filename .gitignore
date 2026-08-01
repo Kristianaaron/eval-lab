@@ -21,6 +21,7 @@ runs/*
 !runs/.gitkeep
 /reports/
 /models/
+/jobs/
 
 # Frontend (dashboard/web)
 dashboard/web/node_modules/
