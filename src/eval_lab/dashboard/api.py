@@ -135,6 +135,63 @@ class DashboardApp:
                 "suites": suites,
             }
 
+        @app.get("/api/models")
+        def list_models() -> list[dict[str, Any]]:
+            """Active models (models with runs) plus run-time stats.
+
+            Run time for each run is read from the run manifest's ``duration_s``
+            (falling back to ``None`` when the manifest is absent or lacks it), so
+            the selector can show both how often a model has been exercised and
+            how long its runs take.
+            """
+            runs = self._store.list_runs(limit=10_000)
+            per: dict[str, dict[str, Any]] = {}
+            for r in runs:
+                mid = str(r.get("model_id") or "")
+                if not mid:
+                    continue
+                entry = per.setdefault(mid, {"model_id": mid, "run_count": 0, "durations_s": []})
+                entry["run_count"] += 1
+                if r.get("run_dir"):
+                    run_dir = Path(str(r["run_dir"]))
+                else:
+                    run_dir = self.runs_root / str(r["run_id"])
+                manifest = _read_json(run_dir / "manifest.json")
+                duration = manifest.get("duration_s") if manifest else None
+                if isinstance(duration, (int, float)):
+                    entry["durations_s"].append(float(duration))
+
+            out: list[dict[str, Any]] = []
+            for mid in sorted(per):
+                e = per[mid]
+                ds = sorted(e["durations_s"])
+                stats: dict[str, Any] = {"model_id": mid, "run_count": e["run_count"]}
+                if ds:
+                    n = len(ds)
+                    mid_idx = (n - 1) // 2
+                    median = ds[mid_idx] if n % 2 else (ds[mid_idx] + ds[mid_idx + 1]) / 2
+                    stats.update(
+                        {
+                            "min_duration_s": round(ds[0], 4),
+                            "max_duration_s": round(ds[-1], 4),
+                            "median_duration_s": round(median, 4),
+                            "mean_duration_s": round(sum(ds) / n, 4),
+                            "latest_duration_s": round(ds[-1], 4),
+                        }
+                    )
+                else:
+                    stats.update(
+                        {
+                            "min_duration_s": None,
+                            "max_duration_s": None,
+                            "median_duration_s": None,
+                            "mean_duration_s": None,
+                            "latest_duration_s": None,
+                        }
+                    )
+                out.append(stats)
+            return out
+
         @app.get("/api/runs")
         def list_runs(
             model_id: str | None = None,

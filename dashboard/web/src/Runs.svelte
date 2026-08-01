@@ -2,6 +2,7 @@
   import { get, fmtPassed } from "./lib/api.js";
 
   let overview = $state(null);
+  let models = $state([]);
   let runs = $state([]);
   let model = $state("");
   let task = $state("");
@@ -12,8 +13,16 @@
     get("/api/overview")
       .then((d) => (overview = d))
       .catch(() => {});
+    get("/api/models")
+      .then((d) => (models = d))
+      .catch(() => {});
     reload();
   });
+
+  function modelLabel(m) {
+    if (m.median_duration_s == null) return `${m.model_id} · ${m.run_count} run(s)`;
+    return `${m.model_id} · ${m.run_count} run(s) · med ${m.median_duration_s}s`;
+  }
 
   function reload() {
     const params = new URLSearchParams();
@@ -29,10 +38,10 @@
 <h1>Runs</h1>
 
 <div class="filters">
-  <select bind:value={model} onchange={reload}>
+  <select bind:value={model} onchange={reload} title="Model selector — active models and run times">
     <option value="">all models</option>
-    {#each (overview?.models ?? []) as m (m)}
-      <option value={m}>{m}</option>
+    {#each models as m (m.model_id)}
+      <option value={m.model_id}>{modelLabel(m)}</option>
     {/each}
   </select>
   <select bind:value={task} onchange={reload}>

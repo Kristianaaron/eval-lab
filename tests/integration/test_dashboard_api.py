@@ -56,6 +56,23 @@ def test_health_and_overview(tmp_path: Path) -> None:
     assert ov["avg_aggregate_score"] is not None
 
 
+def test_models_endpoint_run_times(tmp_path: Path) -> None:
+    _seed_runs(tmp_path)
+    client = TestClient(create_app(tmp_path, tmp_path / "runstore.db"))
+    models = client.get("/api/models").json()
+    by_id = {m["model_id"]: m for m in models}
+    assert set(by_id) == {"mock-a", "mock-b"}
+    assert by_id["mock-a"]["run_count"] == 2
+    assert by_id["mock-b"]["run_count"] == 1
+    # Every seeded run has a real duration_s in its manifest.
+    for m in models:
+        assert m["median_duration_s"] is not None
+        assert m["median_duration_s"] >= 0
+        assert 0 <= m["min_duration_s"] <= m["max_duration_s"]
+    # Sorted by model id, latest_duration == max for a single-run model.
+    assert by_id["mock-b"]["latest_duration_s"] == by_id["mock-b"]["max_duration_s"]
+
+
 def test_runs_list_and_filters(tmp_path: Path) -> None:
     _seed_runs(tmp_path)
     client = TestClient(create_app(tmp_path, tmp_path / "runstore.db"))
