@@ -21,6 +21,9 @@ runs/*
 !runs/.gitkeep
 reports/
 
+# Frontend (dashboard/web)
+dashboard/web/node_modules/
+
 # OS / editor
 .DS_Store
 .idea/

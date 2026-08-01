@@ -282,6 +282,28 @@ def perf_command(
     raise typer.Exit(code=0)
 
 
+@app.command("serve")
+def serve_command(
+    runs_root: str = typer.Option("runs", "--runs-root"),
+    db: str = typer.Option(None, "--db", help="sqlite index; default <runs-root>/runstore.db"),
+    host: str = typer.Option("127.0.0.1", "--host"),
+    port: int = typer.Option(8100, "--port", min=1, max=65535),
+    reload: bool = typer.Option(False, "--reload", help="dev: auto-reload on code change"),
+) -> None:
+    """Serve the read-only web dashboard over run data (FastAPI + Svelte SPA)."""
+    try:
+        import uvicorn
+
+        from eval_lab.dashboard import create_app
+    except ImportError as exc:  # pragma: no cover
+        _err(f"serve requires the 'serve' extra: uv pip install -e '.[serve]' ({exc})")
+        raise typer.Exit(code=1) from None
+
+    app_obj = create_app(runs_root, db)
+    typer.echo(f"dashboard listening on http://{host}:{port}  (runs root: {runs_root})")
+    uvicorn.run(app_obj, host=host, port=port, reload=reload, log_level="info")
+
+
 @app.command("score")
 def score_command(
     run_id: str = typer.Argument(...),

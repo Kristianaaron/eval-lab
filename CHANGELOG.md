@@ -2,7 +2,25 @@
 
 All notable changes to eval-lab are documented here. Format: Keep a Changelog.
 
-## [0.5.0] - 2026-08-01
+## [0.7.0] - 2026-08-01
+
+Dashboard (web UI): read-only eval-results viewer.
+
+- Python FastAPI backend (`eval_lab.dashboard`) + read-only JSON API over
+  `runs/runstore.db` and `runs/<id>/` artifacts: `/api/health`, `/api/overview`,
+  `/api/runs` (with model/task/suite/status filters), `/api/runs/{id}`,
+  `/api/runs/{id}/trace`, `/api/runs/{id}/telemetry` (per-node series).
+- CLI `eval-lab serve` (FastAPI + uvicorn; `serve` extra). Built Svelte SPA is
+  served from `dashboard/web/dist` when present.
+- Svelte 5 + Vite SPA in `dashboard/web/` with an overview, filterable runs
+  table, run detail (scores, ECharts telemetry line chart, trace log), and a
+  tiny hash router. Dev server proxies `/api` to the backend.
+- `RunStore` connections are now thread-safe (`check_same_thread=False`) so
+  FastAPI can query them from the worker pool.
+- Tests: 4 dashboard-API integration tests. `serve`/dashboard code is green
+  under ruff, mypy and format.
+
+## [0.6.0] - 2026-08-01
 
 Phase 4: advanced scorers + LLM judge calibration.
 

@@ -1,0 +1,77 @@
+:root {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --panel-2: #1e232d;
+  --border: #2a303c;
+  --text: #d7dbe3;
+  --muted: #8b93a3;
+  --accent: #4f8cff;
+  --green: #34d399;
+  --red: #f87171;
+  --amber: #fbbf24;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+nav.bar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 20px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+}
+nav.bar .brand { font-weight: 700; letter-spacing: 0.02em; color: var(--text); }
+nav.bar a.nav { color: var(--muted); }
+nav.bar a.nav.active { color: var(--text); text-decoration: none; font-weight: 600; }
+
+main { padding: 20px; max-width: 1280px; margin: 0 auto; }
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.grid { display: grid; gap: 16px; }
+.grid.cols-3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+.stat .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+.stat .v { font-size: 26px; font-weight: 700; margin-top: 4px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+
+.badge { padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.badge.pass { background: rgba(52, 211, 153, 0.15); color: var(--green); }
+.badge.fail { background: rgba(248, 113, 113, 0.15); color: var(--red); }
+.badge.error { background: rgba(251, 191, 36, 0.15); color: var(--amber); }
+
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+select, input {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+.mut { color: var(--muted); }
+.right { text-align: right; }
+button.link { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 14px; padding: 0; }
