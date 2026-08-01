@@ -9,6 +9,15 @@
   import Experiments from "./Experiments.svelte";
   import Comparisons from "./Comparisons.svelte";
   import Jobs from "./Jobs.svelte";
+  import {
+    LayoutDashboard,
+    Boxes,
+    Gauge,
+    Sparkles,
+    FlaskConical,
+    Scale,
+    ListChecks,
+  } from "@lucide/svelte";
 
   function parse(hash) {
     const h = (hash || "").replace(/^#/, "");
@@ -37,13 +46,13 @@
   });
 
   const areas = [
-    { key: "overview", label: "Overview", href: "#/" },
-    { key: "models", label: "Models", href: "#/models" },
-    { key: "evaluation", label: "Evaluation", href: "#/evaluation" },
-    { key: "atlas", label: "Atlas Lab", href: "#/atlas" },
-    { key: "experiments", label: "Experiments", href: "#/experiments" },
-    { key: "comparisons", label: "Comparisons", href: "#/comparisons" },
-    { key: "jobs", label: "Jobs", href: "#/jobs" },
+    { key: "overview", label: "Overview", href: "#/", icon: LayoutDashboard },
+    { key: "models", label: "Models", href: "#/models", icon: Boxes },
+    { key: "evaluation", label: "Evaluation", href: "#/evaluation", icon: Gauge },
+    { key: "atlas", label: "Atlas Lab", href: "#/atlas", icon: Sparkles },
+    { key: "experiments", label: "Experiments", href: "#/experiments", icon: FlaskConical },
+    { key: "comparisons", label: "Comparisons", href: "#/comparisons", icon: Scale },
+    { key: "jobs", label: "Jobs", href: "#/jobs", icon: ListChecks },
   ];
 </script>
 
@@ -56,7 +65,8 @@
         class:active={route.name === a.key || (a.key === "models" && (route.name === "model" || route.name === "register"))}
         href={a.href}
       >
-        {a.label}
+        <svelte:component this={a.icon} size={16} />
+        <span>{a.label}</span>
       </a>
     {/each}
   </nav>

@@ -67,7 +67,8 @@ nav.side {
   box-sizing: border-box;
 }
 nav.side .brand { font-weight: 700; letter-spacing: 0.02em; color: var(--text); padding: 6px 10px 16px; }
-nav.side a.nav { color: var(--muted); padding: 8px 10px; border-radius: 6px; }
+nav.side a.nav { color: var(--muted); padding: 8px 10px; border-radius: 6px; display: flex; align-items: center; gap: 9px; }
+nav.side a.nav :global(svg) { flex: 0 0 auto; }
 nav.side a.nav:hover { background: var(--panel-2); text-decoration: none; }
 nav.side a.nav.active { color: var(--text); background: var(--panel-2); font-weight: 600; text-decoration: none; }
 main.main { flex: 1; padding: 24px; max-width: 1360px; }
