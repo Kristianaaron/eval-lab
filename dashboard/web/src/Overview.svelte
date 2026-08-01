@@ -27,15 +27,16 @@
   );
 </script>
 
-<h1>Overview</h1>
-
-<div class="grid cols-3" style="margin-bottom:16px">
-  <div class="card stat"><div class="k">Registered models</div><div class="v">{counts.total}</div></div>
-  <div class="card stat"><div class="k">Runnable models</div><div class="v" style="color:var(--green)">{counts.runnable}</div></div>
-  <div class="card stat"><div class="k">Source checkpoints</div><div class="v">{counts.source}</div></div>
-  <div class="card stat"><div class="k">Active eval jobs</div><div class="v">{activeJobs}</div></div>
-  <div class="card stat"><div class="k">Failed jobs</div><div class="v" style="color:var(--red)">{recentFailed}</div></div>
-  <div class="card stat"><div class="k">Total runs</div><div class="v">{overview?.total_runs ?? "—"}</div></div>
+<div class="card overview-panel">
+  <h1>Overview</h1>
+  <div class="ov-stats">
+    <div class="ov-stat"><div class="k">Registered models</div><div class="v">{counts.total}</div></div>
+    <div class="ov-stat"><div class="k">Runnable models</div><div class="v" style="color:var(--green)">{counts.runnable}</div></div>
+    <div class="ov-stat"><div class="k">Source checkpoints</div><div class="v">{counts.source}</div></div>
+    <div class="ov-stat"><div class="k">Active eval jobs</div><div class="v">{activeJobs}</div></div>
+    <div class="ov-stat"><div class="k">Failed jobs</div><div class="v" style="color:var(--red)">{recentFailed}</div></div>
+    <div class="ov-stat"><div class="k">Total runs</div><div class="v">{overview?.total_runs ?? "—"}</div></div>
+  </div>
 </div>
 
 <div class="grid cols-2" style="margin-bottom:16px">

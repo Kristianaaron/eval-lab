@@ -47,39 +47,41 @@
   ];
 </script>
 
-<nav class="bar">
-  <a class="brand" href="#/">eval-lab</a>
-  {#each areas as a (a.key)}
-    <a
-      class="nav"
-      class:active={route.name === a.key || (a.key === "models" && (route.name === "model" || route.name === "register"))}
-      href={a.href}
-    >
-      {a.label}
-    </a>
-  {/each}
-</nav>
+<div class="layout">
+  <nav class="side">
+    <a class="brand" href="#/">eval-lab</a>
+    {#each areas as a (a.key)}
+      <a
+        class="nav"
+        class:active={route.name === a.key || (a.key === "models" && (route.name === "model" || route.name === "register"))}
+        href={a.href}
+      >
+        {a.label}
+      </a>
+    {/each}
+  </nav>
 
-<main>
-  {#if route.name === "overview"}
-    <Overview />
-  {:else if route.name === "models"}
-    <Models />
-  {:else if route.name === "register"}
-    <RegisterModel />
-  {:else if route.name === "model"}
-    <ModelDetail assetId={route.id} />
-  {:else if route.name === "evaluation"}
-    <Evaluation runId={route.runId} jobId={route.jobId} />
-  {:else if route.name === "atlas"}
-    <AtlasLab />
-  {:else if route.name === "experiments"}
-    <Experiments />
-  {:else if route.name === "comparisons"}
-    <Comparisons />
-  {:else if route.name === "jobs"}
-    <Jobs />
-  {:else}
-    <Overview />
-  {/if}
-</main>
+  <main class="main">
+    {#if route.name === "overview"}
+      <Overview />
+    {:else if route.name === "models"}
+      <Models />
+    {:else if route.name === "register"}
+      <RegisterModel />
+    {:else if route.name === "model"}
+      <ModelDetail assetId={route.id} />
+    {:else if route.name === "evaluation"}
+      <Evaluation runId={route.runId} jobId={route.jobId} />
+    {:else if route.name === "atlas"}
+      <AtlasLab />
+    {:else if route.name === "experiments"}
+      <Experiments />
+    {:else if route.name === "comparisons"}
+      <Comparisons />
+    {:else if route.name === "jobs"}
+      <Jobs />
+    {:else}
+      <Overview />
+    {/if}
+  </main>
+</div>
