@@ -2,7 +2,7 @@
 
 **Status:** COMPLETE
 **Date:** 2026-07-31
-**Host:** spark-d167 (Linux aarch64, 1× NVIDIA 2e12)
+**Host:** eval-node (Linux aarch64, 1× NVIDIA 2e12)
 **Scope:** Phase 3 only (spec §23). Collectors, telemetry sampling, cold/warm
 markers, performance suite, per-node correlation, and TTFT/decode verification
 against raw timestamps.
@@ -57,10 +57,10 @@ Three repetitions of `hardware.perf.probe.001`: all **pass**, `ttft≈0.050s`
 (configured 20 tokens/s). Trace carries monotonic sequences 0–8 with
 `telemetry_marker` → `model_request` → `token_event`×n → `model_completion` →
 `run_completion` → `telemetry_correlation`, plus periodic `resource_sample`
-events attributed to node `spark-d167`.
+events attributed to node `node-a`.
 
 Manifest `timing`: `ttft_agrees: true`, `decode_tps_agrees: true`, `token_count:
-2`; `telemetry.per_node[spark-d167].sample_count=2`; `telemetry_stream`
+2`; `telemetry.per_node[node-a].sample_count=2`; `telemetry_stream`
 points at the run's `trace.jsonl`.
 
 ## 5. Notes

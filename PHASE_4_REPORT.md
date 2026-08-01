@@ -2,7 +2,7 @@
 
 **Status:** COMPLETE
 **Date:** 2026-08-01
-**Host:** dsv4-spark (Linux aarch64)
+**Host:** eval-node (Linux aarch64)
 **Scope:** Phase 4 only (spec §13.2/13.3, §14). Advanced scorers, the judge
 subsystem (LLM + offline mock), gold-set calibration, pairwise order
 randomization, and the calibration report.

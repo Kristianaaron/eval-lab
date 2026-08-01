@@ -100,7 +100,7 @@ tasks:
 schema_version: "1.0"
 id: deepseek-v4-flash-nvfp4-vllm     # dashed id
 provider_type: openai_compatible
-endpoint: http://spark-a:8000/v1
+endpoint: http://localhost:8000/v1
 model_name: deepseek-v4-flash
 checkpoint: { source: local, path: ..., revision: null }
 quantization: { format: nvfp4, details: vendor_checkpoint }

@@ -2,7 +2,7 @@
 
 **Status:** COMPLETE  
 **Date:** 2026-07-31  
-**Host:** spark-d167 (Linux aarch64)  
+**Host:** eval-node (Linux aarch64)  
 **Scope:** Phase 0 only (spec §26). No real model calls, no Docker/tools/
 telemetry/judges/UI/benchmark imports. Stopped at the Phase 0 gate; not
 proceeding to Phase 1 automatically.
