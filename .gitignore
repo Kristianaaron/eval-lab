@@ -19,7 +19,7 @@ htmlcov/
 # Runtime data
 runs/*
 !runs/.gitkeep
-reports/
+/reports/
 
 # Frontend (dashboard/web)
 dashboard/web/node_modules/

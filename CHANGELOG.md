@@ -2,6 +2,30 @@
 
 All notable changes to eval-lab are documented here. Format: Keep a Changelog.
 
+## [0.8.0] - 2026-08-01
+
+Phase 5: suite and comparison engine.
+
+- New `eval_lab.analysis` package: weighted suite aggregation
+  (`weighted.py`), label slicing (`slices.py`), paired A/B comparison
+  (`comparison.py`), bootstrap CIs + significance (`statistics.py`,
+  `significance.py`), regression detection (`regression.py`), Pareto frontier
+  (`pareto.py`), and a pure `RunRow` data layer (`rows.py`).
+- Weighted suites: composite score recomputed from suite per-task weights;
+  raw unweighted aggregates always shown. Alternative weighting scenarios
+  (spec 8.1B) via `configs/reports/*.yaml` and `--scenario`.
+- Label slicing across domain/capability/modality/trajectory/failure-mode/
+  difficulty, weighted and raw.
+- Paired comparisons gate superiority on bootstrap CI width and sample size
+  (no over-claiming on wide intervals). Regression reports include per-task
+  deltas, pass/fail transitions and resource deltas.
+- CLI `evaluate <suite> --model`, `compare <a> <b>`, `pareto`, writing
+  Markdown suite/comparison reports to `reports/`.
+- Dashboard: new `/api/models` endpoint (active models + run-time stats) and a
+  Svelte model selector in the Runs filter + Overview card.
+- Tests: 20 new (16 analysis unit, 3 Phase 5 integration, 1 dashboard models);
+  full suite 121 passed, ruff/mypy/format clean.
+
 ## [0.7.0] - 2026-08-01
 
 Dashboard (web UI): read-only eval-results viewer.

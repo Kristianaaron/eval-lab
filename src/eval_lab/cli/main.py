@@ -10,10 +10,11 @@ import typer
 from eval_lab.adapters.base import ModelAdapter
 from eval_lab.adapters.factory import build_adapter
 from eval_lab.adapters.mock import MockModelAdapter
+from eval_lab.analysis.rows import RunRow
 from eval_lab.reports.markdown import write_run_report
 from eval_lab.runners.batch import run_batch, run_suite
 from eval_lab.runners.direct import DirectRunner, RunContext, RunResult
-from eval_lab.schemas.models import ModelConfig, SuiteSpec, TaskSpec
+from eval_lab.schemas.models import ModelConfig, SuiteSpec, TaskLabels, TaskSpec
 from eval_lab.storage.sqlite import RunStore
 from eval_lab.tasks.loader import (
     TaskLoadError,
@@ -341,6 +342,191 @@ def report_command(
     typer.echo(out.read_text(encoding="utf-8"))
 
 
+@app.command("evaluate")
+def evaluate_command(
+    suite_ref: str = typer.Argument(..., help="suite YAML path or id"),
+    model_id: str = typer.Option(..., "--model", help="model id whose runs to aggregate"),
+    tasks_dir: str = typer.Option("tasks", "--tasks-dir"),
+    runs_root: str = typer.Option("runs", "--runs-root"),
+    db: str = typer.Option("runs/runstore.db", "--db"),
+    scenario: str = typer.Option(
+        None, "--scenario", help="alternative weighting scenario (configs/reports/*.yaml)"
+    ),
+    out_dir: str = typer.Option("reports", "--out-dir"),
+    json_out: bool = typer.Option(False, "--json"),
+) -> None:
+    """Aggregate a weighted suite for one model and render a label-sliced report.
+
+    The composite is recomputed from the suite config (per-task weights) and,
+    when ``--scenario`` is given, an alternative weighting scenario. Raw
+    unweighted aggregates are always shown next to the weighted ones.
+    """
+    from eval_lab.analysis import aggregate_task_rows, build_task_rows, load_run_rows
+    from eval_lab.analysis.weighting import load_weighting_scenario, reweight_tasks
+    from eval_lab.reports.analysis import render_suite_report, write_report
+
+    suite = _resolve_suite(suite_ref, tasks_dir)
+    tasks_index = _index_tasks(tasks_dir)
+
+    def resolver(task_id: str) -> TaskLabels | None:
+        spec = tasks_index.get(task_id)
+        return spec.labels if spec else None
+
+    store = RunStore(db)
+    try:
+        rows = load_run_rows(store, model_id=model_id, label_resolver=resolver, runs_root=runs_root)
+    finally:
+        store.close()
+
+    weight_by_task = {ref.task_id: ref.weight for ref in suite.tasks}
+    suite_rows = [r for r in rows if r.task_id in weight_by_task]
+    task_rows = build_task_rows(suite_rows, weight_by_task)
+    if scenario:
+        task_rows = reweight_tasks(task_rows, load_weighting_scenario(scenario))
+    agg = aggregate_task_rows(task_rows)
+
+    markdown = render_suite_report(suite.id, agg, model_id=model_id)
+    out_path = write_report(Path(out_dir) / f"suite_{suite.id}_{model_id}.md", markdown)
+    if json_out:
+        _emit_json(
+            {
+                "suite_id": suite.id,
+                "model_id": model_id,
+                "weighted_score": agg.weighted_score,
+                "unweighted_score": agg.unweighted_score,
+                "weighted_pass_rate": agg.weighted_pass_rate,
+                "unweighted_pass_rate": agg.unweighted_pass_rate,
+                "task_count": agg.task_count,
+                "scored_tasks": agg.scored_tasks,
+                "domains": {k: s.weighted_score for k, s in agg.slice("domain").items()},
+                "report": str(out_path),
+            }
+        )
+    else:
+        typer.echo(markdown)
+        typer.echo(f"\nwrote suite report: {out_path}")
+    raise typer.Exit(code=0)
+
+
+@app.command("compare")
+def compare_command(
+    a: str = typer.Argument(..., help="base: model id or run id"),
+    b: str = typer.Argument(..., help="candidate: model id or run id"),
+    tasks_dir: str = typer.Option("tasks", "--tasks-dir"),
+    runs_root: str = typer.Option("runs", "--runs-root"),
+    db: str = typer.Option("runs/runstore.db", "--db"),
+    threshold: float = typer.Option(0.05, "--threshold", help="regression threshold"),
+    out_dir: str = typer.Option("reports", "--out-dir"),
+    json_out: bool = typer.Option(False, "--json"),
+) -> None:
+    """Pair two model configurations (or two runs) on identical tasks and report.
+
+    ``a``/``b`` are model ids (all matching runs) unless they name a single
+    stored run id. Deltas are candidate-minus-base for the base/candidate pair.
+    """
+    from eval_lab.analysis import compare_groups
+    from eval_lab.reports.analysis import render_comparison_report, write_report
+
+    store = RunStore(db)
+    try:
+        run_ids = {str(r["run_id"]) for r in store.list_runs()}
+        # Resolve args to a single run id or a model id filter.
+        a_rows = (
+            _select_rows(store, runs_root, run_id=a)
+            if a in run_ids
+            else _select_rows(store, runs_root, model_id=a)
+        )
+        b_rows = (
+            _select_rows(store, runs_root, run_id=b)
+            if b in run_ids
+            else _select_rows(store, runs_root, model_id=b)
+        )
+    finally:
+        store.close()
+
+    result = compare_groups(
+        a_rows, b_rows, base_label=a, candidate_label=b, regress_threshold=threshold
+    )
+    markdown = render_comparison_report(result)
+    out_path = write_report(Path(out_dir) / f"compare_{a}_vs_{b}.md", markdown)
+    if json_out:
+        _emit_json(
+            {
+                "base": a,
+                "candidate": b,
+                "sample_size": result.sample_size,
+                "mean_delta": result.mean_delta,
+                "median_delta": result.median_delta,
+                "ci": result.ci,
+                "wins": result.wins,
+                "ties": result.ties,
+                "losses": result.losses,
+                "regressions": [r.task_id for r in result.regressions],
+                "improvements": [r.task_id for r in result.improvements],
+                "significant": result.significant,
+                "report": str(out_path),
+            }
+        )
+    else:
+        typer.echo(markdown)
+        typer.echo(f"\nwrote comparison report: {out_path}")
+    raise typer.Exit(code=0)
+
+
+@app.command("pareto")
+def pareto_command(
+    tasks_dir: str = typer.Option("tasks", "--tasks-dir"),
+    runs_root: str = typer.Option("runs", "--runs-root"),
+    db: str = typer.Option("runs/runstore.db", "--db"),
+    json_out: bool = typer.Option(False, "--json"),
+) -> None:
+    """Compute the quality-vs-latency Pareto frontier across model configs.
+
+    One point per model: quality = mean aggregate score, latency = mean run
+    duration. Points with no duration data are dropped.
+    """
+    from eval_lab.analysis import Point, load_run_rows, pareto_frontier
+
+    store = RunStore(db)
+    try:
+        rows = load_run_rows(store, runs_root=runs_root)
+    finally:
+        store.close()
+
+    by_model: dict[str, list[float]] = {}
+    latency: dict[str, list[float]] = {}
+    for r in rows:
+        if r.score is not None and r.duration_s is not None:
+            by_model.setdefault(r.model_id, []).append(r.score)
+            latency.setdefault(r.model_id, []).append(r.duration_s)
+    points = [
+        Point(
+            label=m,
+            quality=sum(v) / len(v),
+            latency=sum(latency[m]) / len(latency[m]),
+        )
+        for m, v in by_model.items()
+        if latency.get(m)
+    ]
+    frontier = pareto_frontier(points)
+    if json_out:
+        _emit_json(
+            {
+                "all": [
+                    {"label": p.label, "quality": p.quality, "latency": p.latency} for p in points
+                ],
+                "frontier": [p.label for p in frontier],
+            }
+        )
+    else:
+        typer.echo("Pareto frontier (quality vs latency):")
+        for p in frontier:
+            typer.echo(f"  {p.label:<16} quality={p.quality:.4f}  latency={p.latency:.3f}s")
+        if not frontier:
+            typer.echo("  (no comparable points with both score and duration)")
+    raise typer.Exit(code=0)
+
+
 @app.command("list-runs")
 def list_runs_command(
     db: str = typer.Option("runs/runstore.db", "--db"),
@@ -462,6 +648,24 @@ def _result_summary(r: RunResult) -> dict[str, object]:
     d["status"] = r.status
     d["aggregate"] = r.aggregate.total if r.aggregate else None
     return d
+
+
+def _select_rows(
+    store: RunStore,
+    runs_root: str,
+    *,
+    run_id: str | None = None,
+    model_id: str | None = None,
+) -> list[RunRow]:
+    """Load analysis rows for one run id, one model, or all runs."""
+    from eval_lab.analysis import load_run_rows
+
+    rows = load_run_rows(store, runs_root=runs_root)
+    if run_id is not None:
+        return [r for r in rows if r.run_id == run_id]
+    if model_id is not None:
+        return [r for r in rows if r.model_id == model_id]
+    return rows
 
 
 # -- sampling helpers ---------------------------------------------------------

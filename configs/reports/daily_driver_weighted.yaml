@@ -1,0 +1,18 @@
+# Daily-driver weighting scenario (spec 8.1B suggested domain allocations).
+# Values are relative emphasis; the weighted mean normalizes them, so these
+# act as per-domain multipliers over the suite's per-task weights.
+schema_version: '1.0'
+id: weighting.daily_driver.001
+name: Daily-driver weighted (spec 8.1B)
+regress_threshold: 0.05
+domain_weights:
+  coding: 25
+  software_engineering: 25
+  frontend: 15
+  voxel: 15
+  agentic: 20
+  tool_calling: 20
+  reasoning: 10
+  mathematics: 10
+  long_context: 10
+  creative: 5

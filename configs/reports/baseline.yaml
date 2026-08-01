@@ -1,0 +1,6 @@
+# Baseline weighting scenario: identity (suite weights are used as-is).
+schema_version: '1.0'
+id: weighting.baseline.001
+name: Baseline (suite weights)
+regress_threshold: 0.05
+domain_weights: {}
