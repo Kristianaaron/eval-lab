@@ -118,6 +118,7 @@ class DashboardApp:
         self._register()
         self._register_models()
         self._register_platform()
+        self._register_atlas()
         self._mount_spa()
 
     # -- route registration -------------------------------------------------
@@ -299,6 +300,16 @@ class DashboardApp:
             }
 
     # Serve the built Svelte SPA last so API routes stay reachable.
+    def _register_atlas(self) -> None:
+        """Register the Atlas plugin routes (open/exchange with the Atlas engine)."""
+        try:
+            from eval_lab.plugins.atlas import register_atlas_routes
+
+            register_atlas_routes(self.app)
+        except ImportError:  # pragma: no cover - eval-lab serves without the plugin
+            pass
+
+    # -- route registration -------------------------------------------------
     def _mount_spa(self) -> None:
         dist = self.runs_root.parent / "dashboard" / "web" / "dist"
         if not dist.is_dir():

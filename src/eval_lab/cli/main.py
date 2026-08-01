@@ -585,6 +585,28 @@ def calibrate_judge(
     raise typer.Exit(code=0)
 
 
+@app.command("atlas")
+def atlas_command(
+    json_out: bool = typer.Option(False, "--json", help="machine-readable JSON"),
+) -> None:
+    """Open/exchange with the Atlas engine (model-atlas) from the eval harness."""
+    from eval_lab.plugins.atlas import check_atlas
+
+    status = check_atlas()
+    if json_out:
+        _emit_json(status)
+    else:
+        typer.echo(f"atlas dashboard: {status['url']}")
+        reachable = status.get("reachable")
+        if reachable:
+            typer.echo("reachable: yes")
+            typer.echo("open in a browser: " + status["url"])
+        else:
+            typer.echo(f"reachable: no ({status.get('error')})")
+    if not status.get("reachable"):
+        raise typer.Exit(1)
+
+
 # -- resolution helpers -------------------------------------------------------
 
 
