@@ -14,6 +14,12 @@ from typing import Any, cast
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 
+from eval_lab.schemas.model_asset import (
+    EnvBudget,
+    InspectPathRequest,
+    RegisterRequest,
+)
+from eval_lab.services.models import ModelAssetService, seed_fixtures
 from eval_lab.storage.sqlite import RunStore
 
 _RUN_FIELDS = (
@@ -78,14 +84,26 @@ def _flatten(d: dict[str, Any], prefix: str = "") -> list[tuple[str, float]]:
 class DashboardApp:
     """Factory that builds the FastAPI app bound to a runs root + sqlite index."""
 
-    def __init__(self, runs_root: str | Path, db_path: str | Path | None = None) -> None:
+    def __init__(
+        self,
+        runs_root: str | Path,
+        db_path: str | Path | None = None,
+        models_root: str | Path | None = None,
+    ) -> None:
         if FastAPI is None:
             raise RuntimeError("dashboard requires the 'serve' extra: uv pip install -e '.[serve]'")
         self.runs_root = Path(runs_root)
         self.db_path = Path(db_path) if db_path is not None else self.runs_root / "runstore.db"
+        self.models_root = (
+            Path(models_root) if models_root is not None else self.runs_root.parent / "models"
+        )
         self.app = FastAPI(title="eval-lab dashboard", version="1.0.0")
         self._store = RunStore(self.db_path)
+        self._models = ModelAssetService(self.models_root)
+        self._budget = EnvBudget()
         self._register()
+        self._register_models()
+        self._mount_spa()
 
     # -- route registration -------------------------------------------------
     def _register(self) -> None:
@@ -265,14 +283,84 @@ class DashboardApp:
                 "series": series,
             }
 
-        # Optionally serve a built Svelte SPA if present.
+    # Serve the built Svelte SPA last so API routes stay reachable.
+    def _mount_spa(self) -> None:
         dist = self.runs_root.parent / "dashboard" / "web" / "dist"
         if not dist.is_dir():
             # Fall back to a repo-relative path when runs_root is custom.
             dist = Path(__file__).resolve().parents[3] / "dashboard" / "web" / "dist"
         if dist.is_dir():  # pragma: no cover - depends on frontend build presence
-            app.mount("/", StaticFiles(directory=str(dist), html=True), name="spa")
+            self.app.mount("/", StaticFiles(directory=str(dist), html=True), name="spa")
+
+    # -- model-asset routes (Milestone 1: registry + inspection + eligibility) ----
+    def _register_models(self) -> None:
+        app = self.app
+        models = self._models
+
+        @app.get("/api/models-assets")
+        def list_model_assets() -> list[dict[str, Any]]:
+            return [a.model_dump(mode="json") for a in models.list_model_assets()]
+
+        @app.get("/api/models-assets/{asset_id}")
+        def get_model_asset(asset_id: str) -> dict[str, Any]:
+            asset = models.get_model_asset(asset_id)
+            if asset is None:
+                raise HTTPException(status_code=404, detail=f"model asset not found: {asset_id}")
+            el = models.eligibility(asset, self._budget)
+            return {"record": asset.model_dump(mode="json"), "actions": el.model_dump(mode="json")}
+
+        @app.post("/api/models-assets/inspect")
+        def inspect_path(req: InspectPathRequest) -> dict[str, Any]:
+            from eval_lab.inspection.checkpoint import inspect_checkpoint
+
+            inspection = inspect_checkpoint(req.path, memory_gb=req.memory_gb)
+            return {
+                "inspection": inspection.model_dump(mode="json"),
+                "recommend_atlas": inspection.atlas_compatible,
+            }
+
+        @app.post("/api/models-assets")
+        def register_asset(req: RegisterRequest) -> dict[str, Any]:
+            record, inspection = models.register_local_checkpoint(
+                req.path,
+                name=req.name,
+                asset_id=req.asset_id,
+                memory_gb=req.memory_gb,
+            )
+            actions = models.eligibility(record, self._budget)
+            return {
+                "record": record.model_dump(mode="json"),
+                "inspection": inspection.model_dump(mode="json"),
+                "actions": actions.model_dump(mode="json"),
+            }
+
+        @app.get("/api/models-assets/{asset_id}/actions")
+        def asset_actions(asset_id: str) -> dict[str, Any]:
+            asset = models.get_model_asset(asset_id)
+            if asset is None:
+                raise HTTPException(status_code=404, detail=f"model asset not found: {asset_id}")
+            return models.eligibility(asset, self._budget).model_dump(mode="json")
+
+        @app.delete("/api/models-assets/{asset_id}")
+        def delete_asset(asset_id: str) -> dict[str, Any]:
+            if not models.delete_model_asset(asset_id):
+                raise HTTPException(status_code=404, detail=f"model asset not found: {asset_id}")
+            return {"deleted": asset_id}
+
+        @app.post("/api/models-assets/fixtures")
+        def reseed_fixtures() -> dict[str, Any]:
+            records = seed_fixtures(self.models_root)
+            return {"seeded": [r.asset_id for r in records]}
 
 
-def create_app(runs_root: str | Path, db_path: str | Path | None = None) -> FastAPI:
-    return DashboardApp(runs_root, db_path).app
+def create_app(
+    runs_root: str | Path,
+    db_path: str | Path | None = None,
+    models_root: str | Path | None = None,
+) -> FastAPI:
+    app = DashboardApp(runs_root, db_path, models_root)
+    # Seed synthetic fixtures on first startup so the GUI reflects real assets;
+    # idempotent and harmless (no full-model loads, Milestone 1).
+    if not app._models.list_model_assets():
+        seed_fixtures(app.models_root)
+    return app.app

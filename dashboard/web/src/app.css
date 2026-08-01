@@ -75,3 +75,47 @@ select, input {
 .mut { color: var(--muted); }
 .right { text-align: right; }
 button.link { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 14px; padding: 0; }
+
+/* ---- eval-harness GUI (Milestone 1) ---- */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+.btn {
+  display: inline-block;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.btn:hover { text-decoration: none; border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn.small { padding: 4px 9px; font-size: 13px; }
+.btn.danger { color: var(--red); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ok { color: var(--green); }
+.warn { color: var(--amber); }
+.error { color: var(--red); }
+
+.model-card .mc-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.model-card .mc-name { font-weight: 700; font-size: 15px; }
+.model-card .mc-type { font-size: 13px; margin: 2px 0 8px; }
+.model-card .mc-meta { font-size: 13px; display: grid; gap: 3px; }
+.model-card .mc-warn { font-size: 12px; margin-top: 8px; color: var(--amber); }
+.model-card .mc-actions { display: flex; gap: 6px; margin-top: 12px; }
+.badge.type { background: rgba(143,147,163,0.15); color: var(--muted); }
+
+.act-row { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.act-row:last-child { border-bottom: none; }
+.act-name { font-weight: 600; }
+.act-name.enabled { color: var(--accent); }
+.act-name.disabled { color: var(--muted); cursor: not-allowed; }
+.act-reason { font-size: 13px; margin: 0; }
+
+label { display: block; margin: 10px 0; color: var(--muted); font-size: 13px; gap: 6px; }
+label input { display: block; width: 100%; margin-top: 4px; }
+.card h3 { margin-top: 0; }
+.card h4 { margin-bottom: 6px; }
+
+.notice { border-left: 3px solid var(--accent); }

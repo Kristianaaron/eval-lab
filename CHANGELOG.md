@@ -2,6 +2,36 @@
 
 All notable changes to eval-lab are documented here. Format: Keep a Changelog.
 
+## [0.9.0] - 2026-08-01
+
+Eval-harness GUI — Milestone 1: model assets, inspection, action eligibility.
+
+- Typed model-asset schemas (`schemas/model_asset.py`): `ModelAssetRecord`,
+  `CheckpointInspection`, `ActionEligibility`, `EnvBudget` + request/result DTOs.
+- Typed application service layer (`services/models.py`): `ModelAssetService`
+  and a pure `resolve_available_actions(asset, budget)` eligibility engine that
+  keeps business rules out of view components (spec 3.4).
+- Lightweight checkpoint inspection (`inspection/checkpoint.py`): reads
+  config + SafeTensors headers only (no tensor payloads); detects
+  type/architecture/layers/routed experts/top-k/quantization, sizes, params,
+  resident estimate, atlas compatibility and runnability. Oversized source
+  checkpoints (e.g. Kimi K3) are classified atlas-compatible but not directly
+  evaluable — with an explanatory reason (spec 3.3/14.1).
+- Persistent model-asset registry (`storage/model_assets.py`, JSON files under
+  `models/`) surviving restarts; idempotent synthetic fixtures seeded on first
+  start (K3 source, DeepSeek V4 Flash, Qwen 2B, a derivative) — no full-model
+  loads in CI.
+- API: `/api/models-assets` CRUD, `/{id}/actions`, `/inspect`, `/fixtures`.
+  Model routes registered before the SPA mount so the catch-all no longer
+  shadows them.
+- Svelte 5 GUI: 6-area navigation shell, Models list, Model detail with
+  action-eligibility panel, Register-local-checkpoint wizard (inspect then
+  register), operational Overview. Evaluation/Atlas/Experiments/Comparisons
+  show Milestone-N placeholders. Existing run table/detail retained under
+  Evaluation.
+- Tests: 17 new (10 unit + 7 integration); full suite 138 passed, ruff/mypy/
+  format clean. Docs: `docs/gui-milestone-1.md` (repo-context + evidence).
+
 ## [0.8.0] - 2026-08-01
 
 Phase 5: suite and comparison engine.

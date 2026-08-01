@@ -56,12 +56,9 @@ def render_suite_report(suite_id: str, agg: SuiteAggregate, *, model_id: str | N
 
 def render_comparison_report(result: ComparisonResult) -> str:
     lines: list[str] = []
+    lines.append(f"# Comparison Report: `{result.base_label}` vs `{result.candidate_label}`\n")
     lines.append(
-        f"# Comparison Report: `{result.base_label}` vs `{result.candidate_label}`\n"
-    )
-    lines.append(
-        f"- Systems compared: base=`{result.base_label}`, "
-        f"candidate=`{result.candidate_label}`"
+        f"- Systems compared: base=`{result.base_label}`, candidate=`{result.candidate_label}`"
     )
     lines.append(f"- Matched tasks (sample size): {result.sample_size}")
     lines.append(f"- Mean paired delta (candidate - base): **{_fmt(result.mean_delta)}**")
