@@ -11,8 +11,10 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
+import yaml
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from eval_lab.schemas.evaluation import EvaluationConfig
 from eval_lab.schemas.model_asset import (
@@ -20,11 +22,74 @@ from eval_lab.schemas.model_asset import (
     InspectPathRequest,
     RegisterRequest,
 )
+from eval_lab.schemas.models import TaskSpec
 from eval_lab.services.comparisons import ComparisonService
 from eval_lab.services.environment import environment_status
 from eval_lab.services.evaluations import EvaluationService
 from eval_lab.services.models import ModelAssetService, seed_fixtures
 from eval_lab.storage.sqlite import RunStore
+from eval_lab.tasks.loader import TaskLoadError, load_task_yaml
+
+
+class SuiteCreate(BaseModel):
+    name: str
+    domains: list[str]
+
+
+_SLUG_KEEP = frozenset("abcdefghijklmnopqrstuvwxyz0123456789_-")
+
+
+def _task_index(tasks_dir: str = "tasks") -> dict[str, TaskSpec]:
+    index: dict[str, TaskSpec] = {}
+    for p in Path(tasks_dir).rglob("*.yaml"):
+        try:
+            t = load_task_yaml(p)
+        except TaskLoadError:
+            continue
+        index[t.id] = t
+    return index
+
+
+def _available_domains() -> list[str]:
+    doms: set[str] = set()
+    for t in _task_index().values():
+        doms.update(t.labels.domains)
+    return sorted(doms)
+
+
+def _slug(name: str) -> str:
+    out = "".join(c if c in _SLUG_KEEP else "-" for c in name.lower()).strip("-")
+    return out or "suite"
+
+
+def build_suite_from_domains(
+    name: str, domains: list[str], tasks_dir: str = "tasks"
+) -> tuple[str, int]:
+    """Write a suite YAML containing tasks whose labels overlap the domains.
+
+    Returns (suite_ref, task_count). Domain list is a union filter, so adding
+    domains later is just adding to the picker and this keeps scaling.
+    """
+    wanted = set(domains)
+    tasks_by_id = _task_index(tasks_dir)
+    selected = sorted(
+        (t for t in tasks_by_id.values() if set(t.labels.domains) & wanted),
+        key=lambda t: t.id,
+    )
+    slug = _slug(name)
+    payload = {
+        "schema_version": "1.0",
+        "id": f"suite.user.{slug}.001",
+        "name": name,
+        "description": f"User suite from domains: {', '.join(sorted(wanted))}",
+        "version": 1,
+        "family": "user",
+        "tasks": [{"task_id": t.id, "weight": 1.0} for t in selected],
+    }
+    out = Path("configs/suites") / f"{slug}.yaml"
+    out.write_text(yaml.safe_dump(payload, sort_keys=False))
+    return str(out), len(selected)
+
 
 _RUN_FIELDS = (
     "run_id",
@@ -455,10 +520,21 @@ class DashboardApp:
             return {
                 "models": models,
                 "suites": suites,
+                "domains": _available_domains(),
                 "harnesses": [
                     {"harness_id": "direct", "name": "Direct (model-level)"},
                     {"harness_id": "agent-react", "name": "Agent (react + tools)"},
                 ],
+            }
+
+        @app.post("/api/suites")
+        def create_suite(payload: SuiteCreate) -> dict[str, Any]:
+            suite_ref, count = build_suite_from_domains(payload.name, payload.domains)
+            return {
+                "suite_ref": suite_ref,
+                "name": payload.name,
+                "task_count": count,
+                "domains": sorted(payload.domains),
             }
 
         @app.post("/api/eval-jobs")

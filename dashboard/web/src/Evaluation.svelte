@@ -10,6 +10,8 @@
   let error = $state(null);
   let model = $state("");
   let suite = $state("");
+  let suiteName = $state("");
+  let selected = $state([]); // chosen domains
   let harness = $state("direct");
   let repeat = $state(1);
   let cold = $state(false);
@@ -32,14 +34,50 @@
     } catch {}
   }
 
+  function toggleDomain(d) {
+    selected = selected.includes(d) ? selected.filter((x) => x !== d) : [...selected, d];
+  }
+
+  async function saveSuite() {
+    error = null;
+    if (!selected.length) {
+      error = "Pick at least one domain first.";
+      return;
+    }
+    try {
+      const created = await post("/api/suites", {
+        name: suiteName.trim() || "User suite",
+        domains: selected,
+      });
+      suite = created.suite_ref;
+      suiteName = "";
+      await loadCfg();
+      suite = created.suite_ref;
+    } catch (e) {
+      error = String(e);
+    }
+  }
+
+  async function ensureSuite() {
+    // Reuse the chosen saved suite, or build an ephemeral one from the selection.
+    if (suite) return suite;
+    const created = await post("/api/suites", {
+      name: suiteName.trim() || "Ad-hoc eval",
+      domains: selected,
+    });
+    suite = created.suite_ref;
+    return suite;
+  }
+
   async function launch() {
     error = null;
     try {
+      const ref = await ensureSuite();
       launchedJob = await post("/api/eval-jobs", {
         model_asset_id: model,
         model_id: model,
         harness_id: harness,
-        suite_ref: suite,
+        suite_ref: ref,
         repeat_count: Number(repeat),
         cold_start: cold,
         runs_root: "runs",
@@ -70,8 +108,9 @@
   <EvalJobDetail jobId={jobId} />
 {:else}
   <p class="mut">
-    What can this runnable model or agent configuration do? Model and harness
-    identity are recorded separately in each run manifest.
+    Configure a run: choose a registered model, pick the domains you want, and either run
+    the instantiated selection or save it as a reusable suite. The panel on the right
+    previews your selection and launches the eval.
   </p>
 
   {#if error}
@@ -85,9 +124,10 @@
     </div>
   {/if}
 
-  <div class="grid cols-2">
+  <div class="grid cols-2" style="align-items:start">
+    <!-- left: configuration -->
     <div class="card">
-      <h3>1 · Configuration</h3>
+      <h3>Configuration</h3>
       {#if cfg}
         <label>
           Model
@@ -97,14 +137,40 @@
             {/each}
           </select>
         </label>
+
+        <div style="margin:12px 0">
+          <div class="k" style="margin-bottom:6px">Domains</div>
+          <div class="chips">
+            {#each cfg.domains ?? [] as d (d)}
+              <button
+                type="button"
+                class:chip class:on={selected.includes(d)}
+                on:click={() => toggleDomain(d)}
+              >
+                {d}
+              </button>
+            {/each}
+          </div>
+          <p class="mut" style="font-size:12px;margin:6px 0 0">
+            Pick domains; the right panel builds rows for the selected domains.
+          </p>
+        </div>
+
         <label>
-          Suite
+          Save selection as suite
+          <input bind:value={suiteName} placeholder="Suite name (optional)" />
+        </label>
+        <button class="btn" on:click={saveSuite}>Save suite</button>
+
+        <label>
+          Or reuse a saved suite
           <select bind:value={suite}>
             {#each cfg.suites as s (s.suite_ref)}
               <option value={s.suite_ref}>{s.name} — {s.task_count} task(s)</option>
             {/each}
           </select>
         </label>
+
         <label>
           Harness
           <select bind:value={harness}>
@@ -118,31 +184,47 @@
           <input type="number" min="1" bind:value={repeat} />
         </label>
         <label><input type="checkbox" bind:checked={cold} /> Cold start</label>
-        <div class="toolbar" style="margin-top:12px">
-          <button class="btn primary" onclick={launch}>Launch evaluation</button>
-        </div>
       {:else}
-        <div class="mut">Loading configuration…</div>
+        <p class="mut">Loading configuration…</p>
       {/if}
     </div>
 
-    <div class="card">
-      <h3>2 · Recent evaluation jobs</h3>
-      <table>
-        <thead><tr><th>Job</th><th>State</th><th class="right">Progress</th></tr></thead>
+    <!-- right: run panel -->
+    <div class="card run-panel">
+      <button class="btn primary run-cta" on:click={launch}>
+        {selected.length ? `Run new eval (${selected.length} domain${selected.length === 1 ? "" : "s"})` : "Run new eval"}
+      </button>
+
+      <table style="margin-top:14px">
+        <thead>
+          <tr><th>Domain</th><th>Tasks</th><th>Weight</th><th>Status</th></tr>
+        </thead>
         <tbody>
-          {#each recent as j (j.job_id)}
+          {#each selected as d (d)}
+            <tr><td>{d}</td><td></td><td></td><td></td></tr>
+          {:else}
             <tr>
-              <td class="mono"><a href="#/evaluation/job/{j.job_id}">{j.job_id}</a></td>
-              <td><span class="badge {jobCls(j.state)}">{j.state}</span></td>
-              <td class="right">
-                {j.progress.done}{j.progress.total != null ? ` / ${j.progress.total}` : ""}
-              </td>
+              <td colspan="4" class="mut">No domains selected — pick domains on the left to build this preview.</td>
             </tr>
           {/each}
         </tbody>
       </table>
-      {#if !recent.length}<p class="mut">No evaluation jobs yet.</p>{/if}
+
+      {#if recent.length}
+        <h4 style="margin-top:18px">Recent jobs</h4>
+        <table>
+          <thead><tr><th>Job</th><th>Model</th><th>State</th></tr></thead>
+          <tbody>
+            {#each recent.slice(0, 8) as j (j.job_id)}
+              <tr>
+                <td><a href="#/evaluation/job/{j.job_id}">{j.job_id}</a></td>
+                <td class="mut">{j.model_id}</td>
+                <td class="{jobCls(j.state)}">{j.state}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      {/if}
     </div>
   </div>
 {/if}

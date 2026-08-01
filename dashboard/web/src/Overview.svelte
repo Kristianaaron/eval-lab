@@ -39,35 +39,28 @@
   </div>
 </div>
 
-<div class="grid cols-2" style="margin-bottom:16px">
-  <div class="card">
-    <h3>Shortcuts</h3>
-    <div class="act-row"><a class="act-name enabled" href="#/models/register">Register model</a></div>
-    <div class="act-row"><a class="act-name enabled" href="#/evaluation">Run evaluation</a></div>
-    <div class="act-row"><a class="act-name enabled" href="#/atlas">Build atlas</a></div>
-    <div class="act-row"><a class="act-name enabled" href="#/experiments">Create experiment</a></div>
-    <div class="act-row"><a class="act-name enabled" href="#/comparisons">Compare models</a></div>
-    <div class="act-row"><a class="act-name enabled" href="#/jobs">Monitor jobs</a></div>
-  </div>
+<div class="card run-tile" style="margin-bottom:16px">
+  <a class="run-title" href="#/evaluation" style="display:block">Run a new eval</a>
+  <p class="mut" style="margin:6px 0 0">Choose a registered model, pick the domains you want, then launch or save the selection as a suite.</p>
+</div>
 
-  <div class="card">
-    <h3>Hardware / environment</h3>
-    <table>
-      <tbody>
-        <tr><td class="mut">Software</td><td class="mono">{env?.software_version ?? "—"}</td></tr>
-        <tr><td class="mut">Nodes</td><td>{env?.nodes ?? "—"} × DGX Spark</td></tr>
-        <tr><td class="mut">Unified memory (target)</td><td>{env?.unified_memory_gb ?? "—"} GB</td></tr>
-        <tr><td class="mut">NVMe available</td><td>{env?.nvme_available_bytes != null ? fmtBytes(env.nvme_available_bytes) : "—"}</td></tr>
-        <tr><td class="mut">GPU present</td><td>{env?.gpu_present == null ? "—" : env.gpu_present ? "yes" : "no"}</td></tr>
-        {#if error}
-          <tr><td class="mut">API status</td><td class="error">{error}</td></tr>
-        {:else}
-          <tr><td class="mut">API status</td><td><span class="ok">ok</span></td></tr>
-        {/if}
-      </tbody>
-    </table>
-    <p class="mut" style="margin-top:8px">Operational view — model, job and hardware state, not decorative analytics.</p>
-  </div>
+<div class="card">
+  <h3>Hardware / environment</h3>
+  <table>
+    <tbody>
+      <tr><td class="mut">Software</td><td class="mono">{env?.software_version ?? "—"}</td></tr>
+      <tr><td class="mut">Nodes</td><td>{env?.nodes ?? "—"} × DGX Spark</td></tr>
+      <tr><td class="mut">Unified memory (target)</td><td>{env?.unified_memory_gb ?? "—"} GB</td></tr>
+      <tr><td class="mut">NVMe available</td><td>{env?.nvme_available_bytes != null ? fmtBytes(env.nvme_available_bytes) : "—"}</td></tr>
+      <tr><td class="mut">GPU present</td><td>{env?.gpu_present == null ? "—" : env.gpu_present ? "yes" : "no"}</td></tr>
+      {#if error}
+        <tr><td class="mut">API status</td><td class="error">{error}</td></tr>
+      {:else}
+        <tr><td class="mut">API status</td><td><span class="ok">ok</span></td></tr>
+      {/if}
+    </tbody>
+  </table>
+  <p class="mut" style="margin-top:8px">Operational view — model, job and hardware state, not decorative analytics.</p>
 </div>
 
 {#if assets.length}

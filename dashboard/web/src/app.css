@@ -114,6 +114,31 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: upp
 .badge.fail { background: rgba(248, 113, 113, 0.15); color: var(--red); }
 .badge.error { background: rgba(251, 191, 36, 0.15); color: var(--amber); }
 
+/* domain picker chips */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  background: var(--panel-2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.chip:hover { border-color: var(--accent); }
+.chip.on { background: rgba(79, 140, 255, 0.18); color: var(--accent); border-color: var(--accent); }
+.k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* eval run panel + cta */
+.run-panel { display: flex; flex-direction: column; }
+.run-cta { font-size: 15px; padding: 12px 16px; }
+
+/* overview run tile */
+.run-tile { display: block; text-decoration: none; }
+.run-tile:hover { border-color: var(--accent); text-decoration: none; }
+.run-title { font-size: 24px; font-weight: 700; color: var(--text); font-family: "JetBrains Mono", ui-monospace, monospace; }
+
 .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 select, input {
   background: var(--panel-2);
