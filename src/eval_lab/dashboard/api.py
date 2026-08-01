@@ -14,11 +14,15 @@ from typing import Any, cast
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 
+from eval_lab.schemas.evaluation import EvaluationConfig
 from eval_lab.schemas.model_asset import (
     EnvBudget,
     InspectPathRequest,
     RegisterRequest,
 )
+from eval_lab.services.comparisons import ComparisonService
+from eval_lab.services.environment import environment_status
+from eval_lab.services.evaluations import EvaluationService
 from eval_lab.services.models import ModelAssetService, seed_fixtures
 from eval_lab.storage.sqlite import RunStore
 
@@ -101,8 +105,19 @@ class DashboardApp:
         self._store = RunStore(self.db_path)
         self._models = ModelAssetService(self.models_root)
         self._budget = EnvBudget()
+        self._evaluations = EvaluationService(
+            self.runs_root.parent / "jobs",
+            runs_root=self.runs_root,
+            db=self.db_path,
+            tasks_dir="tasks",
+            suites_dir="configs/suites",
+        )
+        self._comparisons = ComparisonService(
+            runs_root=self.runs_root, db=self.db_path, tasks_dir="tasks"
+        )
         self._register()
         self._register_models()
+        self._register_platform()
         self._mount_spa()
 
     # -- route registration -------------------------------------------------
@@ -351,6 +366,146 @@ class DashboardApp:
         def reseed_fixtures() -> dict[str, Any]:
             records = seed_fixtures(self.models_root)
             return {"seeded": [r.asset_id for r in records]}
+
+    # -- platform routes (corrections + Milestone 2) ---------------------------
+    def _register_platform(self) -> None:
+        from pathlib import Path
+
+        from eval_lab.tasks.loader import load_suite_yaml
+
+        app = self.app
+        eval_svc = self._evaluations
+        orchestrator = eval_svc.orchestrator
+
+        @app.get("/api/environment")
+        def get_environment() -> dict[str, Any]:
+            env = environment_status()
+            return {
+                "software_version": env.software_version,
+                "nodes": env.nodes,
+                "unified_memory_gb": env.unified_memory_gb,
+                "reserved_system_gb": env.reserved_system_gb,
+                "nvme_available_bytes": env.nvme_available_bytes,
+                "gpu_present": env.gpu_present,
+            }
+
+        # -- generic job endpoints (any kind) --------------------------------
+        @app.get("/api/jobs")
+        def list_jobs(kind: str | None = None) -> list[dict[str, Any]]:
+            jobs = orchestrator.list(kind=kind)
+            return [j.model_dump(mode="json") for j in jobs]
+
+        @app.get("/api/jobs/{job_id}")
+        def get_job(job_id: str) -> dict[str, Any]:
+            job = orchestrator.get(job_id)
+            if job is None:
+                raise HTTPException(status_code=404, detail=f"job not found: {job_id}")
+            return job.model_dump(mode="json")
+
+        @app.post("/api/jobs/{job_id}/cancel")
+        def cancel_job(job_id: str) -> dict[str, Any]:
+            job = orchestrator.cancel(job_id)
+            if job is None:
+                raise HTTPException(status_code=404, detail=f"job not found: {job_id}")
+            return job.model_dump(mode="json")
+
+        # -- evaluation launch/monitor (Milestone 2) -------------------------
+        @app.get("/api/eval-config")
+        def eval_config() -> dict[str, Any]:
+            runnable = [
+                {"asset_id": a.asset_id, "name": a.name, "model_id": a.asset_id}
+                for a in self._models.list_model_assets()
+                if a.runnable
+            ]
+            models = [
+                {
+                    "asset_id": "mock-deterministic",
+                    "name": "Mock (deterministic)",
+                    "model_id": "mock",
+                },
+                *runnable,
+            ]
+            suites: list[dict[str, Any]] = []
+            suites_dir = Path("configs/suites")
+            for p in sorted(suites_dir.glob("*.yaml")):
+                try:
+                    s = load_suite_yaml(p)
+                except Exception:
+                    continue
+                suites.append(
+                    {
+                        "suite_ref": str(p),
+                        "id": s.id,
+                        "name": s.name,
+                        "family": s.family,
+                        "task_count": len(s.tasks),
+                    }
+                )
+            return {
+                "models": models,
+                "suites": suites,
+                "harnesses": [
+                    {"harness_id": "direct", "name": "Direct (model-level)"},
+                    {"harness_id": "agent-react", "name": "Agent (react + tools)"},
+                ],
+            }
+
+        @app.post("/api/eval-jobs")
+        def create_eval_job(cfg: EvaluationConfig) -> dict[str, Any]:
+            job = eval_svc.launch(cfg, name=f"evaluate {cfg.model_id}")
+            return job.model_dump(mode="json")
+
+        @app.get("/api/eval-jobs")
+        def list_eval_jobs() -> list[dict[str, Any]]:
+            return [j.model_dump(mode="json") for j in eval_svc.list()]
+
+        @app.get("/api/eval-jobs/{job_id}")
+        def get_eval_job(job_id: str) -> dict[str, Any]:
+            job = eval_svc.get(job_id)
+            if job is None:
+                raise HTTPException(status_code=404, detail=f"eval job not found: {job_id}")
+            return job.model_dump(mode="json")
+
+        @app.post("/api/eval-jobs/{job_id}/cancel")
+        def cancel_eval_job(job_id: str) -> dict[str, Any]:
+            job = eval_svc.cancel(job_id)
+            if job is None:
+                raise HTTPException(status_code=404, detail=f"eval job not found: {job_id}")
+            return job.model_dump(mode="json")
+
+        # -- comparisons (Phase 5 engine via typed service) ------------------
+        @app.get("/api/comparisons/compare")
+        def compare_models(base: str, candidate: str, threshold: float = 0.05) -> dict[str, Any]:
+            result = self._comparisons.compare(base, candidate, regress_threshold=threshold)
+            return {
+                **result.__dict__,
+                "regressions": [r.task_id for r in result.regressions],
+                "improvements": [r.task_id for r in result.improvements],
+            }
+
+        @app.get("/api/comparisons/slices")
+        def comparison_slices(model: str, axis: str = "domain") -> dict[str, Any]:
+            slices = self._comparisons.label_slices(model, axis=axis)
+            return {
+                "axis": axis,
+                "model": model,
+                "slices": {
+                    k: {
+                        "label": s.label,
+                        "task_count": s.task_count,
+                        "weighted_score": s.weighted_score,
+                        "unweighted_score": s.unweighted_score,
+                    }
+                    for k, s in slices.items()
+                },
+            }
+
+        @app.get("/api/comparisons/pareto")
+        def comparison_pareto() -> list[dict[str, Any]]:
+            return [
+                {"label": p.label, "quality": p.quality, "latency": p.latency, "memory": p.memory}
+                for p in self._comparisons.pareto()
+            ]
 
 
 def create_app(

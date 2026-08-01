@@ -8,18 +8,20 @@
   import AtlasLab from "./AtlasLab.svelte";
   import Experiments from "./Experiments.svelte";
   import Comparisons from "./Comparisons.svelte";
+  import Jobs from "./Jobs.svelte";
 
   function parse(hash) {
     const h = (hash || "").replace(/^#/, "");
     if (h === "/models") return { name: "models" };
     if (h === "/models/register") return { name: "register" };
     if (h.startsWith("/model/")) return { name: "model", id: h.slice("/model/".length) };
+    if (h.startsWith("/evaluation/run/")) return { name: "evaluation", runId: h.slice("/evaluation/run/".length) };
+    if (h.startsWith("/evaluation/job/")) return { name: "evaluation", jobId: h.slice("/evaluation/job/".length) };
     if (h === "/evaluation") return { name: "evaluation" };
-    if (h === "/evaluation/run" || h.startsWith("/evaluation/run/"))
-      return { name: "run", id: h.slice("/evaluation/run/".length) };
     if (h === "/atlas") return { name: "atlas" };
     if (h === "/experiments") return { name: "experiments" };
     if (h === "/comparisons") return { name: "comparisons" };
+    if (h === "/jobs") return { name: "jobs" };
     return { name: "overview" };
   }
 
@@ -41,6 +43,7 @@
     { key: "atlas", label: "Atlas Lab", href: "#/atlas" },
     { key: "experiments", label: "Experiments", href: "#/experiments" },
     { key: "comparisons", label: "Comparisons", href: "#/comparisons" },
+    { key: "jobs", label: "Jobs", href: "#/jobs" },
   ];
 </script>
 
@@ -67,12 +70,16 @@
   {:else if route.name === "model"}
     <ModelDetail assetId={route.id} />
   {:else if route.name === "evaluation"}
-    <Evaluation runId={route.name === "run" ? route.id : null} />
+    <Evaluation runId={route.runId} jobId={route.jobId} />
   {:else if route.name === "atlas"}
     <AtlasLab />
   {:else if route.name === "experiments"}
     <Experiments />
-  {:else}
+  {:else if route.name === "comparisons"}
     <Comparisons />
+  {:else if route.name === "jobs"}
+    <Jobs />
+  {:else}
+    <Overview />
   {/if}
 </main>

@@ -122,6 +122,11 @@ class TaskSpec(EvalBase):
     status: Status = Status.active
 
     labels: TaskLabels = Field(default_factory=TaskLabels)
+    # Spec 4: tasks are partitioned so atlas-calibration data is never reused as
+    # held-out evaluation evidence. "unset" means no partition assigned yet.
+    data_partition: Literal[
+        "atlas_calibration", "development_evaluation", "held_out_evaluation", "unset"
+    ] = "unset"
     input: InputSpec
     execution: ExecutionSpec = Field(default_factory=ExecutionSpec)
     oracle: list[ScorerRef] = Field(default_factory=list)

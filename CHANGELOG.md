@@ -2,6 +2,37 @@
 
 All notable changes to eval-lab are documented here. Format: Keep a Changelog.
 
+## [0.10.0] - 2026-08-01
+
+Architecture corrections (validation report) + Milestone 2: evaluation launch & monitoring.
+
+Corrections:
+- **Job orchestrator** (`schemas/job.py`, `storage/jobs.py`, `services/orchestrator.py`):
+  one persisted, restart-safe state machine for every long-running operation;
+  background workers, real progress/stage, safe-boundary cancellation, and
+  restore-on-restart (orphaned active jobs flagged `failed_recoverable`).
+- **Task `data_partition`** (`atlas_calibration`/`development_evaluation`/
+  `held_out_evaluation`/`unset`) + leakage guard (`services/leakage.py`)
+  so calibration data is never silently reused as held-out evidence.
+- **Reserved atlas schemas** (`schemas/atlas.py`): evidence levels, the
+  measured/estimated/predicted/inferred/causally-tested distinction, and
+  stable source↔derivative expert identity.
+- **Typed services**: `EvaluationService` (launch/monitor/cancel), `ComparisonService`
+  (wraps the Phase 5 analysis engine), `EnvironmentService`; GUI no longer
+  hard-codes hardware facts (served via `/api/environment`).
+- **API**: `/api/environment`, `/api/jobs` (+cancel), `/api/eval-config`,
+  `/api/eval-jobs` (create/status/cancel), `/api/comparisons/{compare,slices,pareto}`.
+
+Milestone 2 (exit gate: existing harness launched from GUI, auditable runs,
+correct interrupted state):
+- GUI **Evaluation** area: configuration wizard (model/suite/harness/repeat/
+  cold), live job monitor with real task progress + stage, cancel-at-boundary,
+  results page (per-run links), and leakage warning.
+- GUI **Jobs** area lists every job with persistent state; Overview source hardware
+  facts from the environment service and shows active/failed counts.
+- Tests: +11 (job state machine, restore-on-restart, leakage, platform API);
+  full suite 149 passed, ruff/mypy/format clean.
+
 ## [0.9.0] - 2026-08-01
 
 Eval-harness GUI — Milestone 1: model assets, inspection, action eligibility.

@@ -1,0 +1,46 @@
+{
+  "job_id": "evaluation-869c3a1f8c",
+  "kind": "evaluation",
+  "name": "evaluate mock",
+  "config": {
+    "model_asset_id": "mock-deterministic",
+    "model_id": "mock",
+    "harness_id": "direct",
+    "suite_ref": "configs/suites/smoke_direct.yaml",
+    "label_filters": [],
+    "repeat_count": 1,
+    "cold_start": false,
+    "sampling": {},
+    "telemetry_interval_s": null,
+    "runs_root": "runs"
+  },
+  "state": "completed",
+  "current_stage": "generating_report",
+  "progress": {
+    "total": 5,
+    "done": 5,
+    "detail": "reasoning.exists_statement.001"
+  },
+  "error": null,
+  "interrupted": false,
+  "cancel_requested": false,
+  "result": {
+    "run_ids": [
+      "2c70d361e424",
+      "ac56f0a7d147",
+      "7e3c067e2392",
+      "5c3b67fe6794",
+      "7d30256e9218"
+    ],
+    "artifact_paths": [],
+    "report_path": null,
+    "extra": {
+      "leakage_overlap": [],
+      "leakage_blocked": false
+    }
+  },
+  "created_at": "2026-08-01T02:39:33.816223Z",
+  "started_at": "2026-08-01T02:39:33.817146Z",
+  "updated_at": "2026-08-01T02:39:33.938483Z",
+  "finished_at": "2026-08-01T02:39:33.938479Z"
+}
