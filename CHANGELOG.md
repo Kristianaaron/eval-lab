@@ -2,6 +2,28 @@
 
 All notable changes to eval-lab are documented here. Format: Keep a Changelog.
 
+## [0.12.0] - 2026-08-04
+
+Atlas head/expert dissection: unit identity, keep-maps, and a micro-suite.
+
+- **Intervention vocab** (`config/labels.py`): added `attention_head_pruning`
+  (aliases `head-dropout`/`head-prune`) so a head-level cut is a first-class,
+  validated, sliceable label alongside the existing `expert_pruning`.
+- **Unit identity** (`schemas/atlas.py`): generalized the trace/keep identity to
+  `UnitIdentity` with an explicit `unit_kind` (`expert`|`head`), so a kept head
+  in a derivative always traces to the source head by stable id (top-4 vs top-8
+  never renumber into each other). `AtlasTraceField.unit` now carries it.
+- **Keep-map shape**: per-layer `UnitKeepMap` + `KeepMapEntry` (kept flag, `top_k`,
+  measured saliency, signal, rank) — the auditable, per-unit artifact of a prune
+  topology that the GUI/reporting can surface to users.
+- **Micro-suite** `configs/suites/heads.yaml` (`family: heads`): reuses existing
+  tasks to benchmark pruned derivatives on the dissected axes a cut must not
+  break — code correctness, exact tool-call handling, and hardware speed.
+- **Comparison slice** (`ComparisonService.compare_variants`): builds the explicit
+  paired A/B matrix across keep-map variants of one source (free full / top-8 /
+  top-4), the arbitration step for choose-a-prune-topology.
+- Tests: 5 new; full suite 154 passed, ruff/mypy/format clean.
+
 ## [0.11.0] - 2026-08-02
 
 Overview landing page redesign matching the reference layout mockup (kept the harness's

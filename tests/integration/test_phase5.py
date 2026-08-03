@@ -135,3 +135,43 @@ def test_pareto_frontier_cli(tmp_path: Path) -> None:
     labels = {p["label"] for p in payload["all"]}
     assert {"mock-a", "mock-b"} <= labels
     assert payload["frontier"]
+
+
+def test_compare_variants_builds_pairwise_keepmap_matrix(tmp_path: Path) -> None:
+    """compare_variants returns a (base -> candidate) A/B matrix across keep-map
+    variants of one source, so full/top-8/top-4 arbitration is explicit."""
+    from eval_lab.services.comparisons import ComparisonService
+
+    store = RunStore(tmp_path / "runstore.db")
+    adapter = MockModelAdapter()
+    dr = DirectRunner()
+    variants = ("full", "top8", "top4")
+    rels = (
+        "reasoning/reverse_string/task.yaml",
+        "mathematics/basic_addition/task.yaml",
+        "coding/json_output/task.yaml",
+    )
+    for model in variants:
+        for rel in rels:
+            task = load_task_yaml(TASKS / rel)
+            dr.execute_task(
+                task,
+                RunContext(
+                    task=task,
+                    model=adapter,
+                    model_id=model,
+                    runs_root=str(tmp_path),
+                    store=store,
+                ),
+            )
+    store.close()
+
+    svc = ComparisonService(runs_root=str(tmp_path), db=str(tmp_path / "runstore.db"))
+    matrix = svc.compare_variants(list(variants))
+    assert set(matrix) == set(variants)
+    assert set(matrix["full"]) == {"top8", "top4"}
+    assert set(matrix["top8"]) == {"top4"}
+    assert matrix["full"]["top4"].sample_size == 3
+    # Identical mock runs must never report a false regression between variants.
+    assert matrix["full"]["top4"].regressions == ()
+    assert matrix["top8"]["top4"].wins == 0

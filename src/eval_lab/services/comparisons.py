@@ -7,6 +7,7 @@ so the GUI (and any runner flow) never touches the analysis package inline
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 
 from eval_lab.analysis import (
@@ -70,6 +71,27 @@ class ComparisonService:
             candidate_label=candidate_model,
             regress_threshold=regress_threshold,
         )
+
+    def compare_variants(
+        self,
+        models: Sequence[str],
+        *,
+        regress_threshold: float = 0.05,
+    ) -> dict[str, dict[str, ComparisonResult]]:
+        """Paired A/B across keep-map variants of one source (e.g. free
+        full / top-8 / top-4 heads or experts).
+
+        Each variant is a distinct model asset (derivative of the same source);
+        running the same suite under each and comparing pairwise yields the
+        per-variant deltas that arbitrate prune topology. Keys are
+        ``(base_model -> candidate_model)`` with left-to-right order as given.
+        """
+        out: dict[str, dict[str, ComparisonResult]] = {}
+        for i, base in enumerate(models):
+            out[base] = {}
+            for cand in models[i + 1 :]:
+                out[base][cand] = self.compare(base, cand, regress_threshold=regress_threshold)
+        return out
 
     def compare_markdown(self, base_model: str, candidate_model: str) -> str:
         return render_comparison_report(self.compare(base_model, candidate_model))

@@ -140,6 +140,13 @@ def test_all_in_contains_known():
     assert "voxel" in domains
 
 
+def test_head_pruning_is_valid_intervention_label():
+    # A head prune is the head-level analogue of expert pruning; aliases resolve.
+    assert validate("intervention", "attention_head_pruning") == "attention_head_pruning"
+    assert canonical("intervention", "head_dropout") == "attention_head_pruning"
+    assert canonical("intervention", "head-prune") == "attention_head_pruning"
+
+
 # ---------------------------------------------------------------------------
 # Task loader
 # ---------------------------------------------------------------------------

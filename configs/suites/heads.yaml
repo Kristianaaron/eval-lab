@@ -1,0 +1,38 @@
+schema_version: '1.0'
+id: suite.heads.001
+name: Heads & experts (dissection)
+description: >
+  Micro-suite for benchmarking pruned derivatives (attention-head or routed-expert
+  keep-maps) on the dissected axes a cut must not break: code correctness,
+  exact tool-call handling, and attention/decoding speed. Run the same tasks
+  under full / top-8 / top-4 and treat only per-concern deltas as prune-topology
+  evidence (see schemas/atlas.py UnitIdentity + UnitKeepMap).
+version: 1
+family: heads
+tasks:
+  - task_id: coding.json_output.001
+    weight: 1.0
+  - task_id: coding.fizzbuzz.001
+    weight: 1.0
+  - task_id: coding.binary_search.001
+    weight: 1.0
+  - task_id: coding.time_complexity.001
+    weight: 1.0
+  - task_id: coding.parse_csv.001
+    weight: 1.0
+  - task_id: coding.spot_bug.001
+    weight: 1.0
+  - task_id: coding.refactor_legacy.001
+    weight: 1.0
+  - task_id: coding.output_prediction.001
+    weight: 1.0
+  - task_id: toolcall.data_transform.001
+    weight: 1.0
+  - task_id: toolcall.dataset_query.001
+    weight: 1.0
+  - task_id: toolcall.json_query_autonomy.001
+    weight: 1.0
+  - task_id: toolcall.shell_automation.001
+    weight: 1.0
+  - task_id: hardware.perf.probe.001
+    weight: 1.0

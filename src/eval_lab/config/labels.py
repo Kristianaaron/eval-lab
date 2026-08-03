@@ -99,6 +99,7 @@ _INTERVENTIONS = {
     "quantization",
     "mixed_precision",
     "expert_pruning",
+    "attention_head_pruning",
     "graded_expert_bank",
     "router_repair",
     "residual_distillation",
@@ -147,7 +148,11 @@ VOCABS: dict[str, Vocab] = {
     "difficulty": Vocab("difficulty", frozenset(_DIFFICULTY)),
     "level": Vocab("level", frozenset(_LEVELS)),
     "failure_mode": Vocab("failure_mode", frozenset(_FAILURE_MODES)),
-    "intervention": Vocab("intervention", frozenset(_INTERVENTIONS)),
+    "intervention": Vocab(
+        "intervention",
+        frozenset(_INTERVENTIONS),
+        {"head-dropout": "attention_head_pruning", "head-prune": "attention_head_pruning"},
+    ),
     "trajectory_stage": Vocab("trajectory_stage", frozenset(_TRAJECTORY_STAGES)),
 }
 
