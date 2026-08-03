@@ -2,6 +2,19 @@
 
 All notable changes to eval-lab are documented here. Format: Keep a Changelog.
 
+## [0.11.0] - 2026-08-02
+
+Overview landing page redesign matching the reference layout mockup (kept the harness's
+established dark theme; the mockup informed layout only).
+
+- Overview now opens with a small "Home landing page" label and two centered CTA cards:
+  **Run eval** → `#/evaluation` and **Compare models** → `#/comparisons`, each with a leading
+  lucide icon, bold JetBrains Mono title and muted description, bordered on the dark theme.
+- Below the CTA row: a compact overview-stats bar (registered/runnable/source checkpoints,
+  active/failed jobs, total runs) plus the existing Hardware/environment and Registered-models
+  tables as stacked bottom cards (horizontal scroll on narrow widths).
+- Dropped the now-superseded full-width "Run a new eval" run tile.
+
 ## [0.10.0] - 2026-08-01
 
 Architecture corrections (validation report) + Milestone 2: evaluation launch & monitoring.
