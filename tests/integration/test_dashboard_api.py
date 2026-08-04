@@ -112,3 +112,30 @@ def test_trace_and_telemetry_serialize(tmp_path: Path) -> None:
     telem = client.get(f"/api/runs/{run_id}/telemetry").json()
     assert telem["run_id"] == run_id
     assert isinstance(telem["series"], dict)
+
+
+def test_run_detail_includes_report_and_artifacts(tmp_path: Path) -> None:
+    _seed_runs(tmp_path)
+    client = TestClient(create_app(tmp_path, tmp_path / "runstore.db"))
+    run_id = client.get("/api/runs").json()[0]["run_id"]
+    detail = client.get(f"/api/runs/{run_id}").json()
+    # Direct runner always writes a markdown report to the run dir.
+    assert isinstance(detail["report"], str) and "Run Report" in detail["report"]
+    # Artifact listing is a list (may be empty for a plain direct run).
+    assert isinstance(detail["artifacts"], list)
+
+
+def test_explorer_registries_summary(tmp_path: Path) -> None:
+    _seed_runs(tmp_path)
+    client = TestClient(create_app(tmp_path, tmp_path / "runstore.db"))
+    reg = client.get("/api/explorer/registries").json()
+    assert reg["runs"]["total"] == 3
+    assert reg["runs"]["passed"] + reg["runs"]["failed"] == 3
+    assert reg["runs"]["avg_aggregate_score"] is not None
+    # Browse surfaces are always lists with the expected shapes.
+    assert isinstance(reg["jobs"]["by_kind"], dict)
+    assert isinstance(reg["atlas_runs"], list)
+    assert isinstance(reg["experiments"], list)
+    assert isinstance(reg["model_assets"], list)
+    assert isinstance(reg["suites"], list)
+    assert all({"asset_id", "runnable"} <= set(a) for a in reg["model_assets"])

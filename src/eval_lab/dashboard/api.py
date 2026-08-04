@@ -213,6 +213,7 @@ class DashboardApp:
         self._register_atlas()
         self._register_atlas_bridge()
         self._register_experiments()
+        self._register_explorer()
         self._mount_spa()
 
     # -- route registration -------------------------------------------------
@@ -352,11 +353,19 @@ class DashboardApp:
             manifest = _read_json(run_dir / "manifest.json")
             result = _read_json(run_dir / "result.json")
             scores = self._store.run_scores(run_id)
+            report_path = run_dir / "report.md"
+            report = report_path.read_text(encoding="utf-8") if report_path.is_file() else None
+            artifacts_dir = run_dir / "artifacts"
+            artifacts: list[str] = []
+            if artifacts_dir.is_dir():
+                artifacts = sorted(p.name for p in artifacts_dir.iterdir() if p.is_file())
             return {
                 "run": {k: row.get(k) for k in _RUN_FIELDS},
                 "manifest": manifest,
                 "result": result,
                 "scores": scores,
+                "report": report,
+                "artifacts": artifacts,
             }
 
         @app.get("/api/runs/{run_id}/trace")
@@ -469,6 +478,88 @@ class DashboardApp:
         @app.delete("/api/experiments/{experiment_id}")
         def delete_experiment(experiment_id: str) -> dict[str, bool]:
             return {"deleted": experiments.delete(experiment_id)}
+
+    def _register_explorer(self) -> None:
+        """M4 Explorer: one cross-registry browse over every recorded artifact."""
+        from eval_lab.tasks.loader import load_suite_yaml
+
+        app = self.app
+
+        @app.get("/api/explorer/registries")
+        def explorer_registries() -> dict[str, Any]:
+            runs = self._store.list_runs(limit=10_000)
+            by_status: dict[str, int] = {}
+            passed = 0
+            scored: list[float] = []
+            for r in runs:
+                status = str(r.get("status", "unknown"))
+                by_status[status] = by_status.get(status, 0) + 1
+                if r.get("passed"):
+                    passed += 1
+                agg = r.get("aggregate_score")
+                if agg is not None:
+                    scored.append(float(cast(float, agg)))
+            avg = round(sum(scored) / len(scored), 4) if scored else None
+
+            jobs = self._evaluations.orchestrator.list()
+            jobs_by_kind: dict[str, int] = {}
+            jobs_by_status: dict[str, int] = {}
+            for j in jobs:
+                jobs_by_kind[str(j.kind)] = jobs_by_kind.get(str(j.kind), 0) + 1
+                jobs_by_status[str(j.state)] = jobs_by_status.get(str(j.state), 0) + 1
+
+            atlas_runs = [
+                {
+                    "run_id": r.run_id,
+                    "arch": r.arch,
+                    "status": r.status,
+                    "n_plans": r.n_plans,
+                    "has_derivative": r.has_derivative,
+                    "evidence_present": r.evidence_present,
+                }
+                for r in self._atlas.scan()
+            ]
+            experiments = [r.model_dump(mode="json") for r in self._experiments.list()]
+            model_assets = [
+                {
+                    "asset_id": a.asset_id,
+                    "name": a.name,
+                    "asset_type": a.asset_type,
+                    "runnable": a.runnable,
+                    "atlas_compatible": a.atlas_compatible,
+                }
+                for a in self._models.list_model_assets()
+            ]
+            suites: list[dict[str, Any]] = []
+            suites_dir = Path("configs/suites")
+            for p in sorted(suites_dir.glob("*.yaml")):
+                try:
+                    s = load_suite_yaml(p)
+                except Exception:
+                    continue
+                suites.append(
+                    {
+                        "ref": str(p),
+                        "id": s.id,
+                        "name": s.name,
+                        "family": s.family,
+                        "task_count": len(s.tasks),
+                    }
+                )
+            return {
+                "runs": {
+                    "total": len(runs),
+                    "by_status": by_status,
+                    "passed": passed,
+                    "failed": len(runs) - passed,
+                    "avg_aggregate_score": avg,
+                },
+                "jobs": {"total": len(jobs), "by_kind": jobs_by_kind, "by_status": jobs_by_status},
+                "atlas_runs": atlas_runs,
+                "experiments": experiments,
+                "model_assets": model_assets,
+                "suites": suites,
+            }
 
     # Serve the built Svelte SPA last so API routes stay reachable.
     def _register_atlas(self) -> None:

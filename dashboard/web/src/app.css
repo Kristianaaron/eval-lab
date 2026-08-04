@@ -234,6 +234,7 @@ main.main { flex: 1; padding: 24px; max-width: 1360px; }
 .stat .v { font-size: 26px; font-weight: 700; margin-top: 4px; }
 
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.grid.cols-4 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
 th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
 

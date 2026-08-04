@@ -2,6 +2,28 @@
 
 All notable changes to eval-lab are documented here. Format: Keep a Changelog.
 
+## [0.16.0] - 2026-08-04
+
+Milestone 4: Explorer — one cross-registry browse over every recorded artifact.
+
+- **Registries endpoint** (`GET /api/explorer/registries`): a single corpus
+  summary across runs (total/pass/fail/avg), jobs (by kind/state), atlas runs,
+  experiments, model assets, and suites — the browse surface never re-scatters.
+- **Run detail extended**: `/api/runs/{id}` now also returns `report` (the run's
+  markdown report) and `artifacts` (extra artifact files under `runs/<id>/artifacts/`)
+  so the deep-dive shows identity + result + report + raw files, not just the index row.
+- **GUI Explorer area**: new nav destination with a registries summary bar and
+  sectioned browse (Runs / Atlas runs / Experiments / Model assets / Jobs / Suites)
+  with facet filters, each row linking into its existing deep-dive or area.
+- **Runs deep-dive** (`#/explorer/run/:id`): tabbed detail — Overview (manifest
+  identity + scores), Result (output/error + markdown report), Telemetry (ECharts
+  series over node samples), Trace (event log), and Raw (stored artifact listing +
+  `manifest.json`/`result.json`/`report.md` verbatim).
+- Wired the previously-orphaned run-browse + run-detail Svelte components into the
+  Explorer area; removed the orphaned `Runs.svelte` list (folded into Explorer).
+- Tests: 2 new integration tests (explorer registries, run detail report/artifacts);
+  full suite 164 passed; ruff/mypy/format clean. SPA rebuilt.
+
 ## [0.15.0] - 2026-08-04
 
 Evaluation page redesign: config-left + per-domain rows, and a config-load fix.
