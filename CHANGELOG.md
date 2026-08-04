@@ -2,6 +2,23 @@
 
 All notable changes to eval-lab are documented here. Format: Keep a Changelog.
 
+## [0.17.1] - 2026-08-04
+
+Atlas Lab run detail visualizations (maps & routing).
+
+- **Saliency map**: layer × expert heatmap, cell intensity ∝ measured
+  `total_value` (with low/mid/high legend and per-cell hover detail). Replaces
+  the verbose per-row table.
+- **Keep map**: plan selector (top-8/4/2…) showing every expert as ✓ kept vs ✕
+  pruned per layer, plus a per-layer kept summary. The on-screen selection
+  reproduces the tracer's own rule (top-k by `total_value`), verified identical
+  to the server's `keep_maps` — no fabricated ranking.
+- **Routing**: per-layer horizontal bars of routed-token share per expert;
+  experts pruned in the selected plan are dimmed, so "what the router sends
+  where, and what we'd cut" is visible at a glance.
+- All rendered client-side from the existing run-detail payload (no API change);
+  source expert identity and full keep-map counts retained. SPA rebuilt.
+
 ## [0.17.0] - 2026-08-04
 
 Milestone 3: Atlas Lab — a genuine lightweight layerwise MoE tracer (handoff

@@ -330,3 +330,18 @@ label input { display: block; width: 100%; margin-top: 4px; }
 .bar { background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; height: 8px; width: 90px; overflow: hidden; }
 .bar-fill { background: var(--accent); height: 100%; transition: width 0.3s; }
 
+/* M3 maps & routing visualizers */
+.heat th, .keepmap th { font-weight: 600; color: var(--muted); font-size: 11px; }
+.hcell { min-width: 54px; height: 30px; text-align: center; font-family: "JetBrains Mono", monospace; font-size: 11px; border: 1px solid rgba(42,48,60,.55); }
+.heat td, .keepmap td { text-align: center; }
+.kmc { min-width: 32px; height: 28px; border: 1px solid var(--border); font-size: 12px; }
+.kmc.kept { background: var(--accent); color: #0b0e13; font-weight: 700; }
+.kmc.prune { background: transparent; color: var(--muted); border-color: var(--border); box-shadow: inset 0 0 0 1px rgba(42,48,60,.5); }
+.routing { flex: 1; display: flex; gap: 2px; height: 18px; min-width: 200px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 3px; padding: 1px; overflow: hidden; }
+.rseg { height: 100%; display: inline-block; background: var(--accent); border-radius: 1px; }
+.rseg.dim { background: #3a4150; }
+.swatch { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+.swatch.low { background: rgba(79,140,255,.14); }
+.swatch.mid { background: rgba(79,140,255,.5); }
+.swatch.high { background: rgba(79,140,255,.9); }
+

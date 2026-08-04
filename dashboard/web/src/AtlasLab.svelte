@@ -168,9 +168,73 @@
     runDetailError = null;
     try {
       runDetail = await get(`/api/atlas-runs/${encodeURIComponent(run_id)}`);
+      // Default the keep/routing overlay to the most aggressive plan (smallest
+      // top-k), which is also the server's primary keep-map budget.
+      const budgets = (runDetail.plans ?? []).map((p) => p.keep_per_layer ?? 0);
+      const best = Math.min(...(budgets.length ? budgets : [0]));
+      const def = (runDetail.plans ?? []).find((p) => p.keep_per_layer === best);
+      planSel = def?.name ?? runDetail.plans?.[0]?.name ?? "";
     } catch (e) {
       runDetailError = String(e);
     }
+  }
+
+  // -- maps & routing visualizers ------------------------------------------
+  // All three render from the measured rows already returned by the API; the
+  // keep selection reproduces the tracer's own rule (top-k by total_value) so
+  // what is shown matches build_plans/build_keep_maps.
+  let planSel = $state("");
+
+  function numExperts() {
+    return runDetail?.topology?.num_local_experts ?? 8;
+  }
+  function numLayers() {
+    return runDetail?.topology?.num_hidden_layers ?? runDetail?.keep_maps?.length ?? 6;
+  }
+  function salRow(layer, expert) {
+    return (runDetail?.saliency ?? []).find((s) => s.layer === layer && s.expert === expert);
+  }
+  function maxSaliency() {
+    let m = 0;
+    for (const s of runDetail?.saliency ?? []) if (s.total_value > m) m = s.total_value;
+    return m > 0 ? m : 1;
+  }
+  function heatStyle(row) {
+    if (!row) return "background: transparent; color: var(--muted)";
+    const rel = Math.min(1, (row.total_value || 0) / maxSaliency());
+    const alpha = 0.14 + 0.86 * rel;
+    const fg = rel > 0.5 ? "#0b0e13" : "var(--text)";
+    return `background: rgba(79,140,255,${alpha.toFixed(3)}); color: ${fg}`;
+  }
+  function planBudget(name) {
+    return (runDetail?.plans ?? []).find((p) => p.name === name)?.keep_per_layer ?? numExperts();
+  }
+  function planShort(name) {
+    return String(name ?? "")
+      .replace(/^keep/, "top-")
+      .replace("-full", " · full")
+      .replace("-saliency", " · saliency");
+  }
+  // kept expert ids per layer for a budget, ranked by measured total_value desc.
+  function keptFor(k) {
+    const out = [];
+    for (let L = 0; L < numLayers(); L++) {
+      const ranked = [];
+      for (let e = 0; e < numExperts(); e++) ranked.push([e, salRow(L, e)?.total_value ?? 0]);
+      ranked.sort((a, b) => b[1] - a[1]);
+      out[L] = new Set(ranked.slice(0, Math.max(0, Math.min(k, numExperts()))).map((x) => x[0]));
+    }
+    return out;
+  }
+  function keptIds(kset) {
+    return [...kset].sort((a, b) => a - b).map((e) => `e${e}`).join(" ");
+  }
+  // share of routed tokens carried by an expert in a layer (frequency normalized).
+  function routingShare(layer, expert) {
+    let sum = 0;
+    for (const s of runDetail?.saliency ?? []) if (s.layer === layer) sum += s.frequency || 0;
+    if (!sum) return 0;
+    return (salRow(layer, expert)?.frequency || 0) / sum;
   }
 
   // -- connect surface ------------------------------------------------------
@@ -474,37 +538,121 @@
       </table>
     </div>
 
-    <h3>Keep-maps (source expert identity preserved)</h3>
-    {#each runDetail.keep_maps as km (km.layer_index)}
-      <div style="margin:6px 0">
-        <span class="mut">layer {km.layer_index} · top-{km.top_k}:</span>
-        {#each km.entries as e (km.layer_index + ":" + e.unit.source_unit_id)}
-          {#if e.kept}
-            <span class="chip on" title="saliency {e.saliency?.toFixed?.(4) ?? '—'} · rank {e.rank_within_layer}">
-              e{e.unit.source_unit_id}
-            </span>
-          {/if}
+    <h3>Maps &amp; routing</h3>
+
+    <!-- SALIENCY MAP: layer x expert heatmap -->
+    <div class="card" style="margin-top:8px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+        <strong>Saliency map</strong>
+        <span class="mut" style="font-size:12px">cell intensity ∝ total_value (measured)</span>
+        <span class="mut" style="font-size:11px;margin-left:auto">low</span>
+        <span class="swatch low"></span><span class="swatch mid"></span><span class="swatch high"></span>
+        <span class="mut" style="font-size:11px">high</span>
+      </div>
+      <div class="table-scroll" style="overflow-x:auto">
+        <table class="heat">
+          <thead><tr><th></th>{#each Array(numExperts()) as _, e (e)}<th>e{e}</th>{/each}</tr></thead>
+          <tbody>
+            {#each Array(numLayers()) as _, L (L)}
+              <tr>
+                <td class="mut">L{L}</td>
+                {#each Array(numExperts()) as _, e (e)}
+                  {@const row = salRow(L, e)}
+                  <td class="hcell" style={heatStyle(row)}
+                      title="expert e{e} · total_value {row?.total_value?.toFixed?.(4) ?? '—'} · freq {row?.frequency?.toFixed?.(4) ?? '—'} · activations {row?.activation_count ?? '—'}">
+                    {row?.total_value?.toFixed?.(2) ?? '—'}
+                  </td>
+                {/each}
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- KEEP MAP: simple kept/pruned matrix per selected plan -->
+    <div class="card" style="margin-top:8px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+        <strong>Keep map</strong>
+        <span class="mut" style="font-size:12px">
+          <span class="chip on" style="padding:1px 6px">✓ kept</span> vs
+          <span class="chip" style="padding:1px 6px">✕ pruned</span> — per layer, by measured saliency
+        </span>
+      </div>
+      <div style="display:flex;gap:6px;margin:8px 0;flex-wrap:wrap">
+        {#each runDetail.plans as p (p.name)}
+          <button class="btn small {planSel === p.name ? 'primary' : ''}" on:click={() => (planSel = p.name)}>
+            {planShort(p.name)}
+          </button>
         {/each}
       </div>
-    {/each}
-
-    <h3>Measured saliency (layer · expert)</h3>
-    <div class="table-scroll">
-      <table>
-        <thead><tr><th>Layer</th><th>Expert</th><th>Saliency</th><th>Freq</th><th>Act.</th></tr></thead>
-        <tbody>
-          {#each runDetail.saliency as s (s.layer + ":" + s.expert)}
-            <tr>
-              <td>{s.layer}</td>
-              <td>{s.expert}</td>
-              <td>{s.total_value?.toFixed?.(4) ?? "—"}</td>
-              <td>{s.frequency?.toFixed?.(4) ?? "—"}</td>
-              <td>{s.activation_count}</td>
-            </tr>
+      {#if planSel}
+        <div class="table-scroll" style="overflow-x:auto">
+          <table class="keepmap">
+            <thead><tr><th></th>{#each Array(numExperts()) as _, e (e)}<th>e{e}</th>{/each}<th>kept</th></tr></thead>
+            <tbody>
+              {#each Array(numLayers()) as _, L (L)}
+                {@const kset = keptFor(planBudget(planSel))[L]}
+                <tr>
+                  <td class="mut">L{L}</td>
+                  {#each Array(numExperts()) as _, e (e)}
+                    <td class="kmc {kset.has(e) ? 'kept' : 'prune'}"
+                        title="layer {L} · expert e{e} · saliency {salRow(L, e)?.total_value?.toFixed?.(4) ?? '—'}">
+                      {kset.has(e) ? '✓' : ''}
+                    </td>
+                  {/each}
+                  <td class="mut">{kset.size}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+        <p class="mut" style="font-size:12px;margin-top:6px">
+          Kept per layer under <span class="mono">{planSel}</span>:
+          {#each Array(numLayers()) as _, L (L)}
+            {@const kset = keptFor(planBudget(planSel))[L]}
+            <span class="mono">L{L}: {keptIds(kset)}</span>{L < numLayers() - 1 ? " · " : ""}
           {/each}
-        </tbody>
-      </table>
+        </p>
+      {/if}
     </div>
+
+    <!-- ROUTING MAP: share of routed tokens per expert, dimmed when pruned -->
+    <div class="card" style="margin-top:8px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+        <strong>Routing</strong>
+        <span class="mut" style="font-size:12px">
+          bar = share of routed tokens per expert; <span class="rseg" style="display:inline-block;width:14px;vertical-align:-2px"></span> kept ·
+          <span class="rseg dim" style="display:inline-block;width:14px;vertical-align:-2px"></span> pruned in {planSel || "plan"}
+        </span>
+      </div>
+      {#each Array(numLayers()) as _, L (L)}
+        {@const kset = keptFor(planBudget(planSel))[L]}
+        <div style="margin:6px 0;display:flex;align-items:center;gap:8px">
+          <span class="mut mono" style="width:30px;flex:0 0 30px">L{L}</span>
+          <div class="routing">
+            {#each Array(numExperts()) as _, e (e)}
+              {@const share = routingShare(L, e)}
+              <span class="rseg {kset.has(e) || !planSel ? '' : 'dim'}"
+                    style="width:{Math.max(2, share * 100)}%"
+                    title="e{e} · {Math.round(share * 100)}% of routed tokens in layer {L}"></span>
+            {/each}
+          </div>
+          <span class="mut" style="font-size:11px;width:200px;flex:0 0 200px;text-align:right">
+            {keptIds(kset)} kept
+          </span>
+        </div>
+      {/each}
+    </div>
+
+    <!-- keep-map legend / source identity fallback -->
+    {#if runDetail.keep_maps.length}
+      <p class="mut" style="font-size:12px;margin-top:6px">
+        Source expert identity is preserved across plans (a kept expert always traces to the
+        same source unit). Primary keep-map (server, budget {runDetail.keep_maps[0]?.top_k})
+        has {runDetail.keep_maps[0]?.kept_count} of {numExperts()} experts kept per layer.
+      </p>
+    {/if}
   </section>
 {/if}
 
