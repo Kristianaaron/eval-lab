@@ -2,6 +2,38 @@
 
 All notable changes to eval-lab are documented here. Format: Keep a Changelog.
 
+## [0.17.0] - 2026-08-04
+
+Milestone 3: Atlas Lab — a genuine lightweight layerwise MoE tracer (handoff
+option A; resolves the pending fork). Real CPU router/expert forward pass over
+deterministic calibration contexts measures actual per-layer/per-expert
+saliency — no fabricated numbers.
+
+- **Tracer core** (`atlas/`): `model.py` (fixed-seed synthetic mini-MoE with
+  meaningful expert geometry, materialized `config.json` + `weights.json`),
+  `tracer.py` (`CalibrationPool` with capability-labelled contexts; `trace_layer`
+  emits per-expert activation frequency, mean gate probability, output-norm
+  variance, and per-label breakdowns), `plans.py` (keep-budget prune topologies
+  derived only from measured saliency), `store.py` (`AtlasRunStore` writing the
+  atlas-bridge-compatible `atlas_out/atlas_runs/<id>/` artifacts + recovery
+  checkpoint).
+- **Runtime service** (`services/atlas_runtime.py`): M3 runs as a restart-safe
+  `atlas` orchestrator job with per-layer progress, pause/resume at safe
+  boundaries, cancel, checkpoint recovery, source-model linking (`atlas-traced`),
+  and an honest resource estimator (one-layer probe calibrated).
+- **Orchestrator**: `JobOrchestrator.pause/resume` (`running→pausing→paused`,
+  `paused→resuming→running`) with shared job store across eval and atlas jobs.
+- **API**: `/api/atlas/config`, `/api/atlas/estimate`, `/api/atlas-jobs` (+
+  `/{id}` and `/{id}/{cancel,pause,resume}`), `/api/atlas-runs[/{id}]`.
+- **GUI Atlas Lab**: build-atlas wizard (source/suite/depth/budgets +
+  estimate + launch), live job monitor with Pause/Resume/Cancel and polling,
+  completed-runs browse + deep-dive (plans, keep-maps, saliency).
+- **Bug fix**: `JobStore.save` raced under concurrent worker/API saves (shared
+  `.tmp` name → intermittent `FileNotFoundError`); now each save uses a unique
+  temp name with atomic rename.
+- Tests: 4 new; full suite 168 passed; ruff/mypy/format clean; SPA rebuilt.
+  Report: `docs/gui-milestone-3.md`.
+
 ## [0.16.0] - 2026-08-04
 
 Milestone 4: Explorer — one cross-registry browse over every recorded artifact.

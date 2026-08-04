@@ -1,0 +1,19 @@
+schema_version: '1.0'
+id: suite.user.eval-frontend.001
+name: Eval frontend
+description: 'User suite from domains: frontend'
+version: 1
+family: user
+tasks:
+- task_id: frontend.accessibility_fix.001
+  weight: 1.0
+- task_id: frontend.center_box_css.001
+  weight: 1.0
+- task_id: frontend.design_card.001
+  weight: 1.0
+- task_id: frontend.form_validation.001
+  weight: 1.0
+- task_id: frontend.responsive_breakpoint.001
+  weight: 1.0
+- task_id: frontend.semantic_markup.001
+  weight: 1.0

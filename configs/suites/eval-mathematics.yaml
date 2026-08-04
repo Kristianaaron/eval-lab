@@ -1,0 +1,11 @@
+schema_version: '1.0'
+id: suite.user.eval-mathematics.001
+name: Eval mathematics
+description: 'User suite from domains: mathematics'
+version: 1
+family: user
+tasks:
+- task_id: mathematics.basic.addition.001
+  weight: 1.0
+- task_id: mathematics.prime_factorization.001
+  weight: 1.0

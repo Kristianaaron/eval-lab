@@ -1,0 +1,19 @@
+schema_version: '1.0'
+id: suite.user.eval-spatial_3d.001
+name: Eval spatial_3d
+description: 'User suite from domains: spatial_3d'
+version: 1
+family: user
+tasks:
+- task_id: voxel.lattice_path.001
+  weight: 1.0
+- task_id: voxel.rotate_90.001
+  weight: 1.0
+- task_id: voxel.solid_box.001
+  weight: 1.0
+- task_id: voxel.sphere.001
+  weight: 1.0
+- task_id: voxel.surface_voxels.001
+  weight: 1.0
+- task_id: voxel.symmetry_axis.001
+  weight: 1.0

@@ -16,6 +16,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from eval_lab.schemas.atlas_runtime import AtlasBuildConfig
 from eval_lab.schemas.evaluation import EvaluationConfig
 from eval_lab.schemas.experiment import ExperimentType
 from eval_lab.schemas.model_asset import (
@@ -25,14 +26,16 @@ from eval_lab.schemas.model_asset import (
 )
 from eval_lab.schemas.models import TaskSpec
 from eval_lab.services.atlas_bridge import AtlasBridgeService
+from eval_lab.services.atlas_runtime import AtlasRuntimeService
 from eval_lab.services.comparisons import ComparisonService
 from eval_lab.services.environment import environment_status
 from eval_lab.services.evaluations import EvaluationService
 from eval_lab.services.experiments import ExperimentService
 from eval_lab.services.models import ModelAssetService, seed_fixtures
+from eval_lab.services.orchestrator import JobOrchestrator
 from eval_lab.storage.model_assets import ModelAssetStore
 from eval_lab.storage.sqlite import RunStore
-from eval_lab.tasks.loader import TaskLoadError, load_task_yaml
+from eval_lab.tasks.loader import TaskLoadError, load_suite_yaml, load_task_yaml
 
 
 class SuiteCreate(BaseModel):
@@ -191,17 +194,24 @@ class DashboardApp:
         self._store = RunStore(self.db_path)
         self._models = ModelAssetService(self.models_root)
         self._budget = EnvBudget()
+        self._jobs = JobOrchestrator(self.runs_root.parent / "jobs")
         self._evaluations = EvaluationService(
             self.runs_root.parent / "jobs",
             runs_root=self.runs_root,
             db=self.db_path,
             tasks_dir="tasks",
             suites_dir="configs/suites",
+            orchestrator=self._jobs,
         )
         self._comparisons = ComparisonService(
             runs_root=self.runs_root, db=self.db_path, tasks_dir="tasks"
         )
         self._atlas = AtlasBridgeService(self.atlas_root, models_root=self.models_root)
+        self._atlas_runtime = AtlasRuntimeService(
+            self._jobs,
+            self.atlas_root,
+            models_store=ModelAssetStore(self.models_root),
+        )
         self._experiments = ExperimentService(
             self._atlas,
             self.experiments_root,
@@ -212,6 +222,7 @@ class DashboardApp:
         self._register_platform()
         self._register_atlas()
         self._register_atlas_bridge()
+        self._register_atlas_runtime()
         self._register_experiments()
         self._register_explorer()
         self._mount_spa()
@@ -438,6 +449,116 @@ class DashboardApp:
             if rec is None:
                 raise HTTPException(status_code=404, detail=f"atlas import not found: {run_id}")
             return rec.model_dump(mode="json")
+
+    def _register_atlas_runtime(self) -> None:
+        """M3 Atlas Lab runtime: build-atlas wizard + live layerwise trace job."""
+
+        from eval_lab.config.labels import all_in
+        from eval_lab.schemas.atlas_runtime import (
+            DEFAULT_KEEP_BUDGETS,
+            DEFAULT_MINI_MOE,
+            TRACE_DEPTH_PARAMS,
+            TraceDepth,
+        )
+
+        app = self.app
+        runtime = self._atlas_runtime
+
+        @app.get("/api/atlas/config")
+        def atlas_config() -> dict[str, Any]:
+            sources = [
+                {
+                    "asset_id": a.asset_id,
+                    "name": a.name,
+                    "arch": a.architecture,
+                    "atlas_compatible": a.atlas_compatible,
+                    "asset_type": a.asset_type,
+                }
+                for a in self._models.list_model_assets()
+            ]
+            suites: list[dict[str, Any]] = []
+            suites_dir = Path("configs/suites")
+            for p in sorted(suites_dir.glob("*.yaml")):
+                try:
+                    s = load_suite_yaml(p)
+                except Exception:
+                    continue
+                suites.append(
+                    {
+                        "suite_ref": str(p),
+                        "id": s.id,
+                        "name": s.name,
+                        "family": s.family,
+                        "task_count": len(s.tasks),
+                    }
+                )
+            return {
+                "sources": sources,
+                "suites": suites,
+                "trace_depths": [
+                    {
+                        "depth": d.value,
+                        "num_samples": TRACE_DEPTH_PARAMS[d][0],
+                        "seq_len": TRACE_DEPTH_PARAMS[d][1],
+                    }
+                    for d in TraceDepth
+                ],
+                "capability_labels": [c for c in all_in("capability")][:12],
+                "default_topology": DEFAULT_MINI_MOE,
+                "default_keep_budgets": DEFAULT_KEEP_BUDGETS,
+            }
+
+        @app.post("/api/atlas/estimate")
+        def atlas_estimate(cfg: AtlasBuildConfig) -> dict[str, Any]:
+            return runtime.estimate(cfg).model_dump(mode="json")
+
+        @app.post("/api/atlas-jobs")
+        def create_atlas_job(cfg: AtlasBuildConfig) -> dict[str, Any]:
+            job = runtime.launch(cfg)
+            return job.model_dump(mode="json")
+
+        @app.get("/api/atlas-jobs")
+        def list_atlas_jobs() -> list[dict[str, Any]]:
+            return [j.model_dump(mode="json") for j in runtime.list_jobs()]
+
+        @app.get("/api/atlas-jobs/{job_id}")
+        def get_atlas_job(job_id: str) -> dict[str, Any]:
+            job = runtime.get(job_id)
+            if job is None:
+                raise HTTPException(status_code=404, detail=f"atlas job not found: {job_id}")
+            return job.model_dump(mode="json")
+
+        @app.post("/api/atlas-jobs/{job_id}/cancel")
+        def cancel_atlas_job(job_id: str) -> dict[str, Any]:
+            job = runtime.cancel(job_id)
+            if job is None:
+                raise HTTPException(status_code=404, detail=f"atlas job not found: {job_id}")
+            return job.model_dump(mode="json")
+
+        @app.post("/api/atlas-jobs/{job_id}/pause")
+        def pause_atlas_job(job_id: str) -> dict[str, Any]:
+            job = runtime.pause(job_id)
+            if job is None:
+                raise HTTPException(status_code=404, detail=f"atlas job not found: {job_id}")
+            return job.model_dump(mode="json")
+
+        @app.post("/api/atlas-jobs/{job_id}/resume")
+        def resume_atlas_job(job_id: str) -> dict[str, Any]:
+            job = runtime.resume(job_id)
+            if job is None:
+                raise HTTPException(status_code=404, detail=f"atlas job not found: {job_id}")
+            return job.model_dump(mode="json")
+
+        @app.get("/api/atlas-runs")
+        def list_atlas_runs() -> list[dict[str, Any]]:
+            return runtime.list_runs()
+
+        @app.get("/api/atlas-runs/{run_id}")
+        def get_atlas_run(run_id: str) -> dict[str, Any]:
+            detail = runtime.run_detail(run_id)
+            if detail is None:
+                raise HTTPException(status_code=404, detail=f"atlas run not found: {run_id}")
+            return detail.model_dump(mode="json")
 
     def _register_experiments(self) -> None:
         """Experiment (M5) CRUD: pin an imported atlas run + candidate plan."""

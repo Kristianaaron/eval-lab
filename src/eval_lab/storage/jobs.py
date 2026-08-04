@@ -33,7 +33,11 @@ class JobStore:
 
     def save(self, job: Job) -> Job:
         path = self._path(job.job_id)
-        tmp = path.with_suffix(".tmp")
+        # Unique temp name: worker-thread progress saves and API-thread state
+        # transitions (cancel/pause) run concurrently, and a shared ".tmp" lets
+        # one rename clobber the other's source (FileNotFoundError). Atomic rename
+        # to the target still holds; last writer wins with a full snapshot.
+        tmp = path.with_name(f"{path.name}.{uuid.uuid4().hex}.tmp")
         tmp.write_text(json.dumps(job.model_dump(mode="json"), indent=2), encoding="utf-8")
         tmp.replace(path)
         return job

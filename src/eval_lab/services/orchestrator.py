@@ -117,11 +117,20 @@ class JobOrchestrator:
             self._to(job_id, JobState.cancelling)
         return self.get(job_id)
 
+    def pause(self, job_id: str) -> Job | None:
+        """Ask a running job to pause at its next safe boundary (per layer)."""
+        job = self.get(job_id)
+        if job is None or job.state != JobState.running:
+            return job
+        self._to(job_id, JobState.pausing)
+        return self.get(job_id)
+
     def resume(self, job_id: str) -> Job | None:
         job = self.get(job_id)
-        if job is not None and job.state == JobState.paused:
-            self._to(job_id, JobState.resuming)
-            self._to(job_id, JobState.queued)
+        if job is not None and job.state in (JobState.paused, JobState.failed_recoverable):
+            # Set resuming (validated) without a queued detour; the worker thread
+            # transitions resuming -> running on start.
+            self._mutate(job_id, lambda j: setattr(j, "state", JobState.resuming))
             thread = threading.Thread(target=self._run, args=(job_id,), daemon=True, name=job_id)
             with self._lock:
                 self._threads[job_id] = thread

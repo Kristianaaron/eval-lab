@@ -150,8 +150,9 @@ class EvaluationService:
         tasks_dir: str | Path = "tasks",
         suites_dir: str | Path = "configs/suites",
         model_factory: ModelFactory | None = None,
+        orchestrator: JobOrchestrator | None = None,
     ) -> None:
-        self.orchestrator = JobOrchestrator(jobs_root)
+        self.orchestrator = orchestrator or JobOrchestrator(jobs_root)
         self.runs_root = str(runs_root)
         self.db = str(db) if db is not None else None
         executor = make_evaluation_executor(

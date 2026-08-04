@@ -1,7 +1,9 @@
 <script>
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import { get, post } from "./lib/api.js";
+  import { Activity, Play, Pause, RotateCcw, X, Database } from "@lucide/svelte";
 
+  // -- external Atlas engine (existing connect/integrate surface) -----------
   let status = $state(null);
   let install = $state(null);
   let url = $state("");
@@ -9,49 +11,170 @@
   let error = $state(null);
   let notice = $state(null);
 
-  // imported atlas runs (bridge consumer)
-  let runs = $state([]);
-  let runsLoading = $state(false);
-  let runsError = $state(null);
-  let detail = $state(null);
-  let detailError = $state(null);
+  // -- build-atlas wizard ---------------------------------------------------
+  let cfg = $state(null);
+  let cfgError = $state(null);
+  let source = $state("");
+  let suiteRef = $state("");
+  let depth = $state("basic");
+  let budgets = $state("");
+  let estimate = $state(null);
+  let estimating = $state(false);
+  let estimateError = $state(null);
+  let launching = $state(false);
 
-  async function loadRuns() {
-    runsLoading = true;
-    runsError = null;
+  // -- job monitor ----------------------------------------------------------
+  let jobs = $state([]);
+  let jobsError = $state(null);
+
+  // -- completed runs -------------------------------------------------------
+  let runs = $state([]);
+  let runsError = $state(null);
+  let runDetail = $state(null);
+  let runDetailError = $state(null);
+
+  const ACTIVE = new Set([
+    "queued",
+    "running",
+    "pausing",
+    "paused",
+    "resuming",
+    "cancelling",
+    "draft",
+  ]);
+  const TERMINAL = new Set([
+    "completed",
+    "completed_with_warnings",
+    "failed",
+    "failed_recoverable",
+    "cancelled",
+  ]);
+
+  async function loadConfig() {
     try {
-      runs = await get("/api/atlas-bridge/runs");
+      cfg = await get("/api/atlas/config");
+      const preferred = (cfg.sources ?? []).find((s) => s.atlas_compatible);
+      if (!source) source = preferred?.asset_id ?? cfg.sources?.[0]?.asset_id ?? "";
+      if (!suiteRef && cfg.suites?.length) suiteRef = cfg.suites[0].suite_ref;
+      if (!budgets) budgets = (cfg.default_keep_budgets ?? [8, 6, 4, 2]).join(",");
     } catch (e) {
-      runsError = String(e);
-    } finally {
-      runsLoading = false;
+      cfgError = String(e);
     }
   }
 
-  async function doImport(run_id) {
-    runsError = null;
+  function currentSource() {
+    return (cfg?.sources ?? []).find((s) => s.asset_id === source);
+  }
+
+  function wizardPayload() {
+    return {
+      model_asset_id: source,
+      suite_ref: suiteRef,
+      trace_depth: depth,
+      keep_budgets: budgets
+        ? budgets
+            .split(",")
+            .map((b) => parseInt(b, 10))
+            .filter((n) => !Number.isNaN(n))
+        : undefined,
+    };
+  }
+
+  async function doEstimate() {
+    estimating = true;
+    estimateError = null;
+    estimate = null;
     try {
-      await post("/api/atlas-bridge/import", { run_id });
-      detail = null;
-      await loadRuns();
+      estimate = await post("/api/atlas/estimate", wizardPayload());
+    } catch (e) {
+      estimateError = String(e);
+    } finally {
+      estimating = false;
+    }
+  }
+
+  async function doLaunch() {
+    launching = true;
+    error = null;
+    try {
+      await post("/api/atlas-jobs", wizardPayload());
+      await loadJobs();
+      flash("Launched build-atlas job.");
+    } catch (e) {
+      error = String(e);
+    } finally {
+      launching = false;
+    }
+  }
+
+  // -- job monitor ----------------------------------------------------------
+  async function loadJobs() {
+    try {
+      jobs = await get("/api/atlas-jobs");
+    } catch (e) {
+      jobsError = String(e);
+    }
+  }
+
+  async function jobAction(job_id, action) {
+    try {
+      await post(`/api/atlas-jobs/${encodeURIComponent(job_id)}/${action}`);
+    } catch (e) {
+      jobsError = String(e);
+    }
+    await loadJobs();
+  }
+
+  function jobLabel(state) {
+    const map = {
+      queued: "queued",
+      running: "tracing",
+      pausing: "pausing",
+      paused: "paused",
+      resuming: "resuming…",
+      cancelling: "cancelling",
+      cancelled: "cancelled",
+      completed: "done",
+      completed_with_warnings: "done (warnings)",
+      failed: "failed",
+      failed_recoverable: "interrupted",
+      draft: "draft",
+    };
+    return map[state] ?? state;
+  }
+
+  function jobCls(state) {
+    if (state === "completed" || state === "completed_with_warnings") return "ok";
+    if (state === "failed" || state === "cancelled") return "error";
+    if (state === "paused") return "type";
+    return "mut";
+  }
+
+  function hasActiveJobs() {
+    return jobs.some((j) => ACTIVE.has(j.state));
+  }
+
+  // -- completed runs -------------------------------------------------------
+  async function loadRuns() {
+    try {
+      runs = await get("/api/atlas-runs");
     } catch (e) {
       runsError = String(e);
     }
   }
 
   async function showRun(run_id) {
-    detail = null;
-    detailError = null;
+    runDetail = null;
+    runDetailError = null;
     try {
-      detail = await get(`/api/atlas-bridge/runs/${encodeURIComponent(run_id)}`);
+      runDetail = await get(`/api/atlas-runs/${encodeURIComponent(run_id)}`);
     } catch (e) {
-      detailError = String(e);
+      runDetailError = String(e);
     }
   }
 
-  async function load() {
-    error = null;
-    notice = null;
+  // -- connect surface ------------------------------------------------------
+  async function loadConnect() {
     try {
       status = await get("/api/atlas");
       if (status.connected && status.reachable) url = status.url;
@@ -60,7 +183,6 @@
     } catch (e) {
       error = String(e);
     }
-    loadRuns();
   }
 
   async function doConnect() {
@@ -87,168 +209,336 @@
     }
   }
 
-  onMount(load);
+  let flashMsg = $state(null);
+  function flash(msg) {
+    flashMsg = msg;
+    setTimeout(() => (flashMsg = null), 2600);
+  }
+
+  let timer = null;
+  function startPolling() {
+    if (timer) return;
+    timer = setInterval(loadJobs, 1500);
+  }
+  function stopPolling() {
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+  }
+
+  $effect(() => {
+    if (hasActiveJobs()) startPolling();
+    else stopPolling();
+  });
+
+  onMount(() => {
+    loadConnect();
+    loadConfig();
+    loadJobs();
+    loadRuns();
+  });
+  onDestroy(stopPolling);
 </script>
 
-<h1>Atlas Lab <span class="badge">{status?.connected && status?.reachable ? "connected" : "disconnected"}</span></h1>
+<h1>Atlas Lab</h1>
 <p class="mut">
-  The Atlas engine measures which internal components are responsible for behaviours.
-  It is a separate app; this flow installs, connects, and integrates it into eval-lab so
-  your calibration data flows into Atlas and derivatives come back for held-out evaluation.
+  Measure which internal experts are responsible for behaviours. eval-lab's build-atlas
+  wizard runs a genuine layerwise MoE trace on a small synthetic calibration model, then
+  proposes prune topologies from the measured saliency — no fabricated numbers.
 </p>
 
 {#if error}
-  <div class="card">Error: <span class="mut">{error}</span></div>
+  <div class="card error">Error: <span class="mut">{error}</span></div>
+{/if}
+{#if flashMsg}
+  <div class="card ok" style="margin-top:10px">{flashMsg}</div>
 {/if}
 
-{#if notice && !status?.connected}
-  <div class="card warn">{notice}</div>
-{/if}
+<div class="eval-layout" style="margin-top:12px">
+  <!-- LEFT: build wizard -->
+  <div class="card eval-config">
+    <h3><Database size="14" style="vertical-align:-2px" /> Build atlas</h3>
 
-<!-- STEP 1: not installed -->
-{#if status && !status.installed}
-  <section class="card">
-    <h2>Step 1 · Install the Atlas engine</h2>
-    <p class="mut">The <code>model-atlas</code> package isn't installed on this host yet.</p>
-    <ol>
-      <li>Install the package:</li>
-      <li><pre class="mono">{install?.install_command}</pre></li>
-      <li>Start the Atlas dashboard server:</li>
-      <li><pre class="mono">{install?.serve_command}</pre></li>
-    </ol>
-    <p class="mut">
-      Docs: <a href={install?.home} target="_blank" rel="noreferrer">{install?.home}</a>
-    </p>
-    <button class="btn" on:click={load}>I've installed it — refresh</button>
-  </section>
+    {#if cfgError}
+      <div class="card error">{cfgError}</div>
+      <button class="btn" on:click={loadConfig}>Retry</button>
+    {:else if cfg}
+      <label>
+        Source model
+        <select bind:value={source}>
+          {#each cfg.sources ?? [] as s (s.asset_id)}
+            <option value={s.asset_id}>
+              {s.name} ({s.asset_id}){s.atlas_compatible ? " · layerwise" : " · not layerwise"}
+            </option>
+          {/each}
+        </select>
+      </label>
 
-<!-- STEP 2: installed but not connected -->
-{:else if status && !status.connected}
-  <section class="card">
-    <h2>Step 2 · Connect to the Atlas</h2>
-    <p class="mut">
-      {#if status.reachable}
-        <span class="ok">The Atlas is running</span>
-      {:else}
-        <span class="warn">The Atlas server isn't reachable yet</span> — start it with
-        <pre class="mono">{install?.serve_command}</pre>
+      <label>
+        Calibration suite
+        <select bind:value={suiteRef}>
+          {#each cfg.suites ?? [] as s (s.suite_ref)}
+            <option value={s.suite_ref}>{s.name} · {s.task_count} tasks</option>
+          {/each}
+        </select>
+      </label>
+
+      <label>
+        Trace depth
+        <select bind:value={depth}>
+          {#each cfg.trace_depths ?? [] as d (d.depth)}
+            <option value={d.depth}>
+              {d.depth} · {d.num_samples} samples × {d.seq_len} tokens
+            </option>
+          {/each}
+        </select>
+      </label>
+
+      <label>
+        Keep budgets (comma-separated)
+        <input type="text" bind:value={budgets} placeholder="e.g. 8,6,4,2" />
+      </label>
+
+      {#if currentSource() && !currentSource().atlas_compatible}
+        <p class="mut" style="font-size:12px">
+          Note: this model is not classified layerwise-compatible; atlas will still trace a
+          synthetic calibration twin for the selected source.
+        </p>
       {/if}
-    </p>
-    <label class="mut" for="atlas-url">Atlas dashboard URL</label>
-    <input id="atlas-url" bind:value={url} class="mono" style="width:360px" />
-    <div style="margin-top:10px">
-      <button class="btn primary" on:click={doConnect} disabled={working || !url}>
-        {working ? "Connecting…" : "Connect & integrate"}
-      </button>
-    </div>
-  </section>
 
-<!-- STEP 3: connected -->
-{:else if status && status.connected}
-  <section class="card">
-    <h2>Connected · Atlas integrated</h2>
-    <table>
-      <tbody>
-        <tr><th>Status</th><td>{status.reachable ? (status.http_status ? "reachable (HTTP " + status.http_status + ")" : "reachable") : "unreachable"}</td></tr>
-        <tr><th>Dashboard</th><td class="mono">{status.url}</td></tr>
-        <tr><th>Instrument</th><td>{status.reachable ? "connected" : "reachable"}</td></tr>
-      </tbody>
-    </table>
-    <p class="mut">
-      eval-lab and Atlas exchange data: your task corpus feeds Atlas calibration, and Atlas
-      derivatives can be evaluated on held-out data back here.
-    </p>
-    <div class="grid cols-3" style="margin-top:12px">
-      <a class="btn primary" href={status.url} target="_blank" rel="noreferrer">Open Atlas Lab</a>
-      <a class="btn" href="/atlas">Jump to /atlas</a>
-      <button class="btn danger" on:click={doDisconnect} disabled={working}>Disconnect</button>
-    </div>
-  </section>
-{/if}
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" on:click={doEstimate} disabled={estimating}>
+          {estimating ? "Estimating…" : "Estimate resources"}
+        </button>
+        <button
+          class="btn primary"
+          on:click={doLaunch}
+          disabled={launching || !source || !suiteRef}
+        >
+          <Play size="14" style="vertical-align:-2px" /> {launching ? "Launching…" : "Build atlas"}
+        </button>
+      </div>
 
-
-<!-- Imported atlas runs (atlas-bridge consumer) -->
-<section class="card" style="margin-top:16px">
-  <h2 style="display:flex;align-items:center;gap:10px">
-    Imported atlas runs
-    <button class="btn small" on:click={loadRuns} disabled={runsLoading}>{runsLoading ? "Loading…" : "Refresh"}</button>
-  </h2>
-  <p class="mut">
-    Atlas export dirs found on this host (<code>atlas_runs/&lt;id&gt;/</code>), imported into
-    eval-lab. Keep-maps preserve source expert identity so prune topologies stay auditable.
-  </p>
-  {#if runsError}
-    <div class="card error">{runsError}</div>
-  {/if}
-  {#if !runsLoading && !runs.length && !runsError}
-    <p class="mut">No atlas runs found yet — run <code>model-atlas export</code> to produce one.</p>
-  {/if}
-  <div class="table-scroll">
-    <table>
-      <thead><tr><th>Run</th><th>Arch</th><th>Status</th><th>Plans</th><th>Derivative</th><th></th><th></th></tr></thead>
-      <tbody>
-        {#each runs as r (r.run_id)}
-          <tr>
-            <td class="mono">{r.run_id}</td>
-            <td class="mut">{r.arch ?? "—"}</td>
-            <td>{r.status ?? "—"}</td>
-            <td>{r.n_plans ?? "—"}</td>
-            <td>{r.has_derivative ? "yes" : "—"}</td>
-            <td><button class="btn small" on:click={() => doImport(r.run_id)}>Import</button></td>
-            <td><button class="btn small" on:click={() => showRun(r.run_id)}>Details</button></td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
+      {#if estimateError}
+        <div class="card error" style="margin-top:10px">{estimateError}</div>
+      {/if}
+      {#if estimate}
+        <div class="card" style="margin-top:10px">
+          <h4>Resource estimate <span class="badge">estimated</span></h4>
+          <table>
+            <tbody>
+              <tr><th>Topology</th><td>{estimate.num_layers} layers · {estimate.num_experts} experts · top-{estimate.top_k}</td></tr>
+              <tr><th>Calibration</th><td>{estimate.num_samples} samples × {estimate.seq_len} tokens = {estimate.num_tokens} tokens</td></tr>
+              <tr><th>Ops</th><td>{Number(estimate.estimated_ops).toExponential(2)}</td></tr>
+              <tr><th>Wall time (est.)</th><td>{estimate.estimated_wall_s.toFixed(2)} s</td></tr>
+              <tr><th>Mini-MoE params</th><td>{estimate.mini_moe_params.toLocaleString()}</td></tr>
+              <tr><th>Trace bytes</th><td>≈ {(estimate.trace_bytes / 1024).toFixed(1)} KB</td></tr>
+            </tbody>
+          </table>
+          <p class="mut" style="font-size:12px;margin-top:6px">{estimate.methodology}</p>
+        </div>
+      {/if}
+    {:else}
+      <p class="mut">Loading wizard…</p>
+    {/if}
   </div>
-</section>
 
-{#if detailError}
-  <div class="card error" style="margin-top:10px">{detailError}</div>
+  <!-- RIGHT: monitor + completed runs -->
+  <div class="rows-panel">
+    <section class="card">
+      <h2 style="display:flex;align-items:center;gap:8px">
+        <Activity size="15" /> Build-atlas jobs
+        <button class="btn small" on:click={loadJobs}>Refresh</button>
+      </h2>
+      {#if jobsError}
+        <div class="card error">{jobsError}</div>
+      {/if}
+      {#if !jobs.length && !jobsError}
+        <p class="mut">No atlas jobs yet — configure one on the left and press Build atlas.</p>
+      {/if}
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Job</th><th>Source</th><th>Stage</th><th>Progress</th><th>State</th><th></th><th></th><th></th></tr>
+          </thead>
+          <tbody>
+            {#each jobs as j (j.job_id)}
+              <tr>
+                <td class="mono">{j.job_id}</td>
+                <td class="mut">{j.config?.model_asset_id ?? "—"}</td>
+                <td class="mut">{j.current_stage ?? "—"}</td>
+                <td>
+                  {#if j.progress?.total}
+                    <div class="bar"><div class="bar-fill" style="width:{(j.progress.done / j.progress.total) * 100}%"></div></div>
+                    <span class="mut" style="font-size:11px">{j.progress.done}/{j.progress.total}{j.progress.detail ? " · " + j.progress.detail : ""}</span>
+                  {:else}
+                    <span class="mut">—</span>
+                  {/if}
+                </td>
+                <td><span class="{jobCls(j.state)}">{jobLabel(j.state)}</span></td>
+                <td>
+                  {#if j.state === "running"}
+                    <button class="btn small" on:click={() => jobAction(j.job_id, "pause")}><Pause size="13" /> Pause</button>
+                  {:else if j.state === "paused" || j.state === "failed_recoverable"}
+                    <button class="btn small" on:click={() => jobAction(j.job_id, "resume")}><RotateCcw size="13" /> Resume</button>
+                  {/if}
+                </td>
+                <td>
+                  {#if ACTIVE.has(j.state) && j.state !== "paused"}
+                    <button class="btn small danger" on:click={() => jobAction(j.job_id, "cancel")}><X size="13" /> Cancel</button>
+                  {/if}
+                </td>
+                <td>
+                  {#if j.config?.atlas_run_id && TERMINAL.has(j.state)}
+                    <button class="btn small" on:click={() => showRun(j.config.atlas_run_id)}>View</button>
+                  {/if}
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:12px">
+      <h2 style="display:flex;align-items:center;gap:8px">
+        Completed atlas runs
+        <button class="btn small" on:click={loadRuns}>Refresh</button>
+      </h2>
+      {#if runsError}
+        <div class="card error">{runsError}</div>
+      {/if}
+      {#if !runs.length && !runsError}
+        <p class="mut">No atlas runs recorded yet.</p>
+      {/if}
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Run</th><th>Arch</th><th>Calibration</th><th>Tasks</th><th>Plans</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {#each runs as r (r.atlas_run_id)}
+              <tr>
+                <td class="mono">{r.atlas_run_id}</td>
+                <td class="mut">{r.source_arch ?? "—"}</td>
+                <td class="mut">{r.calibration_suite_id ?? "—"}</td>
+                <td>{r.n_tasks ?? "—"}</td>
+                <td>{r.n_plans ?? "—"}</td>
+                <td><span class="{r.status === 'completed' ? 'ok' : 'mut'}">{r.status ?? "—"}</span></td>
+                <td><button class="btn small" on:click={() => showRun(r.atlas_run_id)}>Details</button></td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+
+{#if runDetailError}
+  <div class="card error" style="margin-top:12px">{runDetailError}</div>
 {/if}
-{#if detail}
-  <section class="card" style="margin-top:10px">
-    <h2>Atlas run <span class="mono">{detail.run_id}</span>
-      <span class="badge">{detail.status ?? "—"}</span>
-      <a class="btn small" href="#/experiments" style="float:right">Create experiment</a>
+{#if runDetail}
+  <section class="card" style="margin-top:12px">
+    <h2>
+      Atlas run <span class="mono">{runDetail.atlas_run_id}</span>
+      <span class="badge">{runDetail.status}</span>
+      <button class="btn small" style="float:right" on:click={() => (runDetail = null)}>Close</button>
     </h2>
     <table>
       <tbody>
-        <tr><th>Arch</th><td class="mono">{detail.arch ?? "—"}</td></tr>
-        <tr><th>Tasks (calibration)</th><td>{detail.n_tasks ?? "—"}</td></tr>
-        <tr><th>Candidate plans</th><td>{detail.n_plans ?? "—"}</td></tr>
-        <tr><th>Derivative</th><td>{detail.has_derivative ? "built" : "—"}</td></tr>
+        <tr><th>Source checkpoint</th><td class="mono">{runDetail.source_checkpoint_id}</td></tr>
+        <tr><th>Calibration suite</th><td class="mono">{runDetail.calibration_suite_id} · {runDetail.n_tasks} tasks</td></tr>
+        <tr><th>Evidence level</th><td>{runDetail.evidence_level}</td></tr>
+        <tr><th>Topology (synthetic)</th><td>
+          {runDetail.topology?.num_hidden_layers} layers · {runDetail.topology?.num_local_experts} experts · top-{runDetail.topology?.num_experts_per_tok}
+        </td></tr>
+        <tr><th>Trace events</th><td>{runDetail.trace_count}</td></tr>
       </tbody>
     </table>
 
-    <h3>Candidate plans / keep-maps</h3>
-    {#each detail.plans as p (p.name)}
-      <div class="card" style="margin:8px 0">
-        <strong class="mono">{p.name}</strong>
-        {#if p.strategy}<span class="badge">{p.strategy}</span>{/if}
-        {#each p.keep_maps as km (p.name + ":" + km.layer_index)}
-          <div style="margin:6px 0">
-            <span class="mut">layer {km.layer_index} · top-{km.top_k} kept:</span>
-            {#each km.entries as e (p.name + ":" + km.layer_index + ":" + e.unit.source_unit_id)}
-              {#if e.kept}
-                <span class="chip on" title="{e.unit.unit_kind} {e.unit.source_unit_id} · saliency {e.saliency ?? '—'}">{e.unit.unit_kind}·{e.unit.source_unit_id}</span>
-              {/if}
-            {/each}
-          </div>
+    <h3>Candidate plans (from measured saliency)</h3>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Plan</th><th>Strategy</th><th>Kept / layer</th><th>Resident (F32)</th><th>Resident (BF16)</th></tr></thead>
+        <tbody>
+          {#each runDetail.plans as p (p.name)}
+            <tr>
+              <td class="mono">{p.name}</td>
+              <td class="mut">{p.strategy}</td>
+              <td>{Object.values(p.kept_per_layer ?? {})[0] ?? "—"}</td>
+              <td>{(p.resident_bytes_a / 1024).toFixed(1)} KB</td>
+              <td>{(p.resident_bytes_b / 1024).toFixed(1)} KB</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Keep-maps (source expert identity preserved)</h3>
+    {#each runDetail.keep_maps as km (km.layer_index)}
+      <div style="margin:6px 0">
+        <span class="mut">layer {km.layer_index} · top-{km.top_k}:</span>
+        {#each km.entries as e (km.layer_index + ":" + e.unit.source_unit_id)}
+          {#if e.kept}
+            <span class="chip on" title="saliency {e.saliency?.toFixed?.(4) ?? '—'} · rank {e.rank_within_layer}">
+              e{e.unit.source_unit_id}
+            </span>
+          {/if}
         {/each}
       </div>
     {/each}
 
-    <h3>Saliency (layer · expert · label)</h3>
+    <h3>Measured saliency (layer · expert)</h3>
     <div class="table-scroll">
       <table>
-        <thead><tr><th>Layer</th><th>Expert</th><th>Label</th><th>Mean</th><th>Total</th></tr></thead>
+        <thead><tr><th>Layer</th><th>Expert</th><th>Saliency</th><th>Freq</th><th>Act.</th></tr></thead>
         <tbody>
-          {#each (detail.saliency ?? []).slice(0, 200) as s (s.layer + ":" + s.expert + ":" + s.label)}
-            <tr><td>{s.layer}</td><td>{s.expert}</td><td class="mono">{s.label}</td><td>{s.mean?.toFixed?.(4) ?? "—"}</td><td>{s.total_value?.toFixed?.(4) ?? "—"}</td></tr>
+          {#each runDetail.saliency as s (s.layer + ":" + s.expert)}
+            <tr>
+              <td>{s.layer}</td>
+              <td>{s.expert}</td>
+              <td>{s.total_value?.toFixed?.(4) ?? "—"}</td>
+              <td>{s.frequency?.toFixed?.(4) ?? "—"}</td>
+              <td>{s.activation_count}</td>
+            </tr>
           {/each}
         </tbody>
       </table>
     </div>
   </section>
 {/if}
+
+<!-- external Atlas engine (existing connect surface, de-emphasised) -->
+<section class="card" style="margin-top:16px">
+  <h2 style="display:flex;align-items:center;gap:10px">
+    External Atlas engine
+    <span class="badge">{status?.connected && status?.reachable ? "connected" : "not connected"}</span>
+  </h2>
+  {#if notice && !status?.connected}
+    <div class="card warn">{notice}</div>
+  {/if}
+  {#if status && !status.installed}
+    <p class="mut">The <code>model-atlas</code> package isn't installed. Install and serve it:</p>
+    <p class="mono">{install?.install_command} — {install?.serve_command}</p>
+    <button class="btn" on:click={loadConnect}>I've installed it — refresh</button>
+  {:else if status && !status.connected}
+    <label class="mut" for="atlas-url">Atlas dashboard URL</label>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <input id="atlas-url" bind:value={url} class="mono" style="width:320px" />
+      <button class="btn primary" on:click={doConnect} disabled={working || !url}>
+        {working ? "Connecting…" : "Connect"}
+      </button>
+    </div>
+  {:else if status && status.connected}
+    <table>
+      <tbody>
+        <tr><th>Status</th><td>{status.reachable ? "reachable" : "unreachable"}</td></tr>
+        <tr><th>URL</th><td class="mono">{status.url}</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:8px;display:flex;gap:8px">
+      <a class="btn primary" href={status.url} target="_blank" rel="noreferrer">Open Atlas Lab</a>
+      <button class="btn danger" on:click={doDisconnect} disabled={working}>Disconnect</button>
+    </div>
+  {/if}
+</section>
