@@ -146,7 +146,54 @@ main.main { flex: 1; padding: 24px; max-width: 1360px; }
 .rows-panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 4px;
+}
+.eval-rows {
+  display: flex;
+  flex-direction: column;
+}
+.eval-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 2px;
+  border-bottom: 1px solid var(--border);
+}
+.eval-row:last-child {
+  border-bottom: none;
+}
+.eval-row-domain {
+  flex: 1;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-weight: 600;
+  min-width: 0;
+}
+.eval-score {
+  width: 76px;
+  text-align: right;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+.eval-row .view-link {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.eval-remove {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--red);
+  color: var(--red);
+  cursor: pointer;
+  padding: 0;
+  flex: 0 0 auto;
+}
+.eval-remove:hover {
+  background: var(--red);
+  color: #fff;
 }
 .rows-empty {
   border: 1px dashed var(--border);

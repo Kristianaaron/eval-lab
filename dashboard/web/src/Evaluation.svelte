@@ -1,6 +1,7 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import { get, post } from "./lib/api.js";
+  import { Minus } from "@lucide/svelte";
   import RunDetail from "./RunDetail.svelte";
   import EvalJobDetail from "./EvalJobDetail.svelte";
 
@@ -286,27 +287,37 @@
           <p class="mut" style="margin-top:6px">Pick a domain on the left to build an evaluation row.</p>
         </div>
       {:else}
-        {#each rows as row (row.domain)}
-          <div class="card" style="display:flex;align-items:center;gap:14px;padding:12px 16px">
-            <span class="mono" style="font-weight:600;flex:1">{row.domain}</span>
-            <span class="mut" style="width:90px;text-align:right">
-              {#if row.state === "completed"}
-                <strong class="mono">{row.score == null ? "—" : row.score.toFixed(3)}</strong>
-              {:else}
-                <span class="mut">—</span>
+        <div class="eval-rows">
+          {#each rows as row (row.domain)}
+            <div class="eval-row">
+              <span class="eval-row-domain">{row.domain}</span>
+              <span class="eval-score">
+                {#if row.state === "completed"}
+                  {row.score == null ? "—" : row.score.toFixed(3)}
+                {:else}
+                  —
+                {/if}
+              </span>
+              <span class="badge {statusMeta(row).cls}">{statusMeta(row).label}</span>
+              {#if row.jobId && TERMINAL.has(row.state)}
+                <a class="view-link" href="#/evaluation/job/{row.jobId}">View →</a>
+              {:else if row.state === "evaluating"}
+                <span class="mut">…</span>
               {/if}
-            </span>
-            <span class="badge {statusMeta(row).cls}">{statusMeta(row).label}</span>
-            {#if row.jobId && TERMINAL.has(row.state)}
-              <a class="btn small" href="#/evaluation/job/{row.jobId}">View</a>
-            {:else if row.state === "evaluating"}
-              <span class="mut">…</span>
-            {/if}
-            <button class="btn small danger" on:click={() => removeDomain(row.domain)}>Remove</button>
-          </div>
-        {/each}
-        <p class="mut" style="font-size:12px">
-          Strong domain(s) will evaluate in separate jobs; status + aggregate score per row.
+              <button
+                class="eval-remove"
+                title="Remove {row.domain}"
+                aria-label="Remove {row.domain}"
+                on:click={() => removeDomain(row.domain)}
+              >
+                <Minus size={14} />
+              </button>
+            </div>
+          {/each}
+        </div>
+        <p class="mut" style="font-size:12px;margin-top:8px">
+          Each domain evaluates in its own job; status and aggregate score are per row. View opens
+          the job detail.
         </p>
       {/if}
     </div>

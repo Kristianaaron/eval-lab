@@ -16,10 +16,10 @@ Evaluation page redesign: config-left + per-domain rows, and a config-load fix.
   (`340px` config left / fluid right), collapsing to one column on narrow widths.
 - **Config panel (left)**: model, harness, repeat, cold start, and domain chips
   that add/remove a row on the right; `Run new eval (n domains)` launches.
-- **Domain rows (right)**: empty state until a domain is chosen, then one card
-  per domain showing Domain, Score, a lifecycle status badge
-  (pending / queued / evaluating / done / failed / cancelled), a View link to the
-  job once terminal, and Remove.
+- **Domain rows (right)**: empty state until a domain is chosen, then one **flat row
+   per domain** separated by thin dividers showing Domain, Score, a lifecycle status
+  badge (pending / queued / evaluating / done / failed / cancelled), a View link to
+  the job once terminal, and a circular minus-icon remove button.
 - **One eval job per domain** so each row has a real lifecycle; Score is the
   average of that job's run `manifest.aggregate_score`. Recent-jobs list retained
   under the config panel.
