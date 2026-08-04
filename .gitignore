@@ -22,6 +22,8 @@ runs/*
 /reports/
 /models/
 /jobs/
+/atlas_out/
+/experiments/
 
 # Frontend (dashboard/web)
 dashboard/web/node_modules/

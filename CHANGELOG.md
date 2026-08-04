@@ -2,6 +2,28 @@
 
 All notable changes to eval-lab are documented here. Format: Keep a Changelog.
 
+## [0.14.0] - 2026-08-04
+
+Experiments (M5) + Atlas Lab keep-map/saliency surfacing.
+
+- **Experiment backend** (`schemas/experiment.py`, `storage/experiments.py`,
+  `services/experiments.py`): a saved experiment pins one candidate plan from
+  an imported atlas run as a named, evaluable intervention strategy. Created
+  from an imported run + plan, it records the keep-map scope (`kept_per_layer`,
+  `total_kept`), optionally a memory target, and links the registered
+  derivative asset + source asset while preserving source identity.
+- **API**: `GET/POST /api/experiments`, `GET/DELETE /api/experiments/{id}`;
+  `POST /api/experiments` validates the run/plan and 400s on an unknown plan,
+  404s on a missing run.
+- **Atlas Lab GUI** (`AtlasLab.svelte`): new Imported atlas runs section
+  listing `atlas_runs/<id>/` exports with Import/Details, a per-run detail
+  view (candidate plans, per-layer keep-map chips with source expert ids +
+  saliency, and a saliency table), wired to the atlas-bridge API.
+- **Experiments GUI** (`Experiments.svelte`): replaced the M5 placeholder with
+  a real list, create-from-run/plan form, detail cards, and delete.
+- `.gitignore`: treated `atlas_out/` and `experiments/` as runtime registries.
+- Tests: 3 integration tests; full suite 162 passed; ruff/mypy/format clean.
+
 ## [0.13.0] - 2026-08-04
 
 Atlas bridge consumer — eval-lab side of the model-atlas file-manifest bridge.

@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from eval_lab.schemas.evaluation import EvaluationConfig
+from eval_lab.schemas.experiment import ExperimentType
 from eval_lab.schemas.model_asset import (
     EnvBudget,
     InspectPathRequest,
@@ -27,7 +28,9 @@ from eval_lab.services.atlas_bridge import AtlasBridgeService
 from eval_lab.services.comparisons import ComparisonService
 from eval_lab.services.environment import environment_status
 from eval_lab.services.evaluations import EvaluationService
+from eval_lab.services.experiments import ExperimentService
 from eval_lab.services.models import ModelAssetService, seed_fixtures
+from eval_lab.storage.model_assets import ModelAssetStore
 from eval_lab.storage.sqlite import RunStore
 from eval_lab.tasks.loader import TaskLoadError, load_task_yaml
 
@@ -39,6 +42,14 @@ class SuiteCreate(BaseModel):
 
 class AtlasImportRequest(BaseModel):
     run_id: str
+
+
+class ExperimentCreateRequest(BaseModel):
+    run_id: str
+    plan_name: str
+    objective: str = ""
+    memory_target_bytes: int | None = None
+    experiment_type: ExperimentType = ExperimentType.keep_map
 
 
 _SLUG_KEEP = frozenset("abcdefghijklmnopqrstuvwxyz0123456789_-")
@@ -175,6 +186,7 @@ class DashboardApp:
         self.atlas_root = (
             Path(atlas_root) if atlas_root is not None else self.runs_root.parent / "atlas_out"
         )
+        self.experiments_root = self.runs_root.parent / "experiments"
         self.app = FastAPI(title="eval-lab dashboard", version="1.0.0")
         self._store = RunStore(self.db_path)
         self._models = ModelAssetService(self.models_root)
@@ -190,11 +202,17 @@ class DashboardApp:
             runs_root=self.runs_root, db=self.db_path, tasks_dir="tasks"
         )
         self._atlas = AtlasBridgeService(self.atlas_root, models_root=self.models_root)
+        self._experiments = ExperimentService(
+            self._atlas,
+            self.experiments_root,
+            models_store=ModelAssetStore(self.models_root),
+        )
         self._register()
         self._register_models()
         self._register_platform()
         self._register_atlas()
         self._register_atlas_bridge()
+        self._register_experiments()
         self._mount_spa()
 
     # -- route registration -------------------------------------------------
@@ -411,6 +429,46 @@ class DashboardApp:
             if rec is None:
                 raise HTTPException(status_code=404, detail=f"atlas import not found: {run_id}")
             return rec.model_dump(mode="json")
+
+    def _register_experiments(self) -> None:
+        """Experiment (M5) CRUD: pin an imported atlas run + candidate plan."""
+        app = self.app
+        experiments = self._experiments
+
+        @app.get("/api/experiments")
+        def list_experiments() -> list[dict[str, Any]]:
+            return [r.model_dump(mode="json") for r in experiments.list()]
+
+        @app.post("/api/experiments")
+        def create_experiment(req: ExperimentCreateRequest) -> dict[str, Any]:
+            try:
+                rec = experiments.create_from_plan(
+                    req.run_id,
+                    req.plan_name,
+                    objective=req.objective,
+                    memory_target_bytes=req.memory_target_bytes,
+                    experiment_type=req.experiment_type,
+                )
+            except FileNotFoundError:
+                raise HTTPException(
+                    status_code=404, detail=f"atlas import not found: {req.run_id}"
+                ) from None
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from None
+            return rec.model_dump(mode="json")
+
+        @app.get("/api/experiments/{experiment_id}")
+        def get_experiment(experiment_id: str) -> dict[str, Any]:
+            rec = experiments.get(experiment_id)
+            if rec is None:
+                raise HTTPException(
+                    status_code=404, detail=f"experiment not found: {experiment_id}"
+                )
+            return rec.model_dump(mode="json")
+
+        @app.delete("/api/experiments/{experiment_id}")
+        def delete_experiment(experiment_id: str) -> dict[str, bool]:
+            return {"deleted": experiments.delete(experiment_id)}
 
     # Serve the built Svelte SPA last so API routes stay reachable.
     def _register_atlas(self) -> None:
