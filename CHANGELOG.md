@@ -2,6 +2,29 @@
 
 All notable changes to eval-lab are documented here. Format: Keep a Changelog.
 
+## [0.15.0] - 2026-08-04
+
+Evaluation page redesign: config-left + per-domain rows, and a config-load fix.
+
+- **Fixed config never loading**: the Evaluation SPA threw `ReferenceError: chip is
+  not defined` (`class:chip` is a Svelte class directive bound to a missing
+  variable), which killed `onMount` so `/api/eval-config` never resolved — the
+  page sat on "Loading configuration…". Rewrote the domain chip as
+  `class="chip"` + `class:on={...}`.
+- **Layout**: replaced the full-width panels (`.grid.cols-2` was never defined in
+  `app.css`, so cards spanned the whole row) with a two-column `.eval-layout`
+  (`340px` config left / fluid right), collapsing to one column on narrow widths.
+- **Config panel (left)**: model, harness, repeat, cold start, and domain chips
+  that add/remove a row on the right; `Run new eval (n domains)` launches.
+- **Domain rows (right)**: empty state until a domain is chosen, then one card
+  per domain showing Domain, Score, a lifecycle status badge
+  (pending / queued / evaluating / done / failed / cancelled), a View link to the
+  job once terminal, and Remove.
+- **One eval job per domain** so each row has a real lifecycle; Score is the
+  average of that job's run `manifest.aggregate_score`. Recent-jobs list retained
+  under the config panel.
+- Rebuilt the SPA bundle.
+
 ## [0.14.0] - 2026-08-04
 
 Experiments (M5) + Atlas Lab keep-map/saliency surfacing.
