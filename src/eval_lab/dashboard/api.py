@@ -23,6 +23,7 @@ from eval_lab.schemas.model_asset import (
     RegisterRequest,
 )
 from eval_lab.schemas.models import TaskSpec
+from eval_lab.services.atlas_bridge import AtlasBridgeService
 from eval_lab.services.comparisons import ComparisonService
 from eval_lab.services.environment import environment_status
 from eval_lab.services.evaluations import EvaluationService
@@ -34,6 +35,10 @@ from eval_lab.tasks.loader import TaskLoadError, load_task_yaml
 class SuiteCreate(BaseModel):
     name: str
     domains: list[str]
+
+
+class AtlasImportRequest(BaseModel):
+    run_id: str
 
 
 _SLUG_KEEP = frozenset("abcdefghijklmnopqrstuvwxyz0123456789_-")
@@ -158,6 +163,7 @@ class DashboardApp:
         runs_root: str | Path,
         db_path: str | Path | None = None,
         models_root: str | Path | None = None,
+        atlas_root: str | Path | None = None,
     ) -> None:
         if FastAPI is None:
             raise RuntimeError("dashboard requires the 'serve' extra: uv pip install -e '.[serve]'")
@@ -165,6 +171,9 @@ class DashboardApp:
         self.db_path = Path(db_path) if db_path is not None else self.runs_root / "runstore.db"
         self.models_root = (
             Path(models_root) if models_root is not None else self.runs_root.parent / "models"
+        )
+        self.atlas_root = (
+            Path(atlas_root) if atlas_root is not None else self.runs_root.parent / "atlas_out"
         )
         self.app = FastAPI(title="eval-lab dashboard", version="1.0.0")
         self._store = RunStore(self.db_path)
@@ -180,10 +189,12 @@ class DashboardApp:
         self._comparisons = ComparisonService(
             runs_root=self.runs_root, db=self.db_path, tasks_dir="tasks"
         )
+        self._atlas = AtlasBridgeService(self.atlas_root, models_root=self.models_root)
         self._register()
         self._register_models()
         self._register_platform()
         self._register_atlas()
+        self._register_atlas_bridge()
         self._mount_spa()
 
     # -- route registration -------------------------------------------------
@@ -363,6 +374,43 @@ class DashboardApp:
                 "sample_count": len(samples),
                 "series": series,
             }
+
+    # Serve the built Svelte SPA last so API routes stay reachable.
+    def _register_atlas_bridge(self) -> None:
+        """Atlas-bridge routes: discover/import exported atlas runs (consumer)."""
+        app = self.app
+        atlas = self._atlas
+
+        @app.get("/api/atlas-bridge/runs")
+        def list_atlas_imports() -> list[dict[str, Any]]:
+            return [
+                {
+                    "run_id": r.run_id,
+                    "arch": r.arch,
+                    "status": r.status,
+                    "n_plans": r.n_plans,
+                    "has_derivative": r.has_derivative,
+                    "evidence_present": r.evidence_present,
+                }
+                for r in atlas.scan()
+            ]
+
+        @app.post("/api/atlas-bridge/import")
+        def import_atlas_run(req: AtlasImportRequest) -> dict[str, Any]:
+            try:
+                rec = atlas.import_run(req.run_id)
+            except FileNotFoundError:
+                raise HTTPException(
+                    status_code=404, detail=f"atlas run dir missing: {req.run_id}"
+                ) from None
+            return rec.model_dump(mode="json")
+
+        @app.get("/api/atlas-bridge/runs/{run_id}")
+        def get_atlas_import(run_id: str) -> dict[str, Any]:
+            rec = atlas.get_import(run_id)
+            if rec is None:
+                raise HTTPException(status_code=404, detail=f"atlas import not found: {run_id}")
+            return rec.model_dump(mode="json")
 
     # Serve the built Svelte SPA last so API routes stay reachable.
     def _register_atlas(self) -> None:
@@ -599,8 +647,9 @@ def create_app(
     runs_root: str | Path,
     db_path: str | Path | None = None,
     models_root: str | Path | None = None,
+    atlas_root: str | Path | None = None,
 ) -> FastAPI:
-    app = DashboardApp(runs_root, db_path, models_root)
+    app = DashboardApp(runs_root, db_path, models_root, atlas_root)
     # Seed synthetic fixtures on first startup so the GUI reflects real assets;
     # idempotent and harmless (no full-model loads, Milestone 1).
     if not app._models.list_model_assets():

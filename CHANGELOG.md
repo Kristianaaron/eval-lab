@@ -2,6 +2,25 @@
 
 All notable changes to eval-lab are documented here. Format: Keep a Changelog.
 
+## [0.13.0] - 2026-08-04
+
+Atlas bridge consumer — eval-lab side of the model-atlas file-manifest bridge.
+
+- `services/atlas_bridge.py`: `AtlasBridgeService` discovers/imports
+  `atlas_runs/<id>/` exports produced by the model-atlas `export` command,
+  validates them against the reserved atlas schemas, persists an idempotent
+  import record, and registers any derivative checkpoint as a model asset
+  (`derivative_checkpoint`, `parent_asset_id` + `source_atlas_run_id`).
+- `storage/atlas_imports.py`: JSON import store keyed by run id.
+- `schemas/atlas_bridge.py`: typed `AtlasBridgeImport` / `AtlasPlanImport`
+  reusing `UnitKeepMap` / `UnitIdentity` / `EvidenceKind` so prune topologies
+  stay auditable per unit.
+- API: `GET /api/atlas-bridge/runs`, `POST /api/atlas-bridge/import`,
+  `GET /api/atlas-bridge/runs/{run_id}`.
+- eval-lab never imports `model_atlas` (one-way dependency preserved; files
+  are hand-authored or produced by the sibling engine).
+- Tests: 5 new; full suite 159 passed; ruff/mypy/format clean.
+
 ## [0.12.0] - 2026-08-04
 
 Atlas head/expert dissection: unit identity, keep-maps, and a micro-suite.
