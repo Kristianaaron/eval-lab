@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import { get, post } from "./lib/api.js";
-  import { Activity, Play, Pause, RotateCcw, X, Database } from "@lucide/svelte";
+  import { Activity, Play, Pause, RotateCcw, X, Database, Layers } from "@lucide/svelte";
 
   // -- external Atlas engine (existing connect/integrate surface) -----------
   let status = $state(null);
@@ -303,6 +303,75 @@
     loadRuns();
   });
   onDestroy(stopPolling);
+
+  // -- blueprint digest ---------------------------------------------------
+  // Plain-language summaries over the measured artifacts (behaviour/semantic
+  // map, traces, keep/redundancy) so a run is digestible without MoE expertise.
+  const DIGEST_LABELS = Object.freeze({ code_generation: "code", mathematical_reasoning: "maths", long_context_retrieval: "long-ctx", tool_selection: "tools", planning: "planning", spatial_reasoning: "spatial", state_tracking: "state" });
+
+  function labelLeaderLayers(label) {
+    // layers (ascending) the given label's top experts are most responsible for.
+    const acc = {};
+    for (const s of runDetail?.saliency_by_label ?? []) {
+      if (s.label !== label) continue;
+      acc[s.expert] = (acc[s.expert] ?? 0) + (s.total_value ?? 0);
+    }
+    const top = Object.entries(acc).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([e]) => +e);
+    return top.map((exp) => {
+      const layers = [
+        ...new Set(
+          (runDetail?.saliency_by_label ?? [])
+            .filter((s) => s.label === label && s.expert === exp && (s.total_value ?? 0) > 0)
+            .map((s) => s.layer)
+        ),
+      ].sort((a, b) => a - b);
+      return { expert: exp, layers: layers.slice(0, 4) };
+    });
+  }
+
+  function digestLabels() {
+    const labels = {};
+    for (const s of runDetail?.saliency_by_label ?? []) labels[s.label] = (labels[s.label] ?? 0) + 1;
+    return Object.keys(labels)
+      .sort()
+      .map((label) => ({ label, leaders: labelLeaderLayers(label) }));
+  }
+
+  function traceLeaders(n = 5) {
+    const exp = {};
+    for (const s of runDetail?.saliency ?? []) exp[s.expert] = (exp[s.expert] ?? 0) + (s.activation_count ?? 0);
+    return Object.entries(exp).sort((a, b) => b[1] - a[1]).slice(0, n).map(([e, c]) => ({ expert: +e, count: c }));
+  }
+
+  function redundantDigest() {
+    const kept = new Map(); // expert id -> Set(layer indices where kept)
+    for (const km of runDetail?.keep_maps ?? []) {
+      for (const e of km.entries ?? []) {
+        const id = e.unit?.source_unit_id;
+        if (id == null) continue;
+        if (!kept.has(id)) kept.set(id, new Set());
+        if (e.kept) kept.get(id).add(km.layer_index);
+      }
+    }
+    const nLayers = runDetail?.keep_maps?.length ?? 0;
+    const protectedE = [];
+    const redundantE = [];
+    for (const [id, layers] of kept) {
+      if (nLayers > 0 && layers.size === nLayers) protectedE.push(id);
+      else if (layers.size === 0) redundantE.push(id);
+    }
+    return { protectedE: protectedE.sort((a, b) => a - b), redundantE: redundantE.sort((a, b) => a - b) };
+  }
+
+  function planTotalKept(p) {
+    const vals = Object.values(p.kept_per_layer ?? {});
+    const kept = vals.reduce((a, b) => a + (Number(b) || 0), 0);
+    return Number.isFinite(kept) ? kept : 0;
+  }
+
+  function labelShort(label) {
+    return DIGEST_LABELS[label] ?? label;
+  }
 </script>
 
 <h1>Atlas Lab</h1>
@@ -537,6 +606,88 @@
         </tbody>
       </table>
     </div>
+
+    <!-- BLUEPRINT DIGEST: plain-language read of trace + behaviour + keep data -->
+    <section class="card" style="margin-top:12px">
+      <h2 style="display:flex;align-items:center;gap:8px">
+        <Layers size="15" /> Blueprint digest
+        <span class="badge">read me first</span>
+      </h2>
+
+      <div class="card" style="margin-top:8px">
+        <h4>What happened (trace)</h4>
+        <p style="font-size:13px;margin:2px 0 8px;display:flex;gap:16px;flex-wrap:wrap">
+          <span><strong style="color:var(--text)">{runDetail.trace_count}</strong> routed tokens</span>
+          <span><strong style="color:var(--text)">{runDetail.n_tasks}</strong> capability tasks</span>
+          <span>
+            <strong style="color:var(--text)">{runDetail.topology?.num_hidden_layers ?? 0}</strong> layers ×
+            <strong style="color:var(--text)">{runDetail.topology?.num_local_experts ?? 0}</strong> experts
+          </span>
+        </p>
+        <p style="font-size:13px;margin:0">
+          Heaviest experts by routed tokens:
+          {#each traceLeaders() as l (l.expert)}
+            <span class="chip">e{l.expert} · {l.count}</span>
+          {/each}
+        </p>
+      </div>
+
+      <div class="card" style="margin-top:8px">
+        <h4>Who is responsible for what (behaviour / semantic map)</h4>
+        <p class="mut" style="font-size:13px;margin:0 0 8px">
+          Top experts per capability by measured saliency; strongest layers in brackets.
+        </p>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Capability</th><th>Lead experts (strong layers)</th></tr></thead>
+            <tbody>
+              {#each digestLabels() as d (d.label)}
+                <tr>
+                  <td class="mono">{labelShort(d.label)}</td>
+                  <td>
+                    {#if d.leaders.length}
+                      {#each d.leaders as l (l.expert)}
+                        <span class="chip">e{l.expert}{l.layers.length ? " · L" + l.layers.join(", L") : ""}</span>
+                      {/each}
+                    {:else}<span class="mut">—</span>{/if}
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:8px">
+        <h4>How much can we prune (keep / redundancy)</h4>
+        <p class="mut" style="font-size:13px;margin:0 0 8px">
+          Primary keep map (top-{runDetail.keep_maps?.[0]?.top_k ?? "?"}): experts kept in every layer are <em>protected</em>;
+          experts kept in no layer are <em>redundant</em> here.
+        </p>
+        <p style="font-size:13px;margin:0">
+          <span>Protected:
+            {#each redundantDigest().protectedE as e (e)}<span class="chip on">e{e}</span>{:else}<span class="mut">none</span>{/each}
+          </span>
+          <span style="margin-left:12px">Redundant (fully pruned):
+            {#each redundantDigest().redundantE as e (e)}<span class="chip">e{e}</span>{:else}<span class="mut">none</span>{/each}
+          </span>
+        </p>
+        <p class="mut" style="font-size:13px;margin:8px 0 0">
+          Kept experts across all layers per plan:
+          {#each runDetail.plans as p (p.name)}<span class="mono" style="margin-right:10px">{p.name}: {planTotalKept(p)}</span>{/each}
+        </p>
+      </div>
+
+      <details style="margin-top:10px">
+        <summary class="mut" style="cursor:pointer;font-size:13px">How to read this</summary>
+        <ul class="mut" style="font-size:13px;margin:8px 0 0;padding-left:18px;line-height:1.6">
+          <li><strong style="color:var(--text)">Trace</strong> — every routed token through a (layer, expert) during calibration. High counts signal hot experts.</li>
+          <li><strong style="color:var(--text)">Behaviour / semantic map</strong> — which experts a capability routes to most; an expert leading several capabilities is multipurpose.</li>
+          <li><strong style="color:var(--text)">Keep map</strong> — the prune decision (top-k experts per layer by measured saliency). Protected experts serve every layer; redundant experts never rank high enough to keep.</li>
+          <li>Intensity maps below show the same measured data per layer × expert — the digest above is just the plain-language summary.</li>
+        </ul>
+      </details>
+    </section>
 
     <h3>Maps &amp; routing</h3>
 

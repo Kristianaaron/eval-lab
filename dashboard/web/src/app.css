@@ -316,7 +316,7 @@ button.link { background: none; border: none; color: var(--accent); cursor: poin
 .act-reason { font-size: 13px; margin: 0; }
 
 label { display: block; margin: 10px 0; color: var(--muted); font-size: 13px; gap: 6px; }
-label input { display: block; width: 100%; margin-top: 4px; }
+label input, label select { display: block; width: 100%; margin-top: 6px; }
 .card h3 { margin-top: 0; }
 .card h4 { margin-bottom: 6px; }
 

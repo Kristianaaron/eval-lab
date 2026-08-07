@@ -121,3 +121,23 @@ def test_inspection_tiny_memory_budget_disables_running(mini_checkpoint) -> None
     # If the available budget is tiny, the same checkpoint is not runnable-here.
     ins = inspect_checkpoint(mini_checkpoint, memory_gb=0.0001)
     assert ins.runnable_here is False
+
+
+def test_inspection_skips_appledouble_shards(mini_checkpoint) -> None:
+    # Mac-exFAT source drives litter shard dirs with `._*` AppleDouble metadata.
+    # They are not safetensors and must not count as shards or produce issues.
+    junk = mini_checkpoint / "._model-00002-of-00002.safetensors"
+    junk.write_bytes(b"\xff" * 8 + b"not a real safetensors")
+    ins = inspect_checkpoint(mini_checkpoint, memory_gb=256)
+    assert ins.shard_count == 2
+    assert not any("implausible" in i.message or "unknown dtype" in i.message for i in ins.issues)
+
+
+def test_inspection_recognizes_nvfp4_scale_dtypes(mini_checkpoint) -> None:
+    # NVFP4 quantized checkpoints carry FP8-style scale tensors (F8_E4M3/E5M2);
+    # these are real dtypes, not an unknown-dtype warning.
+    from eval_lab.inspection.checkpoint import dtype_bytes
+
+    assert dtype_bytes("F8_E4M3") == 1.0
+    assert dtype_bytes("F8_E5M2") == 1.0
+

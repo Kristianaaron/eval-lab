@@ -29,6 +29,8 @@ _DTYPE_BYTES: dict[str, float] = {
     "F8": 1.0,
     "E4M3": 1.0,
     "E5M2": 1.0,
+    "F8_E4M3": 1.0,
+    "F8_E5M2": 1.0,
     "I8": 1.0,
     "U8": 1.0,
     "BOOL": 1.0,
@@ -147,7 +149,9 @@ def inspect_checkpoint(path: str | Path, *, memory_gb: float = 256.0) -> Checkpo
     else:
         issues.append(InspectionIssue(level="error", message="config.json not found"))
 
-    shards = sorted(root.glob("*.safetensors"))
+    shards = sorted(
+        p for p in root.glob("*.safetensors") if not p.name.startswith("._")
+    )
     total_bytes, params, per_dtype, shard_issues = _scan_safetensors(shards)
     issues.extend(shard_issues)
     shard_count = len(shards)
