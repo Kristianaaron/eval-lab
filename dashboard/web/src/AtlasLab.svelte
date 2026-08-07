@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from "svelte";
   import { get, post } from "./lib/api.js";
   import { Activity, Play, Pause, RotateCcw, X, Database, Layers } from "@lucide/svelte";
+  import Recommendations from "./Recommendations.svelte";
 
   // -- external Atlas engine (existing connect/integrate surface) -----------
   let status = $state(null);
@@ -688,6 +689,8 @@
         </ul>
       </details>
     </section>
+
+    <Recommendations run={runDetail} />
 
     <h3>Maps &amp; routing</h3>
 

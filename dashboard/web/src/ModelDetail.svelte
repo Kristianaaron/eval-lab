@@ -1,5 +1,6 @@
 <script>
   import { get, fmtBytes, fmtGb, ACTION_LABELS } from "./lib/api.js";
+  import { exl3Recommendation, pct } from "./lib/recommend.js";
 
   let { assetId } = $props();
 
@@ -24,6 +25,14 @@
     if (action === "compare") return "#/comparisons";
     return "#/models";
   }
+
+  let exl3 = $derived(
+    exl3Recommendation({
+      stored_size_bytes: data?.record?.stored_size_bytes,
+      params: data?.record?.param_metadata?.params_estimate,
+    })
+  );
+  let pm = $derived(data?.record?.param_metadata ?? {});
 </script>
 
 {#if error}
@@ -98,6 +107,25 @@
       {/if}
     </div>
   </div>
+
+  {#if exl3}
+    <div class="card" style="margin-top:16px">
+      <h3>Storage &amp; next step (EXL3)</h3>
+      <p style="font-size:14px;margin:0 0 6px">
+        This checkpoint is stored at <strong>{exl3.achieved.toFixed(1)} bits per weight</strong>.
+        Quantizing with EXL3 toward <strong>{exl3.target_bpw} bits/weight</strong> would make it roughly
+        <strong>{pct(exl3.shrink)}% smaller</strong> on disk.
+      </p>
+      {#if pm.num_hidden_layers || pm.num_local_experts}
+        <p class="mut" style="font-size:13px;margin:0">
+          Context: {pm.num_hidden_layers ? `${pm.num_hidden_layers} layers` : ""}
+          {pm.num_local_experts ? ` · ${pm.num_local_experts} routed experts` : ""}
+          (from the checkpoint census). EXL3 encoding is the next milestone — it needs a quantizer wired to this
+          checkpoint.
+        </p>
+      {/if}
+    </div>
+  {/if}
 
   <div class="card" style="margin-top:16px">
     <h3>Provenance</h3>
