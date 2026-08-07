@@ -136,6 +136,7 @@ class ModelAssetService:
                 ValidationState.valid if inspection.valid else ValidationState.invalid
             ),
             warnings=[i.message for i in inspection.issues if i.level == "warning"],
+            precision_roles=inspection.precision_roles,
         )
         self.store.save(record)
         return record, inspection

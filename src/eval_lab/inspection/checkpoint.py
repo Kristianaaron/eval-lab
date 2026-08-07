@@ -71,13 +71,37 @@ def _read_safetensors_header(path: Path) -> tuple[dict[str, object], InspectionI
         return {}, InspectionIssue(level="error", message=f"{path.name}: {exc}")
 
 
+# Lightweight tensor-role heuristic mirroring the model-atlas classifier, so we
+# can report achieved bits-per-weight per role (mixed-precision allocation data).
+def _role_of(name: str) -> str:
+    low = name.lower()
+    if "embed" in low or "embed_tokens" in low:
+        return "embedding"
+    if "lm_head" in low or "eh_proj" in low:
+        return "lm_head"
+    if "router" in low or "gate.weight" in low or ".gate." in low:
+        return "router"
+    if "shared" in low:
+        return "shared_expert"
+    if ".experts." in low or "expert" in low:
+        return "experts"
+    if "attention" in low or "self_attn" in low or "kda" in low or "mla" in low:
+        return "attention"
+    if "latent" in low or "proj" in low:
+        return "latent_proj"
+    if "norm" in low:
+        return "norm"
+    return "other"
+
+
 def _scan_safetensors(
     shards: list[Path],
-) -> tuple[int, int, dict[str, float], list[InspectionIssue]]:
-    """Return (total_bytes, params, per_dtype bytes, issues) across shard headers."""
+) -> tuple[int, int, dict[str, float], dict[str, dict[str, float]], list[InspectionIssue]]:
+    """Return (total_bytes, params, per_dtype bytes, per_role{bytes,numel}, issues)."""
     total = 0
     params = 0
     per_dtype: dict[str, float] = {}
+    role: dict[str, dict[str, float]] = {}
     issues: list[InspectionIssue] = []
     for shard in shards:
         header, err = _read_safetensors_header(shard)
@@ -90,6 +114,7 @@ def _scan_safetensors(
                 continue
             dtype = str(meta.get("dtype", ""))
             shape = meta.get("shape")
+            offsets = meta.get("data_offsets")
             if not isinstance(shape, list):
                 continue
             numel = math.prod(int(s) for s in shape)
@@ -103,8 +128,16 @@ def _scan_safetensors(
                     )
                 )
             per_dtype[dtype.upper()] = per_dtype.get(dtype.upper(), 0.0) + numel * bytes_per
+            # real stored bytes from the header offsets when present
+            if isinstance(offsets, list) and len(offsets) == 2:
+                tbytes = float(offsets[1] - offsets[0])
+            else:
+                tbytes = float(numel * bytes_per)
+            r = role.setdefault(_role_of(key), {"bytes": 0.0, "numel": 0.0})
+            r["bytes"] += tbytes
+            r["numel"] += numel
             params += numel
-    return total, params, per_dtype, issues
+    return total, params, per_dtype, role, issues
 
 
 def inspect_checkpoint(path: str | Path, *, memory_gb: float = 256.0) -> CheckpointInspection:
@@ -152,8 +185,19 @@ def inspect_checkpoint(path: str | Path, *, memory_gb: float = 256.0) -> Checkpo
     shards = sorted(
         p for p in root.glob("*.safetensors") if not p.name.startswith("._")
     )
-    total_bytes, params, per_dtype, shard_issues = _scan_safetensors(shards)
+    total_bytes, params, per_dtype, role_bytes, shard_issues = _scan_safetensors(shards)
     issues.extend(shard_issues)
+    precision_roles: list[dict[str, object]] = []
+    for role, acc in sorted(role_bytes.items()):
+        bpw = (acc["bytes"] * 8 / acc["numel"]) if acc["numel"] else None
+        precision_roles.append(
+            {
+                "role": role,
+                "stored_bytes": round(acc["bytes"]),
+                "numel": round(acc["numel"]),
+                "achieved_bpw": round(bpw, 2) if bpw is not None else None,
+            }
+        )
     shard_count = len(shards)
 
     # Fall back to unsplit weights for byte counting when no safetensors present.
@@ -209,4 +253,5 @@ def inspect_checkpoint(path: str | Path, *, memory_gb: float = 256.0) -> Checkpo
         runnable_here=runnable_here,
         atlas_compatible=atlas_compatible,
         issues=issues,
+        precision_roles=precision_roles,
     )

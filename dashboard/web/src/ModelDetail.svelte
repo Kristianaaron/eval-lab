@@ -127,6 +127,30 @@
     </div>
   {/if}
 
+  {#if (a.precision_roles ?? []).length}
+    <div class="card" style="margin-top:16px">
+      <h3>Measured precision map</h3>
+      <p class="mut" style="font-size:13px;margin:0 0 8px">
+        Achieved bits per weight by role, read from the checkpoint headers (no tensors loaded).
+        Roles at 16 bpw are the best targets for precision reduction / EXL3.
+      </p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Role</th><th>Bits / weight</th><th>Stored</th></tr></thead>
+          <tbody>
+            {#each a.precision_roles as r (r.role)}
+              <tr>
+                <td class="mono">{r.role}</td>
+                <td>{r.achieved_bpw != null ? Number(r.achieved_bpw).toFixed(2) : "—"}</td>
+                <td>{fmtBytes(Number(r.stored_bytes ?? 0))}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {/if}
+
   <div class="card" style="margin-top:16px">
     <h3>Provenance</h3>
     <p class="mut">

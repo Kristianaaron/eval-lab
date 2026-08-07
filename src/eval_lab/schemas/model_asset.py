@@ -60,6 +60,10 @@ class ModelAssetRecord(BaseModel):
     latest_quality_score: float | None = None
     latest_eval_run_id: str | None = None
     warnings: list[str] = Field(default_factory=list)
+    precision_roles: list[dict[str, object]] = Field(
+        default_factory=list,
+        description="per-role achieved bits/weight from the header census",
+    )
 
 
 class InspectionIssue(BaseModel):
@@ -91,6 +95,10 @@ class CheckpointInspection(BaseModel):
     node_access: bool = True
     inspected_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     issues: list[InspectionIssue] = Field(default_factory=list)
+    precision_roles: list[dict[str, object]] = Field(
+        default_factory=list,
+        description="per-role achieved bits/weight + stored bytes from headers",
+    )
 
 
 class AvailableAction(BaseModel):
