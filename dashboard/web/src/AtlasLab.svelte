@@ -452,7 +452,7 @@
           {estimating ? "Estimating…" : "Estimate resources"}
         </button>
         <button
-          class="btn primary"
+          class="beam-btn"
           on:click={doLaunch}
           disabled={launching || !source || !suiteRef}
         >

@@ -304,6 +304,42 @@ button.link { background: none; border: none; color: var(--accent); cursor: poin
 .btn.small { padding: 4px 9px; font-size: 13px; }
 .btn.danger { color: var(--red); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---- Border-beam primary CTA (per beam.jakubantalik.com), small version ---- */
+.beam-btn {
+  position: relative; isolation: isolate; overflow: hidden;
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid rgba(79, 140, 255, 0.45); border-radius: 8px;
+  background: linear-gradient(180deg, rgba(79, 140, 255, 0.16), rgba(12, 18, 30, 0.65));
+  color: #eaf1ff; font-weight: 600; font-size: 13px; padding: 7px 14px; cursor: pointer;
+}
+.beam-btn:hover { color: #fff; }
+.beam-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.beam-btn::before {
+  content: ""; position: absolute; inset: 0; z-index: 0; border-radius: inherit; padding: 2px;
+  background: conic-gradient(
+    from 180deg at 50% 50%,
+    rgba(79, 140, 255, 0) 0deg, #4f8cff 75deg, #ffffff 95deg, #fbbf24 128deg,
+    rgba(79, 140, 255, 0) 175deg, rgba(79, 140, 255, 0) 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: border-beam 4.5s linear infinite;
+}
+.beam-btn::after {
+  content: ""; position: absolute; inset: -6px; z-index: -1; border-radius: inherit;
+  background: conic-gradient(
+    from 120deg,
+    rgba(79, 140, 255, 0),
+    rgba(79, 140, 255, 0.55) 130deg,
+    rgba(251, 191, 36, 0.4) 210deg,
+    rgba(79, 140, 255, 0) 300deg
+  );
+  filter: blur(9px); opacity: 0.5; animation: border-beam 3.5s linear infinite;
+}
+@keyframes border-beam { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .ok { color: var(--green); }
 .warn { color: var(--amber); }
 .error { color: var(--red); }
