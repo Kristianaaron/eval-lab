@@ -37,44 +37,44 @@ export function strategyOptions(run, goalKey = "balanced", fitBudgetGiB = null, 
 
   const list = [
     {
-      key: "prune_expert",
-      name: "Prune experts",
-      what: "Drop the least-used experts per layer, keep the strongest.",
-      quality: sc.recommended?.quality ?? 1,
-      speed: 0.8,
-      fit: 0.8,
-      readiness: "measured",
-      evidence: `keeps ${pct(sc.recommended?.quality ?? 1)}% of real traffic`,
-    },
-    {
-      key: "prune_neuron",
+      key: "narrow_neuron",
       name: "Narrow the neurons (width)",
-      what: "Keep the busy experts full-width, thin the quiet ones inside each expert.",
-      quality: 0.7 + 0.3 * Math.min(1, topShare), // concentrated => safer to thin
+      what: "Thin the redundant channels inside every expert but keep ALL experts and routing intact — the quality-safe way to cut size.",
+      quality: 0.96,
       speed: 0.6,
-      fit: 0.7,
+      fit: 0.72,
       readiness: cons.top.length ? "measured" : "staged",
-      evidence: `${pct(topShare)}% of traffic in the top experts`,
+      evidence: `${pct(topShare)}% of traffic in the top experts · no experts removed`,
     },
     {
       key: "quant_exl3",
       name: "Compress with EXL3",
-      what: "Store the weights in fewer bits per weight.",
-      quality: 0.6,
-      speed: 0.4,
-      fit: exl3 ? Math.min(1, exl3.shrink + 0.15) : 0.9,
+      what: "Store the surviving weights in fewer bits per weight — cuts size while keeping the model's behaviour.",
+      quality: 0.8,
+      speed: 0.45,
+      fit: 0.94,
       readiness: "staged",
       evidence: exl3 ? `${pct(exl3.shrink)}% smaller` : "needs a quantizer wired in",
     },
     {
       key: "quant_mixed",
       name: "Mixed precision",
-      what: "Int8/int4/fp8/bf16 for most weights; FP32 only where it must stay exact.",
-      quality: 0.65,
-      speed: 0.45,
-      fit: 0.6,
+      what: "Drop the BF16 non-expert roles (attention/shared/latent/norms) toward FP8/int8; FP32 where exact.",
+      quality: 0.85,
+      speed: 0.5,
+      fit: 0.62,
       readiness: "staged",
       evidence: "per-tensor probes pending",
+    },
+    {
+      key: "prune_expert",
+      name: "Removing whole experts (last resort)",
+      what: "Drops the least-used experts outright — biggest speed/memory win, but it disturbs routing and risks quality.",
+      quality: (sc.recommended?.quality ?? 1) * 0.85, // routing-risk adjusted
+      speed: 0.8,
+      fit: 0.6,
+      readiness: "measured",
+      evidence: `keeps ${pct(sc.recommended?.quality ?? 1)}% of real traffic · aggressive`,
     },
     {
       key: "page_nvme",
@@ -89,7 +89,7 @@ export function strategyOptions(run, goalKey = "balanced", fitBudgetGiB = null, 
     {
       key: "distill",
       name: "Distill / repair",
-      what: "Train a smaller student (or repair after pruning) — the costliest, but recovers the most lost quality.",
+      what: "Train a smaller student (or repair after pruning) — the costliest, recovers the most lost quality.",
       quality: 0.97,
       speed: 0.42,
       fit: 0.6,
@@ -101,9 +101,21 @@ export function strategyOptions(run, goalKey = "balanced", fitBudgetGiB = null, 
   for (const s of list) s.score = w.q * s.quality + w.s * s.speed + w.f * s.fit;
   list.sort((a, b) => b.score - a.score);
 
+  // The blueprint-prescribed fit path: quality-preserving stack, in order.
+  const combo = {
+    name: "Narrow neurons → EXL3 / mixed-precision",
+    steps: ["Narrow the neurons (keep every expert)", "Compress with EXL3", "Mixed precision on the BF16 roles"],
+    why: "keeps the full expert topology (minimizes quality loss) and cuts storage with EXL3/mixed-precision — the recommended quality-preserving path for fitting.",
+    quality: 0.9,
+    fit: 0.9,
+    speed: 0.55,
+    recommended: goalKey !== "speed",
+  };
+
   return {
     list,
     best: list[0] ?? null,
+    combo,
     goalWeights: w,
     goalKey,
     fitsNow,

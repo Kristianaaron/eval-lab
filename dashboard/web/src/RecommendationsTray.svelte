@@ -91,6 +91,12 @@
           <h4 style="margin:0">Strategies to consider</h4>
           <span class="mut" style="font-size:12px">ranked for “{GOALS[goal].label}”</span>
         </div>
+        {#if strat.combo?.recommended}
+          <div class="combo-note">
+            <strong>Quality-preserving path for fitting:</strong> {strat.combo.name}
+            <p class="mut" style="font-size:13px;margin:4px 0 0;line-height:1.5">{strat.combo.why}</p>
+          </div>
+        {/if}
         {#each strat.list as s, i (s.key)}
           <div class="strat-row {i === 0 ? 'top' : ''}">
             <div class="strat-head">
@@ -234,6 +240,10 @@
   .rec-goal.on { background: rgba(79,140,255,.16); color: var(--accent); border-color: var(--accent); font-weight: 600; }
   .rec-row td { background: rgba(79, 140, 255, 0.06); }
   .strat-title { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
+  .combo-note {
+    border: 1px solid var(--accent); background: rgba(79, 140, 255, 0.08);
+    border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; font-size: 14px;
+  }
   .strat-row { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; background: var(--panel-2); }
   .strat-row.top { border-color: var(--accent); background: rgba(79, 140, 255, 0.06); }
   .strat-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
