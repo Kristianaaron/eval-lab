@@ -1,5 +1,6 @@
 <script>
   import { Sparkles, Cpu, HardDrive, ShieldCheck, X } from "@lucide/svelte";
+  import { fly, fade } from "svelte/transition";
   import {
     scorePlans,
     GOALS,
@@ -9,6 +10,7 @@
     modelSummary,
     pct,
   } from "./lib/recommend.js";
+  import { strategyOptions, READINESS } from "./lib/strategies.js";
 
   // `open` toggles the right tray overlay; `run` is the atlas run detail.
   let { open = false, run = null, modelSizeBytes = null, modelParams = null, onclose = () => {} } = $props();
@@ -17,6 +19,12 @@
   let fitGiB = $state(""); // memory budget the deployment must fit in
 
   const sc = $derived(scorePlans(run, goal, fitGiB ? Number(fitGiB) : null));
+  const strat = $derived(
+    strategyOptions(run, goal, fitGiB ? Number(fitGiB) : null, {
+      stored_size_bytes: modelSizeBytes,
+      params: modelParams,
+    })
+  );
   const cons = $derived(loadConcentration(run?.saliency));
   const red = $derived(redundancySummary(run?.keep_maps));
   const sum = $derived(modelSummary(run));
@@ -34,8 +42,14 @@
 </script>
 
 {#if open}
-  <div class="rec-backdrop" role="presentation" onclick={onclose}></div>
-  <aside class="rec-tray" role="dialog" aria-label="Recommendations">
+  <div class="rec-backdrop" role="presentation" onclick={onclose} in:fade={{ duration: 180 }} out:fade={{ duration: 160 }}></div>
+  <aside
+    class="rec-tray"
+    role="dialog"
+    aria-label="Recommendations"
+    in:fly={{ x: 460, duration: 260 }}
+    out:fly={{ x: 460, duration: 200 }}
+  >
     <header class="rec-head">
       <h3 style="display:flex;align-items:center;gap:8px;margin:0"><Sparkles size="15" /> Recommendations</h3>
       <button class="btn small" onclick={onclose}><X size="13" /> Close</button>
@@ -71,9 +85,36 @@
         </p>
       {/if}
 
-      <!-- recommended plan -->
+      <!-- strategies: rank the full lever space against the user's goal -->
       <div class="card" style="margin-top:16px">
-        <h4 style="display:flex;align-items:center;gap:6px"><Cpu size="14" /> Recommended plan</h4>
+        <div class="strat-title">
+          <h4 style="margin:0">Strategies to consider</h4>
+          <span class="mut" style="font-size:12px">ranked for “{GOALS[goal].label}”</span>
+        </div>
+        {#each strat.list as s, i (s.key)}
+          <div class="strat-row {i === 0 ? 'top' : ''}">
+            <div class="strat-head">
+              <span class="strat-rank">{i + 1}</span>
+              <span class="strat-name">{s.name}</span>
+              {#if i === 0}<span class="badge pass">best for you</span>{/if}
+              <span class="badge {READINESS[s.readiness].cls}">{READINESS[s.readiness].label}</span>
+            </div>
+            <p class="strat-what">{s.what}</p>
+            <p class="strat-evidence">{s.evidence}</p>
+            <div class="strat-bar" title="goal match {pct(s.score)}%">
+              <div class="strat-fill" style="width:{pct(s.score)}%"></div>
+            </div>
+          </div>
+        {/each}
+        <p class="mut" style="font-size:12px;margin:10px 0 0;line-height:1.5">{strat.provenance}</p>
+      </div>
+
+      <!-- plan detail: the prune sub-view (collapsed to keep the menu primary) -->
+      <details class="card" style="margin-top:16px" open>
+        <summary style="cursor:pointer">
+          <span style="display:flex;align-items:center;gap:6px"><Cpu size="14" /> Recommended plan <span class="badge">detail</span></span>
+        </summary>
+        <div style="margin-top:8px">
         {#if sc.recommended}
           {@const r = sc.recommended}
           <p style="font-size:14px;margin:0 0 8px;line-height:1.55">
@@ -128,8 +169,9 @@
               </tbody>
             </table>
           </div>
-        {/if}
-      </div>
+          {/if}
+        </div>
+      </details>
 
       <!-- busiest experts -->
       <div class="card" style="margin-top:16px">
@@ -191,4 +233,14 @@
   .rec-goal:hover { border-color: var(--accent); }
   .rec-goal.on { background: rgba(79,140,255,.16); color: var(--accent); border-color: var(--accent); font-weight: 600; }
   .rec-row td { background: rgba(79, 140, 255, 0.06); }
+  .strat-title { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
+  .strat-row { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; background: var(--panel-2); }
+  .strat-row.top { border-color: var(--accent); background: rgba(79, 140, 255, 0.06); }
+  .strat-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .strat-rank { color: var(--muted); font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; }
+  .strat-name { font-weight: 600; }
+  .strat-what { font-size: 13px; margin: 4px 0 2px; line-height: 1.5; }
+  .strat-evidence { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+  .strat-bar { height: 5px; background: var(--panel); border-radius: 3px; overflow: hidden; }
+  .strat-fill { height: 100%; background: var(--accent); }
 </style>
