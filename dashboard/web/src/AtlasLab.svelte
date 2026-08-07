@@ -590,7 +590,7 @@
       </tbody>
     </table>
 
-    <h3>Candidate plans (from measured saliency)</h3>
+    <h3 style="margin-top:28px">Candidate plans (from measured saliency)</h3>
     <div class="table-scroll">
       <table>
         <thead><tr><th>Plan</th><th>Strategy</th><th>Kept / layer</th><th>Resident (F32)</th><th>Resident (BF16)</th></tr></thead>
@@ -692,7 +692,7 @@
 
     <Recommendations run={runDetail} />
 
-    <h3>Maps &amp; routing</h3>
+    <h3 style="margin-top:28px">Maps &amp; routing</h3>
 
     <!-- SALIENCY MAP: layer x expert heatmap -->
     <div class="card" style="margin-top:16px">
