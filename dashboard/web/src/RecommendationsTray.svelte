@@ -11,14 +11,21 @@
     pct,
   } from "./lib/recommend.js";
   import { strategyOptions, READINESS } from "./lib/strategies.js";
+  import { fitSummary, kvGiB, KV_TOKENS_PER_GIB_DEFAULT } from "./lib/fit.js";
 
   // `open` toggles the right tray overlay; `run` is the atlas run detail.
   let { open = false, run = null, modelSizeBytes = null, modelParams = null, onclose = () => {} } = $props();
 
   let goal = $state("balanced");
   let fitGiB = $state(""); // memory budget the deployment must fit in
+  let ctx = $state(98304); // context length flowing through the KV cache
+  let weightsNode = $state(""); // per-node weights GiB; empty = use plan resident
 
   const sc = $derived(scorePlans(run, goal, fitGiB ? Number(fitGiB) : null));
+  const planResidentPerNode = sc.recommended?.bytes ? (sc.recommended.bytes / 1024 ** 3) / 2 : 0;
+  const fit = $derived(
+    fitSummary(weightsNode ? Number(weightsNode) : planResidentPerNode, Number(ctx) || 0)
+  );
   const strat = $derived(
     strategyOptions(run, goal, fitGiB ? Number(fitGiB) : null, {
       stored_size_bytes: modelSizeBytes,
@@ -34,6 +41,16 @@
 
   function gb(bytes) {
     return bytes == null ? null : (bytes / 1024 ** 3).toFixed(2);
+  }
+  function pctNorm(gib, total) {
+    return total > 0 ? Math.max(0, (gib / total) * 100) : 0;
+  }
+  function segColor(name) {
+    return (
+      { Weights: "var(--accent)", "KV cache": "#fbbf24", "Activations + graphs": "#6b7280", Free: "#232a35" }[
+        name
+      ] ?? "var(--border)"
+    );
   }
   function fitsText(p) {
     if (p.fits_budget === null) return "—";
@@ -77,7 +94,20 @@
       </div>
       <div style="margin-bottom:4px">
         <div class="rec-label">Memory budget it must fit in (GiB)</div>
-        <input type="number" min="0" placeholder="e.g. 512" bind:value={fitGiB} style="width:100%" />
+        <input type="number" min="0" placeholder="e.g. 114" bind:value={fitGiB} style="width:100%" />
+      </div>
+      <div style="margin-bottom:4px">
+        <div class="rec-label">Context length (tokens) — drives the KV cache</div>
+        <select style="width:100%" bind:value={ctx}>
+          <option value={8192}>8K (8192)</option>
+          <option value={32768}>32K (32768)</option>
+          <option value={98304}>96K (98304)</option>
+          <option value={131072}>128K (131072)</option>
+        </select>
+      </div>
+      <div style="margin-bottom:4px">
+        <div class="rec-label">Model weights per node (GiB) — leave blank to auto</div>
+        <input type="number" min="0" placeholder="auto (plan)" bind:value={weightsNode} style="width:100%" />
       </div>
       {#if !sc.hasBudget}
         <p class="mut" style="font-size:12px;margin:6px 0 0">
@@ -113,6 +143,56 @@
           </div>
         {/each}
         <p class="mut" style="font-size:12px;margin:10px 0 0;line-height:1.5">{strat.provenance}</p>
+      </div>
+
+      <!-- fit & context: KV-aware dual-node fit (mirrors the dual-Spark recipe) -->
+      <div class="card" style="margin-top:16px">
+        <h4 style="display:flex;align-items:center;gap:8px">
+          Fit &amp; context <span class="badge {fit.fits ? 'pass' : 'error'}">{fit.fits ? "fits" : "over budget"}</span>
+        </h4>
+        <p style="font-size:14px;margin:0 0 8px;line-height:1.55">
+          At <strong>{(ctx / 1024).toFixed(0)}K tokens</strong>: weights
+          ({fit.row.weights.toFixed(1)} GiB/node) + <strong>KV cache ({fit.row.kv.toFixed(1)} GiB)</strong>
+          + activations/graphs ({fit.row.overhead.toFixed(1)} GiB) ={" "}
+          <strong>{fit.row.used.toFixed(1)} / {fit.row.usableGiB.toFixed(0)} GiB per node</strong>.
+          {fit.fits
+            ? `Fits with ${fit.row.free.toFixed(1)} GiB free.`
+            : `Over by ${fit.row.over.toFixed(1)} GiB — shorten context or shrink weights.`}
+        </p>
+        <div class="fit-bar">
+          {#each fit.row.segments as seg (seg.name)}
+            <div
+              class="fit-seg"
+              style="width:{pctNorm(seg.gib, fit.row.usableGiB)}%;background:{segColor(seg.name)}"
+              title="{seg.name}: {seg.gib.toFixed(1)} GiB"
+            ></div>
+          {/each}
+        </div>
+        <div class="fit-legend">
+          {#each fit.row.segments as seg (seg.name)}
+            <span><i style="background:{segColor(seg.name)}"></i> {seg.name} {seg.gib.toFixed(1)}G</span>
+          {/each}
+        </div>
+        <p class="mut" style="font-size:12px;margin:8px 0 0;line-height:1.5">
+          KV is an estimate (~{KV_TOKENS_PER_GIB_DEFAULT.toLocaleString()} tokens/GiB, from the dual-Spark
+          recipe; {kvGiB(ctx).toFixed(1)} GiB at {(ctx / 1024).toFixed(0)}K). Longest standard context that
+          fits: <strong style="color:var(--text)">{(fit.maxFit / 1024).toFixed(0)}K</strong>.
+        </p>
+        <div class="table-scroll" style="margin-top:8px">
+          <table>
+            <thead><tr><th>Context</th><th>Fits</th><th>Used / node</th><th>Free</th></tr></thead>
+            <tbody>
+              {#each fit.across as a (a.contextTokens)}
+                <tr>
+                  <td>{(a.contextTokens / 1024).toFixed(0)}K</td>
+                  <td><span class={a.fits ? "ok" : "error"}>{a.fits ? "yes" : "over"}</span></td>
+                  <td>{a.used.toFixed(1)} / {a.usableGiB.toFixed(0)}</td>
+                  <td>{a.free.toFixed(1)} GiB</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- plan detail: the prune sub-view (collapsed to keep the menu primary) -->
@@ -253,4 +333,8 @@
   .strat-evidence { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
   .strat-bar { height: 5px; background: var(--panel); border-radius: 3px; overflow: hidden; }
   .strat-fill { height: 100%; background: var(--accent); }
+  .fit-bar { display: flex; gap: 2px; height: 16px; border-radius: 3px; overflow: hidden; background: var(--panel); margin: 4px 0 8px; }
+  .fit-seg { height: 100%; display: inline-block; min-width: 1px; }
+  .fit-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+  .fit-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
 </style>
