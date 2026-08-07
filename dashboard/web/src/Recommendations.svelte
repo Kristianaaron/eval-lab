@@ -40,7 +40,7 @@
       the actual trace — nothing is estimated.
     </p>
 
-    <div class="card" style="margin-top:8px">
+    <div class="card" style="margin-top:16px">
       <h4 style="display:flex;align-items:center;gap:6px"><Cpu size="14" /> Pruning strategy</h4>
       {#if pr.recommended}
         {#if pr.recommended.dropped_pct === 0}
@@ -80,7 +80,7 @@
       {/if}
     </div>
 
-    <div class="card" style="margin-top:8px">
+    <div class="card" style="margin-top:16px">
       <h4 style="display:flex;align-items:center;gap:6px"><ShieldCheck size="14" /> Preserve the busiest experts (neurons)</h4>
       {#if hotExperts.length}
         <p style="font-size:14px;margin:0 0 6px">
@@ -97,7 +97,7 @@
       </p>
     </div>
 
-    <div class="card" style="margin-top:8px">
+    <div class="card" style="margin-top:16px">
       <h4 style="display:flex;align-items:center;gap:6px"><HardDrive size="14" /> Storage &amp; next step (EXL3)</h4>
       {#if exl3}
         <p style="font-size:14px;margin:0 0 6px">
@@ -120,7 +120,7 @@
       {/if}
     </div>
 
-    <details style="margin-top:10px">
+    <details style="margin-top:16px">
       <summary class="mut" style="cursor:pointer;font-size:13px">In one line</summary>
       <p class="mut" style="font-size:13px;margin:8px 0 0;line-height:1.6">
         This model routed <strong style="color:var(--text)">{sum.traceTokens}</strong> tokens through

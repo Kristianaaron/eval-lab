@@ -615,7 +615,7 @@
         <span class="badge">read me first</span>
       </h2>
 
-      <div class="card" style="margin-top:8px">
+      <div class="card" style="margin-top:16px">
         <h4>What happened (trace)</h4>
         <p style="font-size:13px;margin:2px 0 8px;display:flex;gap:16px;flex-wrap:wrap">
           <span><strong style="color:var(--text)">{runDetail.trace_count}</strong> routed tokens</span>
@@ -633,7 +633,7 @@
         </p>
       </div>
 
-      <div class="card" style="margin-top:8px">
+      <div class="card" style="margin-top:16px">
         <h4>Who is responsible for what (behaviour / semantic map)</h4>
         <p class="mut" style="font-size:13px;margin:0 0 8px">
           Top experts per capability by measured saliency; strongest layers in brackets.
@@ -659,7 +659,7 @@
         </div>
       </div>
 
-      <div class="card" style="margin-top:8px">
+      <div class="card" style="margin-top:16px">
         <h4>How much can we prune (keep / redundancy)</h4>
         <p class="mut" style="font-size:13px;margin:0 0 8px">
           Primary keep map (top-{runDetail.keep_maps?.[0]?.top_k ?? "?"}): experts kept in every layer are <em>protected</em>;
@@ -679,7 +679,7 @@
         </p>
       </div>
 
-      <details style="margin-top:10px">
+      <details style="margin-top:16px">
         <summary class="mut" style="cursor:pointer;font-size:13px">How to read this</summary>
         <ul class="mut" style="font-size:13px;margin:8px 0 0;padding-left:18px;line-height:1.6">
           <li><strong style="color:var(--text)">Trace</strong> — every routed token through a (layer, expert) during calibration. High counts signal hot experts.</li>
@@ -695,7 +695,7 @@
     <h3>Maps &amp; routing</h3>
 
     <!-- SALIENCY MAP: layer x expert heatmap -->
-    <div class="card" style="margin-top:8px">
+    <div class="card" style="margin-top:16px">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
         <strong>Saliency map</strong>
         <span class="mut" style="font-size:12px">cell intensity ∝ total_value (measured)</span>
@@ -725,7 +725,7 @@
     </div>
 
     <!-- KEEP MAP: simple kept/pruned matrix per selected plan -->
-    <div class="card" style="margin-top:8px">
+    <div class="card" style="margin-top:16px">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
         <strong>Keep map</strong>
         <span class="mut" style="font-size:12px">
@@ -772,7 +772,7 @@
     </div>
 
     <!-- ROUTING MAP: share of routed tokens per expert, dimmed when pruned -->
-    <div class="card" style="margin-top:8px">
+    <div class="card" style="margin-top:16px">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
         <strong>Routing</strong>
         <span class="mut" style="font-size:12px">
