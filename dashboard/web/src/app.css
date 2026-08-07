@@ -330,6 +330,19 @@ label input, label select { display: block; width: 100%; margin-top: 6px; }
 
 .notice { border-left: 3px solid var(--accent); }
 
+/* Atlas monitor: jobs + runs collapsed behind a toggle (controls take priority) */
+.monitor-toggle {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  background: none; border: none; color: var(--text); cursor: pointer; padding: 2px 0;
+}
+.monitor-title { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.monitor-caret { margin-left: auto; font-size: 12px; }
+.panel-sub {
+  display: flex; align-items: center; justify-content: space-between;
+  color: var(--muted); font-size: 12px; text-transform: uppercase;
+  letter-spacing: 0.04em; margin: 12px 0 6px;
+}
+
 /* Milestone 2 */
 .progress { background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; height: 14px; overflow: hidden; margin: 10px 0; }
 .progress .bar { background: var(--accent); height: 100%; transition: width 0.3s; }
