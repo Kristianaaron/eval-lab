@@ -1,8 +1,8 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import { get, post } from "./lib/api.js";
-  import { Activity, Play, Pause, RotateCcw, X, Database, Layers } from "@lucide/svelte";
-  import Recommendations from "./Recommendations.svelte";
+  import { Activity, Play, Pause, RotateCcw, X, Database, Layers, Sparkles } from "@lucide/svelte";
+  import RecommendationsTray from "./RecommendationsTray.svelte";
 
   // -- external Atlas engine (existing connect/integrate surface) -----------
   let status = $state(null);
@@ -33,6 +33,7 @@
   let runsError = $state(null);
   let runDetail = $state(null);
   let runDetailError = $state(null);
+  let recOpen = $state(false);
 
   const ACTIVE = new Set([
     "queued",
@@ -169,6 +170,7 @@
     runDetailError = null;
     try {
       runDetail = await get(`/api/atlas-runs/${encodeURIComponent(run_id)}`);
+      recOpen = true; // guide the user on fitting this model after the run
       // Default the keep/routing overlay to the most aggressive plan (smallest
       // top-k), which is also the server's primary keep-map budget.
       const budgets = (runDetail.plans ?? []).map((p) => p.keep_per_layer ?? 0);
@@ -576,7 +578,8 @@
     <h2>
       Atlas run <span class="mono">{runDetail.atlas_run_id}</span>
       <span class="badge">{runDetail.status}</span>
-      <button class="btn small" style="float:right" on:click={() => (runDetail = null)}>Close</button>
+      <button class="btn small" style="float:right" on:click={() => (recOpen = true)}><Sparkles size="13" /> Recommendations</button>
+      <button class="btn small" style="float:right;margin-right:8px" on:click={() => (runDetail = null)}>Close</button>
     </h2>
     <table>
       <tbody>
@@ -690,7 +693,11 @@
       </details>
     </section>
 
-    <Recommendations run={runDetail} />
+    <RecommendationsTray
+      open={recOpen}
+      run={runDetail}
+      onclose={() => (recOpen = false)}
+    />
 
     <h3 style="margin-top:28px">Maps &amp; routing</h3>
 

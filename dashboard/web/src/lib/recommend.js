@@ -2,10 +2,6 @@
 // Pure functions (no DOM) so they are unit-testable in Node against real runs.
 // All numbers derive from measured saliency / plans / keep-maps — never invented.
 
-// Target: we only recommend a more aggressive prune while it still covers this
-// fraction of the model's actual routed traffic.
-export const RETAIN_TARGET = 0.85;
-
 export function pct(f) {
   const v = Math.round((f ?? 0) * 100);
   return Number.isFinite(v) ? v : 0;
@@ -36,31 +32,88 @@ export function routingRetained(saliency, k) {
   return total ? kept / total : 1;
 }
 
-// Score every plan (keep budget) by traffic kept and experts dropped; recommend
-// the most aggressive plan that still retains >= RETAIN_TARGET of traffic.
-export function pruneRecommendations(run) {
+// ---- usecase-aware, multi-objective recommendation scoring ----
+// Every plan is scored on three measured axes:
+//   quality = fraction of real routed traffic still covered
+//   speed   = fraction of experts removed (fewer experts to run)
+//   fit     = how well the plan fits the USER's memory budget (see `fitBudgetGiB`)
+// The user's goal weights these; the highest weighted score wins. Deterministic
+// (no inference), yet the pick changes with the data AND the chosen priorities.
+export const GOALS = {
+  quality: { label: "Maximum quality", q: 1.0, s: 0.0, f: 0.0 },
+  balanced: { label: "Balanced", q: 0.55, s: 0.25, f: 0.2 },
+  speed: { label: "Speed first", q: 0.25, s: 0.55, f: 0.2 },
+  fit: { label: "Fit in memory", q: 0.35, s: 0.15, f: 0.5 },
+};
+
+/**
+ * `fitBudgetGiB` is the memory (GiB) the deployment must fit in. When provided,
+ * `fit` is 1 for any plan at or under that budget and degrades with how far it
+ * exceeds it. When omitted (unknown constraint), fit is neutral (0) and the
+ * recommendation leans on quality/speed, with a hint to supply a budget.
+ */
+export function scorePlans(run, goalKey = "balanced", fitBudgetGiB = null) {
   const saliency = run?.saliency ?? [];
-  const plans = run?.plans ?? [];
+  const plans = (run?.plans ?? []).filter((p) => (p.keep_per_layer ?? 0) > 0);
   const nExp = expertsPerLayer(saliency) || run?.topology?.num_local_experts || 0;
-  const scored = plans
-    .map((p) => {
-      const k = p.keep_per_layer ?? nExp;
-      return {
-        name: p.name,
-        strategy: p.strategy,
-        keep_per_layer: k,
-        retained: routingRetained(saliency, k),
-        dropped_pct: nExp ? pct(1 - k / nExp) : 0,
-      };
-    })
-    .filter((s) => s.keep_per_layer > 0)
-    .sort((a, b) => b.keep_per_layer - a.keep_per_layer);
-  // most aggressive (smallest budget) that still hits the retention target
-  const recommended =
-    [...scored].reverse().find((s) => s.retained >= RETAIN_TARGET) ??
-    scored[scored.length - 1] ??
-    null;
-  return { scores: scored, recommended, target: RETAIN_TARGET, nExp };
+  const w = GOALS[goalKey] ?? GOALS.balanced;
+  const budgetBytes = fitBudgetGiB ? fitBudgetGiB * 1024 ** 3 : null;
+  const scored = plans.map((p) => {
+    const k = p.keep_per_layer;
+    const retained = routingRetained(saliency, k);
+    const dropped = nExp ? 1 - k / nExp : 0;
+    const bytes = (p.resident_bytes_a ?? 0) + (p.resident_bytes_b ?? 0);
+    const fits = budgetBytes !== null ? bytes <= budgetBytes : null;
+    const fit =
+      budgetBytes === null
+        ? 0
+        : fits
+          ? 1
+          : Math.max(0, budgetBytes / (bytes || 1)); // degrades with overage
+    const quality = retained;
+    const speed = dropped;
+    const combined = w.q * quality + w.s * speed + w.f * fit;
+    return {
+      name: p.name,
+      strategy: p.strategy,
+      keep_per_layer: k,
+      quality,
+      speed,
+      fit,
+      retained,
+      dropped_pct: pct(dropped),
+      bytes,
+      fits_budget: fits,
+      combined,
+    };
+  });
+  scored.sort((a, b) => b.combined - a.combined || b.quality - a.quality || b.dropped_pct - a.dropped_pct);
+  const recommended = scored[0] ?? null;
+  const second = scored[1] ?? null;
+  const gap = recommended && second ? recommended.combined - second.combined : 1;
+  const confidence = gap >= 0.1 ? "high" : gap >= 0.03 ? "medium" : "close";
+  // best plan per single axis, so the user sees why the chosen one balances
+  const bestQuality = byAxis(scored, (x) => x.quality);
+  const bestSpeed = byAxis(scored, (x) => x.speed);
+  const bestFit = byAxis(scored, (x) => x.fit);
+  return {
+    scored,
+    recommended,
+    second,
+    confidence,
+    nExp,
+    goalKey,
+    weights: w,
+    bestQuality,
+    bestSpeed,
+    bestFit,
+    hasBudget: budgetBytes !== null,
+  };
+}
+
+function byAxis(scored, f) {
+  if (!scored.length) return null;
+  return [...scored].sort((a, b) => f(b) - f(a))[0];
 }
 
 // How concentrated routing is: does a small set of experts do most of the work?
