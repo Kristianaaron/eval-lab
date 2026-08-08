@@ -8,6 +8,7 @@
   import RegisterModel from "./RegisterModel.svelte";
   import Evaluation from "./Evaluation.svelte";
   import AtlasLab from "./AtlasLab.svelte";
+  import AtlasRunDetail from "./AtlasRunDetail.svelte";
   import Experiments from "./Experiments.svelte";
   import Comparisons from "./Comparisons.svelte";
   import Jobs from "./Jobs.svelte";
@@ -33,6 +34,7 @@
     if (h.startsWith("/evaluation/job/")) return { name: "evaluation", jobId: h.slice("/evaluation/job/".length) };
     if (h === "/evaluation") return { name: "evaluation" };
     if (h === "/atlas") return { name: "atlas" };
+    if (h.startsWith("/atlas/run/")) return { name: "atlas-run", runId: h.slice("/atlas/run/".length) };
     if (h === "/experiments") return { name: "experiments" };
     if (h === "/comparisons") return { name: "comparisons" };
     if (h === "/jobs") return { name: "jobs" };
@@ -94,6 +96,8 @@
       <Evaluation runId={route.runId} jobId={route.jobId} />
     {:else if route.name === "atlas"}
       <AtlasLab />
+    {:else if route.name === "atlas-run"}
+      <AtlasRunDetail runId={route.runId} />
     {:else if route.name === "experiments"}
       <Experiments />
     {:else if route.name === "comparisons"}
