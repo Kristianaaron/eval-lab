@@ -297,6 +297,7 @@ button.link { background: none; border: none; color: var(--accent); cursor: poin
   padding: 7px 12px;
   font-size: 14px;
   cursor: pointer;
+  text-align: center;
   text-decoration: none;
 }
 .btn:hover { text-decoration: none; border-color: var(--accent); }
@@ -319,6 +320,8 @@ button.link { background: none; border: none; color: var(--accent); cursor: poin
   isolation: isolate;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
   gap: 8px;
   background: linear-gradient(180deg, #2c3543, #20262f);
   color: #f3f6fb;
