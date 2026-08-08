@@ -502,9 +502,10 @@
   <!-- RIGHT: live monitor — same height as the left panel, tabbed, 'show all' -> modal -->
   <div class="rows-panel">
     <section class="card mon-card">
+      <h3 style="margin:0 0 8px;display:flex;align-items:center;gap:8px"><Activity size="14" /> Builds</h3>
       <div class="tab-bar">
         <button class="tab-btn {monitorTab === 'current' ? 'on' : ''}" on:click={() => (monitorTab = "current")}>
-          Current <span class="badge {activeJobsCount() ? 'pass' : ''}">{activeJobsCount()}</span>
+          In progress <span class="badge {activeJobsCount() ? 'pass' : ''}">{activeJobsCount()}</span>
         </button>
         <button class="tab-btn {monitorTab === 'completed' ? 'on' : ''}" on:click={() => (monitorTab = "completed")}>
           Completed <span class="badge">{runs.length}</span>
@@ -517,7 +518,7 @@
       <div class="mon-list">
         {#if monitorTab === "current"}
           {#if jobsError}<div class="card error mon-msg">{jobsError}</div>{/if}
-          {#if !activeJobs.length && !jobsError}<p class="mut mon-msg">No current jobs — configure one on the left and press Build atlas.</p>{/if}
+          {#if !activeJobs.length && !jobsError}<p class="mut mon-msg">No builds in progress. Completed builds appear under Completed.</p>{/if}
           {#each activeJobs.slice(0, VISIBLE) as j (j.job_id)}
             <div class="job-row">
               <span class="mono job-id">{j.job_id}</span>
@@ -579,7 +580,7 @@
       </div>
       <div class="tab-bar" style="padding:0 18px;margin:12px 0 0">
         <button class="tab-btn {modalTab === 'current' ? 'on' : ''}" on:click={() => (modalTab = "current")}>
-          Current <span class="badge {activeJobsCount() ? 'pass' : ''}">{activeJobsCount()}</span>
+          In progress <span class="badge {activeJobsCount() ? 'pass' : ''}">{activeJobsCount()}</span>
         </button>
         <button class="tab-btn {modalTab === 'completed' ? 'on' : ''}" on:click={() => (modalTab = "completed")}>
           Completed <span class="badge">{runs.length}</span>
@@ -588,7 +589,7 @@
       </div>
       <div class="modal-body">
         {#if modalTab === "current"}
-          {#if !activeJobs.length}<p class="mut">No current jobs.</p>{/if}
+          {#if !activeJobs.length}<p class="mut">No builds in progress.</p>{/if}
           {#each activeJobs as j (j.job_id)}
             <div class="job-row">
               <span class="mono job-id">{j.job_id}</span>
