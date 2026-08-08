@@ -88,7 +88,7 @@
       <h3 style="display:flex;align-items:center;gap:8px;margin:0"><Sparkles size="15" /> Recommendations</h3>
       <button class="btn small" onclick={onclose}><X size="13" /> Close</button>
     </header>
-    <p class="mut rec-intro" style="font-size:13px;margin:0;line-height:1.5">
+    <p class="mut rec-intro" style="font-size:14px;margin:0;line-height:1.5">
       What you can do to fit this model in your hardware. Pick what matters most and set a
       memory budget — the advice changes to match. Every figure comes from this run's trace.
     </p>
@@ -127,7 +127,7 @@
         <input type="number" min="0" placeholder="auto (plan)" bind:value={weightsNode} style="width:100%" />
       </div>
       {#if !sc.hasBudget}
-        <p class="mut" style="font-size:12px;margin:6px 0 0">
+        <p class="mut" style="font-size:13px;margin:6px 0 0">
           No budget set — “fit-in-memory” is ignored until you enter one.
         </p>
       {/if}
@@ -136,7 +136,7 @@
       <div class="card">
         <div class="strat-title">
           <h4 style="margin:0">Strategies to consider</h4>
-          <span class="mut" style="font-size:12px">ranked for “{GOALS[goal].label}”</span>
+          <span class="mut" style="font-size:13px">ranked for “{GOALS[goal].label}”</span>
         </div>
         {#if strat.combo?.recommended}
           <div class="combo-note">
@@ -162,7 +162,7 @@
             </div>
           </div>
         {/each}
-        <p class="mut" style="font-size:12px;margin:10px 0 0;line-height:1.5">{strat.provenance}</p>
+        <p class="mut" style="font-size:13px;margin:10px 0 0;line-height:1.5">{strat.provenance}</p>
       </div>
 
       <!-- fit & context: KV-aware dual-node fit (mirrors the dual-Spark recipe) -->
@@ -221,7 +221,7 @@
             {/each}
           </div>
         {/if}
-        <p class="mut" style="font-size:12px;margin:8px 0 0;line-height:1.5">
+        <p class="mut" style="font-size:13px;margin:8px 0 0;line-height:1.5">
           KV is an estimate (~{KV_TOKENS_PER_GIB_DEFAULT.toLocaleString()} tokens/GiB, from the dual-Spark
           recipe; {kvGiB(ctx).toFixed(1)} GiB at {(ctx / 1024).toFixed(0)}K). Longest standard context that
           fits: <strong style="color:var(--text)">{(fit.maxFit / 1024).toFixed(0)}K</strong>.
@@ -357,7 +357,8 @@
     display: flex; flex-direction: column; box-shadow: -12px 0 32px rgba(0,0,0,.35);
   }
   .rec-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px 10px; }
-  .rec-head h3 { font-size: 16px; }
+  .rec-head h3, .rec-body h4 { font-size: 16px; font-weight: 600; }
+  .rec-body .strat-title h4 { margin: 0; }
   .rec-intro { padding: 0 22px 14px; }
   .rec-body { padding: 0 22px 28px; overflow-y: auto; }
   .rec-field { margin-bottom: 14px; }
@@ -388,7 +389,7 @@
   .strat-rank { color: var(--muted); font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; }
   .strat-name { font-weight: 600; }
   .strat-what { font-size: 13px; margin: 4px 0 2px; line-height: 1.5; }
-  .strat-evidence { font-size: 12px; color: var(--muted); margin: 0; }
+  .strat-evidence { font-size: 13px; color: var(--muted); margin: 0; line-height: 1.5; }
   .strat-foot { display: flex; justify-content: flex-end; align-items: baseline; gap: 5px; margin-top: 6px; font-size: 12px; }
   .strat-gib { font-family: "JetBrains Mono", ui-monospace, monospace; color: var(--accent); font-weight: 600; }
   .strat-pct { color: var(--muted); }
