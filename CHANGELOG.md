@@ -2,6 +2,21 @@
 
 All notable changes to eval-lab are documented here. Format: Keep a Changelog.
 
+## [0.17.2] - 2026-08-08
+
+Recommendations tray tidy-up (visual + fit communication).
+
+- **Wider tray** (460 → 660 px) with normalized section/field spacing.
+- **Lower-ranked strategies dimmed** (`opacity: .5`, hover restores) so the
+  top "best for you" recommendation reads as the worthy choice; the winner
+  also gets an accent ring.
+- **Budget-driven fit bar**: once a memory budget is entered, the bar fills to
+  `used / budget` and shows an explicit "`X GiB of Y GiB (Z%)`" readout with a
+  green/red fit state and a red ring when over budget. The previous
+  node-capacity segmented bar remains the no-budget fallback; the weights/KV/
+  activations breakdown is preserved inside the used fill.
+- SPA rebuilt.
+
 ## [0.17.1] - 2026-08-04
 
 Atlas Lab run detail visualizations (maps & routing).
