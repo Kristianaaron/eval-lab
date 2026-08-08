@@ -34,7 +34,19 @@
   let runDetail = $state(null);
   let runDetailError = $state(null);
   let recOpen = $state(false);
-  let showMonitor = $state(false);
+  let showMonitor = $state(true);
+  let monitorTab = $state("current"); // "current" | "completed"
+  let modalOpen = $state(false);
+  let modalTab = $state("current");
+
+  const VISIBLE = 8; // line items that fit the panel height before "Show all"
+
+  const activeJobs = $derived(jobs.filter((j) => ACTIVE.has(j.state)));
+
+  function openModal(tab) {
+    modalTab = tab;
+    modalOpen = true;
+  }
 
   const ACTIVE = new Set([
     "queued",
@@ -447,18 +459,21 @@
         </p>
       {/if}
 
-      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn cta" on:click={doEstimate} disabled={estimating}>
-          {estimating ? "Estimating…" : "Estimate resources"}
-        </button>
-        <button
-          class="beam-btn"
-          on:click={doLaunch}
-          disabled={launching || !source || !suiteRef}
-        >
-          <Play size="14" style="vertical-align:-2px" /> {launching ? "Launching…" : "Build atlas"}
-        </button>
-      </div>
+      <button
+        class="beam-btn"
+        on:click={doLaunch}
+        disabled={launching || !source || !suiteRef}
+      >
+        <Play size="14" style="vertical-align:-2px" /> {launching ? "Launching…" : "Build atlas"}
+      </button>
+
+      {#if !launching}
+        <div style="margin-top:8px">
+          <button class="link" on:click={doEstimate} disabled={estimating}>
+            {estimating ? "Estimating…" : "Estimate resources"}
+          </button>
+        </div>
+      {/if}
 
       {#if estimateError}
         <div class="card error" style="margin-top:10px">{estimateError}</div>
@@ -484,99 +499,132 @@
     {/if}
   </div>
 
-  <!-- RIGHT: monitor + completed runs (collapsed by default; controls first) -->
+  <!-- RIGHT: live monitor — same height as the left panel, tabbed, 'show all' -> modal -->
   <div class="rows-panel">
-    <section class="card">
-      <button
-        class="monitor-toggle"
-        on:click={() => (showMonitor = !showMonitor)}
-        aria-expanded={showMonitor}
-      >
-        <span class="monitor-title"><Activity size="14" /> Jobs &amp; runs</span>
-        <span class="badge pass">{activeJobsCount()} active</span>
-        <span class="badge type">{runs.length} completed</span>
-        <span class="mut monitor-caret">{showMonitor ? "hide ▾" : "show ▸"}</span>
-      </button>
+    <section class="card mon-card">
+      <div class="tab-bar">
+        <button class="tab-btn {monitorTab === 'current' ? 'on' : ''}" on:click={() => (monitorTab = "current")}>
+          Current <span class="badge {activeJobsCount() ? 'pass' : ''}">{activeJobsCount()}</span>
+        </button>
+        <button class="tab-btn {monitorTab === 'completed' ? 'on' : ''}" on:click={() => (monitorTab = "completed")}>
+          Completed <span class="badge">{runs.length}</span>
+        </button>
+        <button class="btn small" style="margin-left:auto" on:click={monitorTab === "current" ? loadJobs : loadRuns}>
+          Refresh
+        </button>
+      </div>
 
-      {#if showMonitor}
-        <h5 class="panel-sub">Build-atlas jobs <button class="btn small" on:click={loadJobs}>Refresh</button></h5>
-        {#if jobsError}
-          <div class="card error">{jobsError}</div>
+      <div class="mon-list">
+        {#if monitorTab === "current"}
+          {#if jobsError}<div class="card error mon-msg">{jobsError}</div>{/if}
+          {#if !activeJobs.length && !jobsError}<p class="mut mon-msg">No current jobs — configure one on the left and press Build atlas.</p>{/if}
+          {#each activeJobs.slice(0, VISIBLE) as j (j.job_id)}
+            <div class="job-row">
+              <span class="mono job-id">{j.job_id}</span>
+              <span class="{jobCls(j.state)} job-state">{jobLabel(j.state)}</span>
+              <span class="mut job-stage">{j.current_stage ?? "—"}</span>
+              <span class="mut job-src">{j.config?.model_asset_id ?? "—"}</span>
+              <span class="job-actions">
+                {#if j.progress?.total}
+                  <span class="job-prog">{Math.round((j.progress.done / j.progress.total) * 100)}%</span>
+                {/if}
+                {#if j.state === "running"}
+                  <button class="btn small" on:click={() => jobAction(j.job_id, "pause")}><Pause size="12" /></button>
+                {:else if j.state === "paused" || j.state === "failed_recoverable"}
+                  <button class="btn small" on:click={() => jobAction(j.job_id, "resume")}><RotateCcw size="12" /></button>
+                {/if}
+                {#if ACTIVE.has(j.state) && j.state !== "paused"}
+                  <button class="btn small danger" on:click={() => jobAction(j.job_id, "cancel")}><X size="12" /></button>
+                {/if}
+                {#if j.config?.atlas_run_id && TERMINAL.has(j.state)}
+                  <button class="btn small" on:click={() => showRun(j.config.atlas_run_id)}>View</button>
+                {/if}
+              </span>
+            </div>
+          {/each}
+          {#if activeJobs.length > VISIBLE}
+            <button class="btn small show-all" on:click={() => openModal("current")}>
+              Show all ({activeJobs.length})
+            </button>
+          {/if}
+        {:else}
+          {#if runsError}<div class="card error mon-msg">{runsError}</div>{/if}
+          {#if !runs.length && !runsError}<p class="mut mon-msg">No completed runs recorded yet.</p>{/if}
+          {#each runs.slice(0, VISIBLE) as r (r.atlas_run_id)}
+            <div class="job-row">
+              <span class="mono job-id">{r.atlas_run_id}</span>
+              <span class="{r.status === 'completed' ? 'ok' : 'mut'} job-state">{r.status ?? "—"}</span>
+              <span class="mut job-stage">{r.source_arch ?? "—"}</span>
+              <span class="mut job-src">{r.calibration_suite_id ?? "—"}</span>
+              <span class="job-actions"><button class="btn small" on:click={() => showRun(r.atlas_run_id)}>Details</button></span>
+            </div>
+          {/each}
+          {#if runs.length > VISIBLE}
+            <button class="btn small show-all" on:click={() => openModal("completed")}>
+              Show all ({runs.length})
+            </button>
+          {/if}
         {/if}
-        {#if !jobs.length && !jobsError}
-          <p class="mut">No atlas jobs yet — configure one on the left and press Build atlas.</p>
-        {/if}
-        <div class="table-scroll">
-          <table>
-            <thead>
-              <tr><th>Job</th><th>Source</th><th>Stage</th><th>Progress</th><th>State</th><th></th><th></th><th></th></tr>
-            </thead>
-            <tbody>
-              {#each jobs as j (j.job_id)}
-                <tr>
-                  <td class="mono">{j.job_id}</td>
-                  <td class="mut">{j.config?.model_asset_id ?? "—"}</td>
-                  <td class="mut">{j.current_stage ?? "—"}</td>
-                  <td>
-                    {#if j.progress?.total}
-                      <div class="bar"><div class="bar-fill" style="width:{(j.progress.done / j.progress.total) * 100}%"></div></div>
-                      <span class="mut" style="font-size:11px">{j.progress.done}/{j.progress.total}{j.progress.detail ? " · " + j.progress.detail : ""}</span>
-                    {:else}
-                      <span class="mut">—</span>
-                    {/if}
-                  </td>
-                  <td><span class="{jobCls(j.state)}">{jobLabel(j.state)}</span></td>
-                  <td>
-                    {#if j.state === "running"}
-                      <button class="btn small" on:click={() => jobAction(j.job_id, "pause")}><Pause size="13" /> Pause</button>
-                    {:else if j.state === "paused" || j.state === "failed_recoverable"}
-                      <button class="btn small" on:click={() => jobAction(j.job_id, "resume")}><RotateCcw size="13" /> Resume</button>
-                    {/if}
-                  </td>
-                  <td>
-                    {#if ACTIVE.has(j.state) && j.state !== "paused"}
-                      <button class="btn small danger" on:click={() => jobAction(j.job_id, "cancel")}><X size="13" /> Cancel</button>
-                    {/if}
-                  </td>
-                  <td>
-                    {#if j.config?.atlas_run_id && TERMINAL.has(j.state)}
-                      <button class="btn small" on:click={() => showRun(j.config.atlas_run_id)}>View</button>
-                    {/if}
-                  </td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
-
-        <h5 class="panel-sub">Completed atlas runs <button class="btn small" on:click={loadRuns}>Refresh</button></h5>
-        {#if runsError}
-          <div class="card error">{runsError}</div>
-        {/if}
-        {#if !runs.length && !runsError}
-          <p class="mut">No atlas runs recorded yet.</p>
-        {/if}
-        <div class="table-scroll">
-          <table>
-            <thead><tr><th>Run</th><th>Arch</th><th>Calibration</th><th>Tasks</th><th>Plans</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-              {#each runs as r (r.atlas_run_id)}
-                <tr>
-                  <td class="mono">{r.atlas_run_id}</td>
-                  <td class="mut">{r.source_arch ?? "—"}</td>
-                  <td class="mut">{r.calibration_suite_id ?? "—"}</td>
-                  <td>{r.n_tasks ?? "—"}</td>
-                  <td>{r.n_plans ?? "—"}</td>
-                  <td><span class="{r.status === 'completed' ? 'ok' : 'mut'}">{r.status ?? "—"}</span></td>
-                  <td><button class="btn small" on:click={() => showRun(r.atlas_run_id)}>Details</button></td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      {/if}
+      </div>
     </section>
   </div>
+
+  <!-- ALL-JOBS MODAL (mirrors the tab filter; shows the full active tab list) -->
+  {#if modalOpen}
+    <div class="modal-backdrop" on:click={() => (modalOpen = false)}></div>
+    <div class="modal" role="dialog" aria-label="All jobs">
+      <div class="modal-head">
+        <h3 style="margin:0">All {modalTab === "current" ? "current jobs" : "completed runs"}</h3>
+        <button class="btn small" on:click={() => (modalOpen = false)}>Close</button>
+      </div>
+      <div class="tab-bar" style="padding:0 18px;margin:12px 0 0">
+        <button class="tab-btn {modalTab === 'current' ? 'on' : ''}" on:click={() => (modalTab = "current")}>
+          Current <span class="badge {activeJobsCount() ? 'pass' : ''}">{activeJobsCount()}</span>
+        </button>
+        <button class="tab-btn {modalTab === 'completed' ? 'on' : ''}" on:click={() => (modalTab = "completed")}>
+          Completed <span class="badge">{runs.length}</span>
+        </button>
+        <button class="btn small" style="margin-left:auto" on:click={modalTab === "current" ? loadJobs : loadRuns}>Refresh</button>
+      </div>
+      <div class="modal-body">
+        {#if modalTab === "current"}
+          {#if !activeJobs.length}<p class="mut">No current jobs.</p>{/if}
+          {#each activeJobs as j (j.job_id)}
+            <div class="job-row">
+              <span class="mono job-id">{j.job_id}</span>
+              <span class="{jobCls(j.state)} job-state">{jobLabel(j.state)}</span>
+              <span class="mut job-stage">{j.current_stage ?? "—"}</span>
+              <span class="mut job-src">{j.config?.model_asset_id ?? "—"}</span>
+              <span class="job-actions">
+                {#if j.state === "running"}
+                  <button class="btn small" on:click={() => jobAction(j.job_id, "pause")}><Pause size="12" /></button>
+                {:else if j.state === "paused" || j.state === "failed_recoverable"}
+                  <button class="btn small" on:click={() => jobAction(j.job_id, "resume")}><RotateCcw size="12" /></button>
+                {/if}
+                {#if ACTIVE.has(j.state) && j.state !== "paused"}
+                  <button class="btn small danger" on:click={() => jobAction(j.job_id, "cancel")}><X size="12" /></button>
+                {/if}
+                {#if j.config?.atlas_run_id && TERMINAL.has(j.state)}
+                  <button class="btn small" on:click={() => showRun(j.config.atlas_run_id)}>View</button>
+                {/if}
+              </span>
+            </div>
+          {/each}
+        {:else}
+          {#if !runs.length}<p class="mut">No completed runs.</p>{/if}
+          {#each runs as r (r.atlas_run_id)}
+            <div class="job-row">
+              <span class="mono job-id">{r.atlas_run_id}</span>
+              <span class="{r.status === 'completed' ? 'ok' : 'mut'} job-state">{r.status ?? "—"}</span>
+              <span class="mut job-stage">{r.source_arch ?? "—"}</span>
+              <span class="mut job-src">{r.calibration_suite_id ?? "—"}</span>
+              <span class="job-actions"><button class="btn small" on:click={() => showRun(r.atlas_run_id)}>Details</button></span>
+            </div>
+          {/each}
+        {/if}
+      </div>
+    </div>
+  {/if}
 </div>
 
 {#if runDetailError}

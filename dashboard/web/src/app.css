@@ -454,18 +454,50 @@ label input, label select { display: block; width: 100%; margin-top: 6px; }
 
 .notice { border-left: 3px solid var(--accent); }
 
-/* Atlas monitor: jobs + runs collapsed behind a toggle (controls take priority) */
-.monitor-toggle {
-  width: 100%; display: flex; align-items: center; gap: 10px;
-  background: none; border: none; color: var(--text); cursor: pointer; padding: 2px 0;
+/* Atlas monitor: fixed-height panel matching the left column, tabbed rows + modal */
+.eval-layout { align-items: stretch; }
+.rows-panel { min-height: 0; height: 100%; }
+.mon-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: 10px;
 }
-.monitor-title { display: flex; align-items: center; gap: 8px; font-weight: 600; }
-.monitor-caret { margin-left: auto; font-size: 12px; }
-.panel-sub {
-  display: flex; align-items: center; justify-content: space-between;
-  color: var(--muted); font-size: 12px; text-transform: uppercase;
-  letter-spacing: 0.04em; margin: 12px 0 6px;
+.tab-bar { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.tab-btn {
+  background: var(--panel-2); color: var(--muted);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 5px 10px; font-size: 13px; cursor: pointer;
 }
+.tab-btn.on { color: var(--accent); border-color: var(--accent); background: rgba(79, 140, 255, 0.12); font-weight: 600; }
+.mon-list {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 6px; padding-right: 2px;
+}
+.mon-msg { padding: 8px 4px; }
+.job-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border: 1px solid var(--border);
+  border-radius: 8px; background: var(--panel-2); flex-shrink: 0;
+}
+.job-id { flex: 0 0 auto; }
+.job-state { flex: 0 0 auto; font-weight: 600; font-size: 12px; }
+.job-stage { flex: 1 1 auto; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.job-src { flex: 0 1 auto; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+.job-prog { font-size: 12px; color: var(--accent); }
+.job-actions { display: flex; gap: 4px; align-items: center; flex: 0 0 auto; }
+.show-all { align-self: flex-start; margin-top: 2px; }
+
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); z-index: 60; }
+.modal {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: min(720px, 92vw); max-height: 86vh;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+  z-index: 61; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,.5);
+}
+.modal-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 18px 0; }
+.modal-body { padding: 12px 18px 18px; overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
 
 /* Milestone 2 */
 .progress { background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; height: 14px; overflow: hidden; margin: 10px 0; }
