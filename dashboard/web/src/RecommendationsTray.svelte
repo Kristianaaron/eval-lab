@@ -78,7 +78,7 @@
       <h3 style="display:flex;align-items:center;gap:8px;margin:0"><Sparkles size="15" /> Recommendations</h3>
       <button class="btn small" onclick={onclose}><X size="13" /> Close</button>
     </header>
-    <p class="mut" style="font-size:13px;margin:8px 0 0;line-height:1.5">
+    <p class="mut rec-intro" style="font-size:13px;margin:0;line-height:1.5">
       What you can do to fit this model in your hardware. Pick what matters most and set a
       memory budget — the advice changes to match. Every figure comes from this run's trace.
     </p>
@@ -345,7 +345,8 @@
   }
   .rec-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px 10px; }
   .rec-head h3 { font-size: 16px; }
-  .rec-body { padding: 6px 22px 28px; overflow-y: auto; }
+  .rec-intro { padding: 0 22px 14px; }
+  .rec-body { padding: 0 22px 28px; overflow-y: auto; }
   .rec-field { margin-bottom: 14px; }
   .rec-field:last-of-type { margin-bottom: 4px; }
   .rec-label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 6px; }
