@@ -11,7 +11,7 @@
     pct,
   } from "./lib/recommend.js";
   import { strategyOptions, READINESS } from "./lib/strategies.js";
-  import { fitSummary, kvGiB, KV_TOKENS_PER_GIB_DEFAULT } from "./lib/fit.js";
+  import { fitSummary, fitStack, kvGiB, KV_TOKENS_PER_GIB_DEFAULT } from "./lib/fit.js";
 
   // `open` toggles the right tray overlay; `run` is the atlas run detail.
   let { open = false, run = null, modelSizeBytes = null, modelParams = null, onclose = () => {} } = $props();
@@ -51,6 +51,16 @@
   function usedSegPct(gib) {
     const t = fit.row.weights + fit.row.kv + fit.row.overhead;
     return t > 0 ? (gib / t) * 100 : 0;
+  }
+  // Approximate per-node footprint after applying a strategy: takes the recommended
+  // plan's resident weight footprint per node, applies the option's reduction
+  // multiplier, then recomputes weights + KV + overhead for the current context.
+  function optionUsedGiB(red) {
+    const w = planResidentPerNode * (red ?? 1);
+    return fitStack({ weightsGiB: w, contextTokens: Number(ctx) || 0 }).used;
+  }
+  function optionPct(red) {
+    return hasBudget ? (optionUsedGiB(red) / budget) * 100 : null;
   }
   function segColor(name) {
     return (
@@ -144,8 +154,11 @@
             </div>
             <p class="strat-what">{s.what}</p>
             <p class="strat-evidence">{s.evidence}</p>
-            <div class="strat-bar" title="goal match {pct(s.score)}%">
-              <div class="strat-fill" style="width:{pct(s.score)}%"></div>
+            <div class="strat-foot">
+              <span class="strat-gib">~{optionUsedGiB(s.red).toFixed(1)} GiB</span>
+              {#if hasBudget && optionPct(s.red) != null}
+                <span class="strat-pct">({optionPct(s.red).toFixed(0)}% of {budget} GiB)</span>
+              {/if}
             </div>
           </div>
         {/each}
@@ -366,18 +379,19 @@
     border: none;
     border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; font-size: 14px;
   }
-  .strat-row { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; background: var(--panel-2); }
-  .strat-row:last-of-type { margin-bottom: 0; }
-  .strat-row.top { border-color: var(--accent); background: rgba(79, 140, 255, 0.06); box-shadow: 0 0 0 1px var(--accent); }
+  .strat-row { padding: 10px 2px; border-bottom: 1px solid var(--border); }
+  .strat-row:last-of-type { border-bottom: none; padding-bottom: 0; }
+  .strat-row.top { background: transparent; }
   .strat-row.dim { opacity: 0.5; }
   .strat-row.dim:hover { opacity: 1; }
   .strat-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .strat-rank { color: var(--muted); font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; }
   .strat-name { font-weight: 600; }
   .strat-what { font-size: 13px; margin: 4px 0 2px; line-height: 1.5; }
-  .strat-evidence { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
-  .strat-bar { height: 5px; background: var(--panel); border-radius: 3px; overflow: hidden; }
-  .strat-fill { height: 100%; background: var(--accent); }
+  .strat-evidence { font-size: 12px; color: var(--muted); margin: 0; }
+  .strat-foot { display: flex; justify-content: flex-end; align-items: baseline; gap: 5px; margin-top: 6px; font-size: 12px; }
+  .strat-gib { font-family: "JetBrains Mono", ui-monospace, monospace; color: var(--accent); font-weight: 600; }
+  .strat-pct { color: var(--muted); }
   .budget-readout { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin: 2px 0 6px; font-size: 14px; }
   .budget-amt { font-weight: 600; }
   .budget-pct { color: var(--muted); font-weight: 400; }
