@@ -362,8 +362,9 @@
   .card + .card { margin-top: 14px; }
   .strat-title { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; gap: 8px; }
   .combo-note {
-    border: 1px solid var(--accent); background: rgba(79, 140, 255, 0.08);
-    border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; font-size: 14px;
+    background: var(--panel-2);
+    border: none;
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; font-size: 14px;
   }
   .strat-row { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; background: var(--panel-2); }
   .strat-row:last-of-type { margin-bottom: 0; }
