@@ -448,7 +448,7 @@
       {/if}
 
       <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn" on:click={doEstimate} disabled={estimating}>
+        <button class="btn cta" on:click={doEstimate} disabled={estimating}>
           {estimating ? "Estimating…" : "Estimate resources"}
         </button>
         <button
