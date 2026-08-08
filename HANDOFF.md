@@ -58,3 +58,65 @@
   `/experiments/` to root so runtime output stays untracked while source stays
   tracked.
 - To QA: `eval-lab doctor`, `run suite`, `compare`, `pareto`, `evaluate`.
+
+---
+
+## PICKUP CONTEXT (session 2026-08-07 → next, "Atlas GUI + real GLM-5.2")
+
+Goal to resume: **finish the Atlas ML-compression workflow and make its
+recommendation surface trustworthy for a non-ML user.**
+
+### Live environment
+- Dashboard: `http://100.96.194.44:8100` (tailnet) / same port on the host.
+  Managed process **name `atlas-gui`** (restart via `hub restart atlas-gui`;
+  auto `restart on-failure`). cwd `/home/kristianaaron/tmp/eval-lab`.
+- **Real GLM-5.2-NVFP4 checkpoint connected**: external 931G G-Drive mounted at
+  `/media/glm52/models/nvidia/GLM-5.2-NVFP4` (47 shards, 464.8 GB, vocab 154,820,
+  78 layers, 256 routed experts, top-8). Sudo password used to mount is
+  `G!ngersnap23` (user-provided; need it only for remounts).
+- Real checkpoint registered in the GUI as model asset
+  `source_checkpoint-c19ebb1e1c` ("GLM-5.2-NVFP4 (real)", atlas-compatible) —
+  appears first in the Atlas "Source model" dropdown / Build-wizard.
+
+### What this session shipped in eval-lab (all committed + pushed)
+- **Blueprint digest** (+ run detail → now a dedicated page).
+- **Recommendations tray** (`RecommendationsTray.svelte`, right-side drawer,
+  ease-in/out): goal selector (quality/balanced/speed/fit), memory-budget,
+  context-length (KV), ranked **strategy options**
+  (`lib/strategies.js`) — narrow-neurons + EXL3 as the quality-preserving fit
+  path; whole-expert removal demoted to "last resort".
+- **KV-aware fit** (`lib/fit.js`, mirrors howtospark GLM-5.2 TP2 recipe):
+  per-node ~114 GiB, KV ∝ context (~11,296 token/GiB), segmented bar.
+- **Measured per-role precision** (`census/precision.py` in model-atlas +
+  `precision_roles` wired through eval-lab inspection → ModelDetail page):
+  real GLM-5.2 = experts **8.19 bpw**, attention/embedding/lm_head/shared/
+  latent/norm all **16 bpw (BF16)** — the mixed-precision/EXL3 targets.
+- **Run visuals on their own page**: `#/atlas/run/:id` (`AtlasRunDetail.svelte`)
+  with a `← Back to Atlas Lab` link.
+- **Builds monitor** rework: title "Builds", tabs **In progress / Completed**
+  (default now **Completed**), fixed height matching the left panel, `Show all`
+  → modal with the same tab filter.
+- **Estimate resources** = text link below the **beam-styled Build atlas** CTA
+  (exact BorderBeam `sm`/colorful port from Jakubantalik/border-beam;
+  `@property --beam-angle-atlas` + `beam-spin`; slower 4.5s, lighter bg, 16px
+  semibold, centered).
+- Backup push note: a few commits pushed after transient DNS flakes — **verify
+  `git status`/`git log` is in sync with origin** before trusting HEAD.
+
+### Pending / next (honest gaps — do NOT fake)
+- **Repair/heal (distill) pipeline**: blueprint "recovery/distillation"; blocked
+  — needs a real training loop; not implemented (do not stub).
+- **EXL3 quantizer**: still no real encoder/kernel → EXL3 is a *recommendation
+  target* only, never claimed as working.
+- **Neuron/channel prune on real weights**: precision map is real (header-only);
+  applying actual per-expert width pruning needs the NVFP4 dequant layout pinned
+  (source has U8 weights + FP8 scales; no higher-precision parent).
+- **SM121 kernels / two-Spark serving**: hardware/tooling gated.
+- Could not pixel-verify GUI (no Chromium): verify visually on the running box.
+
+### Repos
+- `eval-lab` (GUI/backend) — this HANDOFF.
+- `model-atlas` — compression engine (`src/model_atlas`); own HANDOFF.md has the
+  Milestone-E frontier, protection demo, and precision census (`850e5a2`).
+- Blueprints: `/home/kristianaaron/tmp/m3blueprint/`.
+

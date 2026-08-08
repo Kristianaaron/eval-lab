@@ -31,7 +31,7 @@
   let runs = $state([]);
   let runsError = $state(null);
   let showMonitor = $state(true);
-  let monitorTab = $state("current"); // "current" | "completed"
+  let monitorTab = $state("completed"); // "current" | "completed"
   let modalOpen = $state(false);
   let modalTab = $state("current");
 
