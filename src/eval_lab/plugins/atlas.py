@@ -76,18 +76,33 @@ def _clear_config() -> None:
 def connection_status() -> dict[str, Any]:
     """Overall integration status: the Atlas profiler service is reachable over
     HTTP (no need for the package to be importable in eval-lab's venv — model-
-    atlas runs as a separate served app). ``installed`` tracks the package
-    presence only as informational; the feature is usable when ``reachable``."""
+    atlas runs as a separate served app). ``installed`` tracks package presence
+    only as informational. When a persisted URL is stale/unreachable (e.g. a
+    legacy port), we fall back to probing the default so the feature still
+    resolves to a live Atlas instance."""
     cfg = _read_config()
     installed = model_atlas_installed()
-    target = cfg.get("url") or DEFAULT_ATLAS_URL
-    check = check_atlas(target)
+    probes: list[str] = []
+    for u in (cfg.get("url"), DEFAULT_ATLAS_URL):
+        if u and u not in probes:
+            probes.append(u)
+    for u in probes:
+        check = check_atlas(u)
+        if check["reachable"]:
+            return {
+                "installed": installed,
+                "connected": True,
+                "reachable": True,
+                "http_status": check["http_status"],
+                "url": check["url"],
+            }
+    last = check_atlas(cfg.get("url") or DEFAULT_ATLAS_URL)
     return {
         "installed": installed,
-        "connected": bool(check["reachable"]),
-        "reachable": check["reachable"],
-        "http_status": check["http_status"],
-        "url": check["url"],
+        "connected": False,
+        "reachable": False,
+        "http_status": last["http_status"],
+        "url": cfg.get("url") or DEFAULT_ATLAS_URL,
     }
 
 
