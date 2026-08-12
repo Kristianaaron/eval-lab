@@ -26,7 +26,7 @@ def test_connected_when_service_reachable_even_if_package_absent(monkeypatch) ->
     assert status["reachable"] is True
 
 
-def test_not_connected_when_service_down(monkeypatch) -> None:
+def test_not_connected_when_all_unreachable(monkeypatch) -> None:
     monkeypatch.setattr(atlas_plugin, "model_atlas_installed", lambda: True)
     monkeypatch.setattr(
         atlas_plugin,
@@ -41,3 +41,24 @@ def test_not_connected_when_service_down(monkeypatch) -> None:
     status = connection_status()
     assert status["connected"] is False
     assert status["reachable"] is False
+
+
+def test_stale_persisted_url_falls_back_to_default(monkeypatch) -> None:
+    # A legacy/stale stored URL must not wedge the integration: when it's
+    # unreachable, connection_status probes the default Atlas URL too.
+    monkeypatch.setattr(
+        atlas_plugin,
+        "_read_config",
+        lambda: {"url": "http://127.0.0.1:8200/"},
+    )
+
+    def fake_check(url, timeout=2.0):
+        reachable = url.startswith("http://127.0.0.1:8011/")
+        return {"url": url, "reachable": reachable,
+                "http_status": 200 if reachable else None,
+                "error": None if reachable else "refused"}
+
+    monkeypatch.setattr(atlas_plugin, "check_atlas", fake_check)
+    status = connection_status()
+    assert status["connected"] is True
+    assert status["url"].startswith("http://127.0.0.1:8011/")
