@@ -100,12 +100,49 @@ DERIVATIVE = {
 }
 
 
+PLANNING_MAPS = {
+    "schema_version": 1,
+    "source_arch": "k3-mini",
+    "maps": {
+        "channel": [
+            {
+                "layer_index": 0,
+                "source_expert_id": 3,
+                "channel_id": 0,
+                "importance": 0.9,
+                "keep": True,
+            }
+        ],
+        "tile": [],
+        "node_ownership": [],
+        "overflow_pack": [
+            {"layer_index": 0, "source_expert_id": 3, "tier": "nvme_a", "reason": "saliency"}
+        ],
+        "router_repair": [],
+        "residual_repair": [],
+        "distillation_target": [],
+    },
+    "candidates": [
+        {
+            "name": "keep4-value",
+            "kept_per_layer": {"0": 4},
+            "resident_bytes_a": 123.0,
+            "resident_bytes_b": 0.0,
+            "stored_bytes": 456.0,
+            "coverage": 1.0,
+            "precision": [],
+        }
+    ],
+}
+
+
 def _write_fixture_dir(root: Path, run_id: str = RUN_ID, *, derivative: bool = False) -> Path:
     run_dir = root / "atlas_runs" / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "run_manifest.json").write_text(json.dumps(RUN_MANIFEST), encoding="utf-8")
     (run_dir / "layer_saliency.json").write_text(json.dumps(LAYER_SALIENCY), encoding="utf-8")
     (run_dir / "plans.json").write_text(json.dumps(PLANS), encoding="utf-8")
+    (run_dir / "planning_maps.json").write_text(json.dumps(PLANNING_MAPS), encoding="utf-8")
     if derivative:
         (run_dir / "derivative.json").write_text(json.dumps(DERIVATIVE), encoding="utf-8")
     return run_dir
@@ -145,6 +182,19 @@ def test_import_persists_and_is_idempotent(tmp_path: Path) -> None:
     assert km.entries[0].unit.source_unit_id == 3
     assert km.entries[0].saliency == 0.9
     assert km.entries[0].evidence_kind.value == "measured"
+
+    # model-atlas fit facts are no longer dropped by the importer.
+    p0 = imp.plans[0]
+    assert p0.precision == PLANS[0]["precision"]["entries"]
+    assert p0.resident_bytes_a == 123.0
+    assert p0.resident_bytes_b == 0.0
+    assert p0.coverage == 1.0
+
+    # comprehensive §25 maps + real-bytes candidates ride the bridge too.
+    assert imp.maps["channel"]
+    assert imp.maps["overflow_pack"]
+    assert imp.real_bytes is not None
+    assert imp.real_bytes["candidates"][0]["name"] == "keep4-value"
 
     # Persisted to <out_root>/atlas_runs/<id>/import.json.
     assert (tmp_path / "atlas_runs" / RUN_ID / "import.json").is_file()

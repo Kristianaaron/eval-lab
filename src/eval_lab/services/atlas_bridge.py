@@ -67,7 +67,8 @@ class AtlasBridgeService:
         saliency = _read_json(run_dir / "layer_saliency.json") or []
         plans = _read_json(run_dir / "plans.json") or []
         derivative = _read_json(run_dir / "derivative.json")
-        record = self._build_record(run_id, manifest, saliency, plans, derivative)
+        planning = _read_json(run_dir / "planning_maps.json") or {}
+        record = self._build_record(run_id, manifest, saliency, plans, derivative, planning)
         self.store.save(record)
         if derivative is not None:
             self._register_derivative(run_id, record)
@@ -78,6 +79,7 @@ class AtlasBridgeService:
 
     # -- record construction ------------------------------------------------
     def _from_manifest_only(self, run_id: str, manifest: dict[str, Any]) -> AtlasBridgeImport:
+        planning = _read_json(self.run_dir(run_id) / "planning_maps.json") or {}
         return AtlasBridgeImport(
             run_id=run_id,
             arch=manifest.get("source_arch"),
@@ -87,6 +89,8 @@ class AtlasBridgeService:
             evidence_present=manifest.get("evidence_present") or [],
             has_derivative=self.run_dir(run_id).joinpath("derivative.json").is_file(),
             manifest=manifest,
+            maps=planning.get("maps") or {},
+            real_bytes=planning or None,
         )
 
     def _build_record(
@@ -96,6 +100,7 @@ class AtlasBridgeService:
         saliency: list[dict[str, Any]],
         plans: list[dict[str, Any]],
         derivative: dict[str, Any] | None,
+        planning: dict[str, Any] | None = None,
     ) -> AtlasBridgeImport:
         sal_lookup = {
             (int(r["layer"]), int(r["expert"])): r
@@ -104,6 +109,7 @@ class AtlasBridgeService:
         }
         fallback_source = manifest.get("source_arch") or "atlas"
         plan_imports = [self._plan_to_import(p, sal_lookup, fallback_source) for p in plans]
+        planning = planning or {}
         return AtlasBridgeImport(
             run_id=run_id,
             arch=manifest.get("source_arch"),
@@ -116,6 +122,14 @@ class AtlasBridgeService:
             saliency=saliency,
             plans=plan_imports,
             derivative=derivative,
+            maps=planning.get("maps") or {},
+            real_bytes=(
+                {"schema_version": planning.get("schema_version"),
+                 "source_arch": planning.get("source_arch"),
+                 "candidates": planning.get("candidates") or []}
+                if planning
+                else None
+            ),
         )
 
     def _plan_to_import(
@@ -164,6 +178,10 @@ class AtlasBridgeService:
             keep_per_layer=plan.get("keep_per_layer"),
             kept_per_layer=kept_per_layer,
             keep_maps=keep_maps,
+            precision=[dict(e) for e in (plan.get("precision") or {}).get("entries", [])],
+            resident_bytes_a=plan.get("resident_bytes_a"),
+            resident_bytes_b=plan.get("resident_bytes_b"),
+            coverage=_coverage(entries),
         )
 
     # -- derivative registration --------------------------------------------
@@ -209,3 +227,11 @@ def _read_json(path: Path) -> Any | None:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
+
+
+def _coverage(entries: list[dict[str, Any]]) -> float | None:
+    """Fraction of keep-map entries that are kept (None when not measurable)."""
+    if not entries:
+        return None
+    kept = sum(1 for e in entries if bool(e.get("keep", True)))
+    return round(kept / len(entries), 4)
