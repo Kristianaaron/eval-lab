@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 else:
     _App = Any
 
-DEFAULT_ATLAS_URL = os.environ.get("MODEL_ATLAS_URL", "http://127.0.0.1:8200/")
+DEFAULT_ATLAS_URL = os.environ.get("MODEL_ATLAS_URL", "http://127.0.0.1:8011/")
 CONNECTION_FILE = os.environ.get(
     "ATLAS_CONNECTION_FILE", str(Path.home() / ".eval-lab" / "atlas_connection.json")
 )
@@ -74,20 +74,17 @@ def _clear_config() -> None:
 
 
 def connection_status() -> dict[str, Any]:
-    """Overall integration status driving the UI: installed / connected / reachable."""
+    """Overall integration status: the Atlas profiler service is reachable over
+    HTTP (no need for the package to be importable in eval-lab's venv — model-
+    atlas runs as a separate served app). ``installed`` tracks the package
+    presence only as informational; the feature is usable when ``reachable``."""
     cfg = _read_config()
     installed = model_atlas_installed()
-    if not installed:
-        return {
-            "installed": False,
-            "connected": False,
-            "reachable": False,
-            "url": DEFAULT_ATLAS_URL,
-        }
-    check = check_atlas(cfg.get("url") or None)
+    target = cfg.get("url") or DEFAULT_ATLAS_URL
+    check = check_atlas(target)
     return {
-        "installed": True,
-        "connected": bool(cfg.get("url")),
+        "installed": installed,
+        "connected": bool(check["reachable"]),
         "reachable": check["reachable"],
         "http_status": check["http_status"],
         "url": check["url"],
@@ -121,7 +118,7 @@ def install_instructions() -> dict[str, str]:
         "install_command": "pip install model-atlas",
         "serve_command": (
             "model-atlas dashboard --out site/index.html; "
-            "python -m http.server 8200 --directory site"
+            "python -m http.server 8011 --directory site"
         ),
         "connect_url_hint": "http://127.0.0.1:8200/",
     }

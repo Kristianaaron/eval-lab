@@ -27,6 +27,11 @@ class AtlasPlanImport(BaseModel):
     keep_per_layer: int | None = None
     kept_per_layer: dict[str, int] = Field(default_factory=dict)
     keep_maps: list[UnitKeepMap] = Field(default_factory=list)
+    # Model-atlas carriies these per-candidate fit facts; kept here verbatim.
+    precision: list[dict[str, Any]] = Field(default_factory=list)
+    resident_bytes_a: float | None = None
+    resident_bytes_b: float | None = None
+    coverage: float | None = None
 
 
 class AtlasBridgeImport(BaseModel):
@@ -45,4 +50,8 @@ class AtlasBridgeImport(BaseModel):
     saliency: list[dict[str, Any]] = Field(default_factory=list)
     plans: list[AtlasPlanImport] = Field(default_factory=list)
     derivative: dict[str, Any] | None = None
+    # Comprehensive §25 profiling maps + real-bytes candidates from a
+    # model-atlas ``planning_maps.json`` (empty when the run has none).
+    maps: dict[str, Any] = Field(default_factory=dict)
+    real_bytes: dict[str, Any] | None = None
     imported_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

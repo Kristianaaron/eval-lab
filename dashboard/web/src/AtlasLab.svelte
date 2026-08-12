@@ -187,7 +187,7 @@
     try {
       status = await get("/api/atlas");
       if (status.connected && status.reachable) url = status.url;
-      else if (!status.connected) url = status.url || "http://127.0.0.1:8200/";
+      else if (!status.connected) url = status.url || "http://127.0.0.1:8011/";
       if (!install) install = await get("/api/atlas/install");
     } catch (e) {
       error = String(e);
@@ -485,37 +485,45 @@
   {/if}
 </div>
 
-<!-- external Atlas engine (existing connect surface, de-emphasised) -->
+<!-- Atlas profiler integration (optional, native when reachable) -->
 <section class="card" style="margin-top:16px">
   <h2 style="display:flex;align-items:center;gap:10px">
-    External Atlas engine
-    <span class="badge">{status?.connected && status?.reachable ? "connected" : "not connected"}</span>
+    Atlas profiler
+    <span class="badge">{status?.connected ? "connected" : "optional / offline"}</span>
   </h2>
-  {#if notice && !status?.connected}
+  {#if notice}
     <div class="card warn">{notice}</div>
   {/if}
-  {#if status && !status.installed}
-    <p class="mut">The <code>model-atlas</code> package isn't installed. Install and serve it:</p>
-    <p class="mono">{install?.install_command} — {install?.serve_command}</p>
-    <button class="btn" on:click={loadConnect}>I've installed it — refresh</button>
-  {:else if status && !status.connected}
-    <label class="mut" for="atlas-url">Atlas dashboard URL</label>
+  {#if status && status.connected}
+    <table>
+      <tbody>
+        <tr><th>Status</th><td>{status.reachable ? "reachable" : "unreachable"}</td></tr>
+        <tr><th>Profiler URL</th><td class="mono">{status.url}</td></tr>
+        <tr><th>Package</th><td>{status.installed ? "installed" : "served separately (no install needed here)"}</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:8px;display:flex;gap:8px">
+      <a class="btn primary" href={status.url} target="_blank" rel="noreferrer">Open Atlas Profiler (comprehensive maps · fit)</a>
+      <button class="btn danger" on:click={doDisconnect} disabled={working}>Disconnect</button>
+    </div>
+  {:else if status}
+    <p class="mut">
+      The Atlas profiler is an optional module for comprehensive profiling &amp; fit maps.
+      It isn't reachable right now — eval-lab benchmarking is unaffected. Start the profiler
+      to see the full maps, or connect to a running instance below.
+    </p>
+    <label class="mut" for="atlas-url">Atlas profiler URL</label>
     <div style="display:flex;gap:8px;margin-top:6px">
       <input id="atlas-url" bind:value={url} class="mono" style="width:320px" />
       <button class="btn primary" on:click={doConnect} disabled={working || !url}>
         {working ? "Connecting…" : "Connect"}
       </button>
     </div>
-  {:else if status && status.connected}
-    <table>
-      <tbody>
-        <tr><th>Status</th><td>{status.reachable ? "reachable" : "unreachable"}</td></tr>
-        <tr><th>URL</th><td class="mono">{status.url}</td></tr>
-      </tbody>
-    </table>
-    <div style="margin-top:8px;display:flex;gap:8px">
-      <a class="btn primary" href={status.url} target="_blank" rel="noreferrer">Open Atlas Lab</a>
-      <button class="btn danger" on:click={doDisconnect} disabled={working}>Disconnect</button>
-    </div>
+    {#if !status.installed}
+      <p class="mut" style="font-size:12px;margin-top:6px">
+        Package: <code>model-atlas</code>. It can be served separately
+        (<code class="mono">{install?.serve_command}</code>) — it need not be installed in eval-lab.
+      </p>
+    {/if}
   {/if}
 </section>
