@@ -77,6 +77,10 @@
         <span>{a.label}</span>
       </a>
     {/each}
+    <a class="nav extern" href="http://{location.hostname}:8011/atlas_qa.html" target="_blank">
+      <Sparkles size={16} />
+      <span>Atlas Profile &#8599;</span>
+    </a>
   </nav>
 
   <main class="main">

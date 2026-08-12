@@ -81,6 +81,7 @@ nav.side a.nav { color: var(--muted); padding: 8px 10px; border-radius: 6px; dis
 nav.side a.nav :global(svg) { flex: 0 0 auto; }
 nav.side a.nav:hover { background: var(--panel-2); text-decoration: none; }
 nav.side a.nav.active { color: var(--text); background: var(--panel-2); font-weight: 600; text-decoration: none; }
+nav.side a.nav.extern { margin-top: 14px; border-top: 1px solid var(--panel-2); border-radius: 0; color: var(--accent, #7cc0ff); }
 main.main { flex: 1; padding: 24px; max-width: 1360px; }
 
 /* ---- overview landing (reference mockup) ---- */
