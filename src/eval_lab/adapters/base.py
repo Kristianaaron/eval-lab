@@ -29,6 +29,9 @@ class GenerationRequest:
     temperature: float = 0.0
     top_p: float = 1.0
     max_tokens: int = 4096
+    # This is a per-request transport bound, not a best-effort adapter default.
+    # Evaluation callers that need a reproducible deadline must pass it explicitly.
+    timeout_seconds: float = 120.0
     stop: list[str] = field(default_factory=list)
     seed: int | None = None
     structured_schema: dict[str, Any] | None = None

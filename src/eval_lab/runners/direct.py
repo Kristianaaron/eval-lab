@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -24,9 +25,20 @@ class RunContext:
     model_id: str
     harness_id: str | None = None
     seed: int | None = None
+    sampling: dict[str, float | int] = field(default_factory=dict)
+    http_timeout_seconds: float = 120.0
+    task_timeout_seconds: float | None = None
     runs_root: str = "runs"
     store: RunStore | None = None
     extra: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not math.isfinite(self.http_timeout_seconds) or self.http_timeout_seconds <= 0:
+            raise ValueError("http_timeout_seconds must be finite and positive")
+        if self.task_timeout_seconds is not None and (
+            not math.isfinite(self.task_timeout_seconds) or self.task_timeout_seconds <= 0
+        ):
+            raise ValueError("task_timeout_seconds must be finite and positive")
 
 
 @dataclass
@@ -56,16 +68,14 @@ class DirectRunner:
         run_id = uuid.uuid4().hex[:12]
         ws = RunWorkspace(context.runs_root, run_id)
 
-        # Load instruction: prefer an explicit prompt in context; else read the
-        # task's instruction file text; else fall back to the raw file name.
+        # Loaded task packages resolve this to one exact regular file.  A
+        # direct run never falls back to a path string as model input.
         prompt = context.extra.get("prompt")
         if prompt is None:
             ifcand = Path(task.input.instruction_file)
-            prompt = (
-                ifcand.read_text(encoding="utf-8")
-                if ifcand.exists()
-                else task.input.instruction_file
-            )
+            if not ifcand.is_absolute() or ifcand.is_symlink() or not ifcand.is_file():
+                raise ValueError("direct task instruction must be a regular package file")
+            prompt = ifcand.read_text(encoding="utf-8")
 
         recorder = TraceRecorder(run_id, ws.trace_path())
         recorder.record(
@@ -80,6 +90,7 @@ class DirectRunner:
         start = time.monotonic()
         error: str | None = None
         request = self._build_request(prompt, context)
+        task_timeout = context.task_timeout_seconds or float(task.execution.timeout_seconds)
         try:
             recorder.record(
                 "model_request", {"prompt_tokens": None, "max_tokens": request.max_tokens}
@@ -102,8 +113,10 @@ class DirectRunner:
             error = str(exc)
             recorder.record("exception", {"error": error})
         duration = time.monotonic() - start
-        recorder.record("run_completion", {"duration_s": duration, "error": error})
 
+        if duration > task_timeout:
+            error = "task timeout exceeded"
+        recorder.record("run_completion", {"duration_s": duration, "error": error})
         # Score.
         scores = []
         aggregate = None
@@ -159,7 +172,7 @@ class DirectRunner:
         )
 
     def _build_request(self, prompt: str, context: RunContext) -> GenerationRequest:
-        settings = context.extra.get("sampling") or {}
+        settings = context.sampling or context.extra.get("sampling") or {}
         # If an oracle asks for JSON, request structured output from the adapter.
         structured = None
         for ref in context.task.oracle:
@@ -172,6 +185,10 @@ class DirectRunner:
             temperature=float(settings.get("temperature", 0.0)),
             max_tokens=int(settings.get("max_tokens", 4096)),
             seed=context.seed,
+            timeout_seconds=min(
+                context.http_timeout_seconds,
+                context.task_timeout_seconds or float(context.task.execution.timeout_seconds),
+            ),
             structured_schema=structured,
         )
 
@@ -193,8 +210,11 @@ class DirectRunner:
             model_id=context.model_id,
             harness_id=context.harness_id,
             random_seed=context.seed,
-            sampling=context.extra.get("sampling") or {},
-            budgets={"timeout_seconds": task.execution.timeout_seconds},
+            sampling=context.sampling or context.extra.get("sampling") or {},
+            budgets={
+                "timeout_seconds": context.task_timeout_seconds or task.execution.timeout_seconds,
+                "http_timeout_seconds": context.http_timeout_seconds,
+            },
             warm_state=context.extra.get("warm_state", "model"),
             result_status="completed" if (aggregate is not None and not error) else "error",
         ).model_dump(mode="json") | {
