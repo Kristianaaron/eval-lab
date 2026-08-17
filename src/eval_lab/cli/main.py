@@ -38,6 +38,45 @@ def _err(message: str) -> None:
     typer.echo(f"error: {message}", err=True)
 
 
+def _bound_run_context(
+    task: TaskSpec,
+    *,
+    model: ModelAdapter,
+    model_id: str,
+    runs_root: str,
+    store: RunStore,
+    seed: int | None,
+    temperature: float,
+    max_tokens: int,
+    http_timeout_seconds: float,
+    task_timeout_seconds: float | None,
+    require_held_out: bool,
+) -> RunContext:
+    """Build the request context after proving the suite's execution contract."""
+
+    if require_held_out:
+        if task.data_partition != "held_out_evaluation":
+            raise typer.BadParameter(f"task {task.id} is not held_out_evaluation")
+        if task.execution.runner != "direct":
+            raise typer.BadParameter(f"task {task.id} is not a direct task")
+        if task_timeout_seconds is None:
+            raise typer.BadParameter("--task-timeout-seconds is required with --require-held-out")
+    effective_task_timeout = task_timeout_seconds or float(task.execution.timeout_seconds)
+    if task_timeout_seconds is not None and task.execution.timeout_seconds != task_timeout_seconds:
+        raise typer.BadParameter(f"task {task.id} timeout does not match --task-timeout-seconds")
+    return RunContext(
+        task=task,
+        model=model,
+        model_id=model_id,
+        seed=seed,
+        sampling={"temperature": temperature, "max_tokens": max_tokens},
+        http_timeout_seconds=http_timeout_seconds,
+        task_timeout_seconds=effective_task_timeout,
+        runs_root=runs_root,
+        store=store,
+    )
+
+
 @app.command("doctor")
 def doctor(
     json_out: bool = typer.Option(False, "--json", help="machine-readable output"),
@@ -173,6 +212,12 @@ def run_command(
     tasks_dir: str = typer.Option("tasks", "--tasks-dir"),
     runs_root: str = typer.Option("runs", "--runs-root"),
     db: str = typer.Option("runs/runstore.db", "--db"),
+    seed: int | None = typer.Option(None, "--seed", min=0),
+    temperature: float = typer.Option(0.0, "--temperature", min=0.0, max=2.0),
+    max_tokens: int = typer.Option(4096, "--max-tokens", min=1),
+    http_timeout_seconds: float = typer.Option(120.0, "--http-timeout-seconds", min=0.001),
+    task_timeout_seconds: float | None = typer.Option(None, "--task-timeout-seconds", min=0.001),
+    require_held_out: bool = typer.Option(False, "--require-held-out"),
     json_out: bool = typer.Option(False, "--json"),
 ) -> None:
     """Run a task or suite against a model and score it."""
@@ -182,19 +227,46 @@ def run_command(
     try:
         if kind == "task":
             task = _resolve_task(kind, target, tasks_dir)
-            context = RunContext(
-                task=task, model=adapter, model_id=model, runs_root=runs_root, store=store
+            context = _bound_run_context(
+                task,
+                model=adapter,
+                model_id=model,
+                runs_root=runs_root,
+                store=store,
+                seed=seed,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                http_timeout_seconds=http_timeout_seconds,
+                task_timeout_seconds=task_timeout_seconds,
+                require_held_out=require_held_out,
             )
             results = run_batch(runner, [task], lambda t: context)
         elif kind == "suite":
             suite = _resolve_suite(target, tasks_dir)
             tasks_by_id = _index_tasks(tasks_dir)
+            selected = [
+                tasks_by_id[ref.task_id] for ref in suite.tasks if ref.task_id in tasks_by_id
+            ]
+            if len(selected) != len(suite.tasks):
+                raise typer.BadParameter("suite contains a task absent from --tasks-dir")
+            if require_held_out and not selected:
+                raise typer.BadParameter("held-out suite must select at least one task")
             results = run_suite(
                 runner,
                 suite,
                 tasks_by_id,
-                lambda t: RunContext(
-                    task=t, model=adapter, model_id=model, runs_root=runs_root, store=store
+                lambda task: _bound_run_context(
+                    task,
+                    model=adapter,
+                    model_id=model,
+                    runs_root=runs_root,
+                    store=store,
+                    seed=seed,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    http_timeout_seconds=http_timeout_seconds,
+                    task_timeout_seconds=task_timeout_seconds,
+                    require_held_out=require_held_out,
                 ),
             )
         else:

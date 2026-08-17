@@ -8,6 +8,7 @@ dependency on the ``openai`` SDK; the SDK variant can be added later.
 from __future__ import annotations
 
 import json
+import math
 import urllib.request
 from typing import Any
 
@@ -27,11 +28,13 @@ class OpenAICompatibleAdapter(ModelAdapter):
         base_url: str,
         model_name: str,
         api_key: str | None = None,
-        timeout: float = 120.0,
+        timeout: float | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model_name = model_name
         self.api_key = api_key
+        if timeout is not None and (not math.isfinite(timeout) or timeout <= 0):
+            raise ValueError("adapter timeout must be finite and positive when set")
         self.timeout = timeout
 
     def _url(self) -> str:
@@ -61,6 +64,13 @@ class OpenAICompatibleAdapter(ModelAdapter):
         )
 
     def generate(self, request: GenerationRequest) -> GenerationResult:
+        if not math.isfinite(request.timeout_seconds) or request.timeout_seconds <= 0:
+            return GenerationResult(
+                text="",
+                finish_reason="error",
+                error="invalid request timeout",
+                raw={},
+            )
         messages: list[dict[str, Any]] = []
         if request.system_prompt:
             messages.append({"role": "system", "content": request.system_prompt})
@@ -88,7 +98,10 @@ class OpenAICompatibleAdapter(ModelAdapter):
         body = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(self._url(), data=body, headers=self._headers(), method="POST")
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+            timeout = request.timeout_seconds if self.timeout is None else min(
+                self.timeout, request.timeout_seconds
+            )
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
         except Exception as exc:
             return GenerationResult(text="", finish_reason="error", error=str(exc), raw={})
