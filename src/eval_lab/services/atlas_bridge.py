@@ -200,6 +200,9 @@ class AtlasBridgeService:
             name=deriv.get("display_name") or f"atlas-run {run_id} derivative",
             asset_type=ModelAssetType.derivative_checkpoint,
             path=deriv.get("checkpoint_path"),
+            endpoint=deriv.get("endpoint"),
+            model_name=deriv.get("model_name"),
+            api_key_env=deriv.get("api_key_env"),
             family=deriv.get("model_family"),
             architecture=deriv.get("architecture"),
             param_metadata={
@@ -208,7 +211,7 @@ class AtlasBridgeService:
             },
             stored_size_bytes=deriv.get("stored_size_bytes"),
             resident_estimate_bytes=deriv.get("estimated_resident_bytes"),
-            runnable=False,
+            runnable=bool(deriv.get("endpoint") and deriv.get("model_name")),
             atlas_compatible=False,
             validation_state=ValidationState.unvalidated,
             parent_asset_id=deriv.get("parent_model_id"),

@@ -42,7 +42,7 @@
 
   const sections = [
     { key: "runs", label: `Runs (${reg?.runs?.total ?? "…"})` },
-    { key: "atlas", label: `Atlas runs (${reg?.atlas_runs?.length ?? "…"})` },
+    { key: "atlas", label: `Cebu profiles (${reg?.atlas_runs?.length ?? "…"})` },
     { key: "experiments", label: `Experiments (${reg?.experiments?.length ?? "…"})` },
     { key: "models", label: `Model assets (${reg?.model_assets?.length ?? "…"})` },
     { key: "jobs", label: `Jobs (${reg?.jobs?.total ?? "…"})` },
@@ -52,7 +52,7 @@
 
 <h1>Explorer</h1>
 <p class="mut">
-  Browse every artifact the harness has recorded — runs, atlas exports, experiments,
+  Browse every artifact the harness has recorded — runs, Cebu profile exports, experiments,
   model assets, jobs, and suites. Filter the run corpus or drill into any run for its
   trace, telemetry, and raw stored artifacts.
 </p>
@@ -75,7 +75,7 @@
       </div>
     </div>
     <div class="card stat">
-      <div class="k">Atlas runs</div>
+      <div class="k">Cebu profiles</div>
       <div class="v">{reg.atlas_runs.length}</div>
       <div class="mut">{reg.atlas_runs.filter((r) => r.has_derivative).length} with derivative</div>
     </div>
@@ -149,11 +149,11 @@
 {:else if section === "atlas"}
   <div class="card table-scroll">
     <table>
-      <thead><tr><th>Atlas run</th><th>Arch</th><th>Status</th><th>Plans</th><th>Derivative</th></tr></thead>
+      <thead><tr><th>Cebu profile</th><th>Arch</th><th>Status</th><th>Plans</th><th>Quantized output</th></tr></thead>
       <tbody>
         {#each reg?.atlas_runs ?? [] as r (r.run_id)}
           <tr>
-            <td class="mono"><a href="#/atlas">{r.run_id}</a></td>
+            <td class="mono"><a href="#/cebu">{r.run_id}</a></td>
             <td class="mut">{r.arch ?? "—"}</td>
             <td>{r.status ?? "—"}</td>
             <td>{r.n_plans ?? "—"}</td>
@@ -162,13 +162,13 @@
         {/each}
       </tbody>
     </table>
-    {#if !reg?.atlas_runs?.length}<p class="mut">No atlas runs recorded yet.</p>{/if}
+    {#if !reg?.atlas_runs?.length}<p class="mut">No Cebu profiles recorded yet.</p>{/if}
   </div>
 
 {:else if section === "experiments"}
   <div class="card table-scroll">
     <table>
-      <thead><tr><th>Experiment</th><th>Atlas run</th><th>Plan</th><th>Objective</th><th>Kept</th><th>Status</th></tr></thead>
+      <thead><tr><th>Experiment</th><th>Cebu profile</th><th>Plan</th><th>Objective</th><th>Kept</th><th>Status</th></tr></thead>
       <tbody>
         {#each reg?.experiments ?? [] as e (e.experiment_id)}
           <tr>
@@ -188,7 +188,7 @@
 {:else if section === "models"}
   <div class="card table-scroll">
     <table>
-      <thead><tr><th>Asset</th><th>Name</th><th>Type</th><th>Runnable</th><th>Atlas-compatible</th></tr></thead>
+      <thead><tr><th>Asset</th><th>Name</th><th>Type</th><th>Runnable</th><th>Cebu-compatible</th></tr></thead>
       <tbody>
         {#each reg?.model_assets ?? [] as m (m.asset_id)}
           <tr>

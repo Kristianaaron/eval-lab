@@ -55,7 +55,7 @@
         <div><span class="mut">Resident</span> {fmtGb(a.resident_estimate_bytes)}</div>
         <div><span class="mut">Arch</span> {a.architecture ?? "—"}</div>
         <div>
-          <span class="mut">Atlas</span>
+          <span class="mut">Cebu</span>
           <span class={a.atlas_compatible ? "ok" : "mut"}>{a.atlas_compatible ? "compatible" : "—"}</span>
         </div>
         {#if a.latest_quality_score != null}

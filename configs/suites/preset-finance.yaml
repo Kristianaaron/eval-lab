@@ -1,0 +1,9 @@
+schema_version: '1.0'
+id: suite.user.preset-finance.001
+name: Preset finance
+description: 'User suite from domains: finance'
+version: 1
+family: user
+tasks:
+- task_id: finance.percent_change.001
+  weight: 1.0

@@ -37,6 +37,30 @@ def test_eval_config_lists_models_and_suites(tmp_path: Path) -> None:
     assert cfg["harnesses"]
 
 
+def test_eval_config_exposes_runnable_benchmark_presets(tmp_path: Path) -> None:
+    c = _client(tmp_path)
+    domains = set(c.get("/api/eval-config").json()["domains"])
+    assert {
+        "code_generation",
+        "debugging",
+        "planning",
+        "retrieval",
+        "structured_output",
+        "health",
+        "finance",
+        "legal",
+        "science",
+        "education",
+        "multilingual",
+        "safety",
+    } <= domains
+
+    for domain in ("debugging", "retrieval", "structured_output", "health", "finance", "legal", "science", "education", "multilingual", "safety"):
+        response = c.post("/api/suites", json={"name": f"Preset {domain}", "domains": [domain]})
+        assert response.status_code == 200
+        assert response.json()["task_count"] > 0
+
+
 def test_eval_job_create_run_complete(tmp_path: Path) -> None:
     c = _client(tmp_path)
     r = c.post(

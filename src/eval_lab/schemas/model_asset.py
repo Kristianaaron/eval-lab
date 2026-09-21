@@ -40,6 +40,9 @@ class ModelAssetRecord(BaseModel):
     name: str
     asset_type: ModelAssetType
     path: str | None = None
+    endpoint: str | None = None
+    model_name: str | None = None
+    api_key_env: str | None = None
     family: str | None = None
     architecture: str | None = None
     revision: str | None = None
@@ -135,6 +138,16 @@ class RegisterRequest(BaseModel):
     name: str | None = None
     asset_id: str | None = None
     memory_gb: float = 256.0
+
+
+class RegisterEndpointRequest(BaseModel):
+    """Register an OpenAI-compatible endpoint without storing its secret."""
+
+    asset_id: str | None = None
+    name: str
+    endpoint: str
+    model_name: str
+    api_key_env: str | None = None
 
 
 class InspectResult(BaseModel):

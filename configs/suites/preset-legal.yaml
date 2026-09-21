@@ -1,0 +1,9 @@
+schema_version: '1.0'
+id: suite.user.preset-legal.001
+name: Preset legal
+description: 'User suite from domains: legal'
+version: 1
+family: user
+tasks:
+- task_id: legal.contract_obligation.001
+  weight: 1.0

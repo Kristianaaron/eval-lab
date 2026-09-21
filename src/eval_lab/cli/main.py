@@ -623,7 +623,15 @@ def _resolve_task(kind: str, target: str, tasks_dir: str) -> TaskSpec:
 def _resolve_suite(target: str, tasks_dir: str) -> SuiteSpec:
     p = Path(target) if Path(target).exists() else None
     if p is None:
-        _err(f"suite not found (pass a file path): {target}")
+        for candidate in (
+            Path("configs/suites") / f"{target}.yaml",
+            Path("configs/suites") / f"{target}.yml",
+        ):
+            if candidate.is_file():
+                p = candidate
+                break
+    if p is None:
+        _err(f"suite not found: {target}")
         raise typer.Exit(code=1)
     return load_suite_yaml(p)
 

@@ -55,7 +55,7 @@ export function fmtGb(n) {
 export const ACTION_LABELS = {
   inspect_checkpoint: "Inspect checkpoint",
   evaluate_directly: "Evaluate directly",
-  build_atlas: "Build atlas",
+  build_atlas: "Run Cebu profile",
   create_keep_map: "Create keep map",
   create_experiment: "Create experiment",
   compare: "Compare",

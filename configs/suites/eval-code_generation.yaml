@@ -1,0 +1,43 @@
+schema_version: '1.0'
+id: suite.user.eval-code_generation.001
+name: Eval code_generation
+description: 'User suite from domains: coding, frontend'
+version: 1
+family: user
+tasks:
+- task_id: agentic.api_migration.001
+  weight: 1.0
+- task_id: agentic.multi_file_fix.001
+  weight: 1.0
+- task_id: coding.binary_search.001
+  weight: 1.0
+- task_id: coding.fizzbuzz.001
+  weight: 1.0
+- task_id: coding.json_output.001
+  weight: 1.0
+- task_id: coding.output_prediction.001
+  weight: 1.0
+- task_id: coding.parse_csv.001
+  weight: 1.0
+- task_id: coding.refactor_legacy.001
+  weight: 1.0
+- task_id: coding.spot_bug.001
+  weight: 1.0
+- task_id: coding.time_complexity.001
+  weight: 1.0
+- task_id: frontend.accessibility_fix.001
+  weight: 1.0
+- task_id: frontend.center_box_css.001
+  weight: 1.0
+- task_id: frontend.design_card.001
+  weight: 1.0
+- task_id: frontend.form_validation.001
+  weight: 1.0
+- task_id: frontend.responsive_breakpoint.001
+  weight: 1.0
+- task_id: frontend.semantic_markup.001
+  weight: 1.0
+- task_id: reasoning.reverse_string.001
+  weight: 1.0
+- task_id: toolcall.dataset_query.001
+  weight: 1.0

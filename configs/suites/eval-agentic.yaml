@@ -1,0 +1,17 @@
+schema_version: '1.0'
+id: suite.user.eval-agentic.001
+name: Eval agentic
+description: 'User suite from domains: agentic'
+version: 1
+family: user
+tasks:
+- task_id: agentic.api_migration.001
+  weight: 1.0
+- task_id: agentic.debug_pipeline.001
+  weight: 1.0
+- task_id: agentic.multi_file_fix.001
+  weight: 1.0
+- task_id: agentic.report_generation.001
+  weight: 1.0
+- task_id: toolcall.shell_automation.001
+  weight: 1.0

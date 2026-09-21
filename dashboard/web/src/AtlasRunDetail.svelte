@@ -14,7 +14,7 @@
   async function load() {
     error = null;
     try {
-      runDetail = await get(`/api/atlas-runs/${encodeURIComponent(runId)}`);
+      runDetail = await get(`/api/cebu-runs/${encodeURIComponent(runId)}`);
       recOpen = true; // guide the user on fitting this model after the run
       // Default the keep/routing overlay to the most aggressive plan (smallest
       // top-k), which is also the server's primary keep-map budget.
@@ -153,7 +153,7 @@
   }
 </script>
 
-<a class="mut" href="#/atlas">← Back to Atlas Lab</a>
+<a class="mut" href="#/cebu">← Back to Cebu Profiler</a>
 
 {#if error}
   <div class="card error" style="margin-top:12px">Error: <span class="mut">{error}</span></div>
@@ -162,7 +162,7 @@
 {#if runDetail}
   <section class="card" style="margin-top:12px">
     <h2>
-      Atlas run <span class="mono">{runDetail.atlas_run_id}</span>
+      Cebu profile <span class="mono">{runDetail.atlas_run_id}</span>
       <span class="badge">{runDetail.status}</span>
       <button class="btn small" style="float:right" on:click={() => (recOpen = true)}><Sparkles size="13" /> Recommendations</button>
     </h2>

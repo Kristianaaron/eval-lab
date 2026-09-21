@@ -8,6 +8,7 @@ in ``runs/<run-id>/``. It deliberately has no write access to runs.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, cast
 
@@ -16,15 +17,17 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from eval_lab.adapters.factory import build_adapter
 from eval_lab.schemas.atlas_runtime import AtlasBuildConfig
 from eval_lab.schemas.evaluation import EvaluationConfig
 from eval_lab.schemas.experiment import ExperimentType
 from eval_lab.schemas.model_asset import (
     EnvBudget,
     InspectPathRequest,
+    RegisterEndpointRequest,
     RegisterRequest,
 )
-from eval_lab.schemas.models import TaskSpec
+from eval_lab.schemas.models import ModelConfig, TaskSpec
 from eval_lab.services.atlas_bridge import AtlasBridgeService
 from eval_lab.services.atlas_runtime import AtlasRuntimeService
 from eval_lab.services.comparisons import ComparisonService
@@ -45,6 +48,13 @@ class SuiteCreate(BaseModel):
 
 class AtlasImportRequest(BaseModel):
     run_id: str
+
+
+class ProfilerBenchmarkRequest(BaseModel):
+    """Launch the standard benchmark for a profiler-produced model asset."""
+
+    suite_ref: str = "configs/suites/daily_driver.yaml"
+    repeat_count: int = 1
 
 
 class ExperimentCreateRequest(BaseModel):
@@ -73,7 +83,26 @@ def _available_domains() -> list[str]:
     doms: set[str] = set()
     for t in _task_index().values():
         doms.update(t.labels.domains)
+    # Presets are curated views over the task corpus, rather than synthetic
+    # labels. This keeps every item selectable in the UI backed by a runnable
+    # suite while giving users the vocabulary they use when benchmarking.
+    doms.update(_DOMAIN_PRESETS)
     return sorted(doms)
+
+
+# User-facing benchmark intents mapped to the controlled task domains. The
+# mapping is deliberately kept in the API layer so adding a preset does not
+# require relabelling dozens of task manifests or changing their semantics.
+_DOMAIN_PRESETS: dict[str, set[str]] = {
+    "software_engineering": {"coding", "frontend", "agentic", "tool_calling"},
+    "instruction_following": {"coding", "frontend", "general_reasoning"},
+    "code_generation": {"coding", "frontend"},
+    "debugging": {"coding", "agentic"},
+    "planning": {"agentic", "tool_calling"},
+    "retrieval": {"long_context", "research"},
+    "structured_output": {"coding", "tool_calling", "voxel"},
+    "factuality": {"general_reasoning", "research", "long_context"},
+}
 
 
 def _slug(name: str) -> str:
@@ -89,7 +118,8 @@ def build_suite_from_domains(
     Returns (suite_ref, task_count). Domain list is a union filter, so adding
     domains later is just adding to the picker and this keeps scaling.
     """
-    wanted = set(domains)
+    requested = set(domains)
+    wanted = set().union(*(_DOMAIN_PRESETS.get(domain, {domain}) for domain in requested))
     tasks_by_id = _task_index(tasks_dir)
     selected = sorted(
         (t for t in tasks_by_id.values() if set(t.labels.domains) & wanted),
@@ -201,6 +231,7 @@ class DashboardApp:
             db=self.db_path,
             tasks_dir="tasks",
             suites_dir="configs/suites",
+            model_factory=self._build_evaluation_model,
             orchestrator=self._jobs,
         )
         self._comparisons = ComparisonService(
@@ -226,6 +257,38 @@ class DashboardApp:
         self._register_experiments()
         self._register_explorer()
         self._mount_spa()
+
+    def _build_evaluation_model(self, job: Any) -> Any:
+        """Resolve the selected registry asset to the adapter that will run it."""
+        cfg = EvaluationConfig.model_validate(job.config)
+        if cfg.model_id == "mock":
+            return build_adapter(
+                ModelConfig(id="mock", provider_type="mock", model_name="mock-deterministic")
+            )
+        asset = self._models.get_model_asset(cfg.model_asset_id)
+        if asset is None:
+            raise ValueError(f"model asset not found: {cfg.model_asset_id}")
+        if asset.asset_id != cfg.model_id:
+            raise ValueError(
+                f"model_id {cfg.model_id!r} does not match asset {asset.asset_id!r}"
+            )
+        if not asset.runnable:
+            raise ValueError(f"model asset is not runnable: {asset.name}")
+        if not asset.endpoint or not asset.model_name:
+            raise ValueError(
+                f"model asset {asset.name!r} has no endpoint/model name configured; "
+                "register an OpenAI-compatible endpoint first"
+            )
+        api_key = os.getenv(asset.api_key_env) if asset.api_key_env else None
+        return build_adapter(
+            ModelConfig(
+                id="selected-model",
+                provider_type="openai_compatible",
+                endpoint=asset.endpoint,
+                model_name=asset.model_name,
+                api_key=api_key,
+            )
+        )
 
     # -- route registration -------------------------------------------------
     def _register(self) -> None:
@@ -419,7 +482,7 @@ class DashboardApp:
         app = self.app
         atlas = self._atlas
 
-        @app.get("/api/atlas-bridge/runs")
+        @app.get("/api/cebu-bridge/runs")
         def list_atlas_imports() -> list[dict[str, Any]]:
             return [
                 {
@@ -433,7 +496,7 @@ class DashboardApp:
                 for r in atlas.scan()
             ]
 
-        @app.post("/api/atlas-bridge/import")
+        @app.post("/api/cebu-bridge/import")
         def import_atlas_run(req: AtlasImportRequest) -> dict[str, Any]:
             try:
                 rec = atlas.import_run(req.run_id)
@@ -443,7 +506,55 @@ class DashboardApp:
                 ) from None
             return rec.model_dump(mode="json")
 
-        @app.get("/api/atlas-bridge/runs/{run_id}")
+        @app.post("/api/cebu-bridge/runs/{run_id}/benchmark")
+        def benchmark_profiler_output(
+            run_id: str, req: ProfilerBenchmarkRequest
+        ) -> dict[str, Any]:
+            """Import a Cebu Profiler export and launch Eval Lab in one action."""
+            try:
+                atlas.import_run(run_id)
+            except FileNotFoundError:
+                raise HTTPException(
+                    status_code=404, detail=f"Cebu profile output missing: {run_id}"
+                ) from None
+
+            asset = next(
+                (
+                    a
+                    for a in self._models.list_model_assets()
+                    if a.source_atlas_run_id == run_id
+                    and a.asset_type.value == "derivative_checkpoint"
+                ),
+                None,
+            )
+            if asset is None:
+                raise HTTPException(
+                    status_code=400, detail="profiler export has no quantized model asset"
+                )
+            if not asset.runnable:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"{asset.name} is registered, but has no runnable endpoint/model name. "
+                        "Serve the quantized output with an OpenAI-compatible runtime and "
+                        "re-export it "
+                        "with endpoint and model_name metadata."
+                    ),
+                )
+            try:
+                cfg = EvaluationConfig(
+                    model_asset_id=asset.asset_id,
+                    model_id=asset.asset_id,
+                    suite_ref=req.suite_ref,
+                    repeat_count=req.repeat_count,
+                    runs_root="runs",
+                )
+                job = self._evaluations.launch(cfg, name=f"benchmark {asset.name}")
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from None
+            return {"asset": asset.model_dump(mode="json"), "job": job.model_dump(mode="json")}
+
+        @app.get("/api/cebu-bridge/runs/{run_id}")
         def get_atlas_import(run_id: str) -> dict[str, Any]:
             rec = atlas.get_import(run_id)
             if rec is None:
@@ -464,7 +575,7 @@ class DashboardApp:
         app = self.app
         runtime = self._atlas_runtime
 
-        @app.get("/api/atlas/config")
+        @app.get("/api/cebu/config")
         def atlas_config() -> dict[str, Any]:
             sources = [
                 {
@@ -508,52 +619,52 @@ class DashboardApp:
                 "default_keep_budgets": DEFAULT_KEEP_BUDGETS,
             }
 
-        @app.post("/api/atlas/estimate")
+        @app.post("/api/cebu/estimate")
         def atlas_estimate(cfg: AtlasBuildConfig) -> dict[str, Any]:
             return runtime.estimate(cfg).model_dump(mode="json")
 
-        @app.post("/api/atlas-jobs")
+        @app.post("/api/cebu-jobs")
         def create_atlas_job(cfg: AtlasBuildConfig) -> dict[str, Any]:
             job = runtime.launch(cfg)
             return job.model_dump(mode="json")
 
-        @app.get("/api/atlas-jobs")
+        @app.get("/api/cebu-jobs")
         def list_atlas_jobs() -> list[dict[str, Any]]:
             return [j.model_dump(mode="json") for j in runtime.list_jobs()]
 
-        @app.get("/api/atlas-jobs/{job_id}")
+        @app.get("/api/cebu-jobs/{job_id}")
         def get_atlas_job(job_id: str) -> dict[str, Any]:
             job = runtime.get(job_id)
             if job is None:
                 raise HTTPException(status_code=404, detail=f"atlas job not found: {job_id}")
             return job.model_dump(mode="json")
 
-        @app.post("/api/atlas-jobs/{job_id}/cancel")
+        @app.post("/api/cebu-jobs/{job_id}/cancel")
         def cancel_atlas_job(job_id: str) -> dict[str, Any]:
             job = runtime.cancel(job_id)
             if job is None:
                 raise HTTPException(status_code=404, detail=f"atlas job not found: {job_id}")
             return job.model_dump(mode="json")
 
-        @app.post("/api/atlas-jobs/{job_id}/pause")
+        @app.post("/api/cebu-jobs/{job_id}/pause")
         def pause_atlas_job(job_id: str) -> dict[str, Any]:
             job = runtime.pause(job_id)
             if job is None:
                 raise HTTPException(status_code=404, detail=f"atlas job not found: {job_id}")
             return job.model_dump(mode="json")
 
-        @app.post("/api/atlas-jobs/{job_id}/resume")
+        @app.post("/api/cebu-jobs/{job_id}/resume")
         def resume_atlas_job(job_id: str) -> dict[str, Any]:
             job = runtime.resume(job_id)
             if job is None:
                 raise HTTPException(status_code=404, detail=f"atlas job not found: {job_id}")
             return job.model_dump(mode="json")
 
-        @app.get("/api/atlas-runs")
+        @app.get("/api/cebu-runs")
         def list_atlas_runs() -> list[dict[str, Any]]:
             return runtime.list_runs()
 
-        @app.get("/api/atlas-runs/{run_id}")
+        @app.get("/api/cebu-runs/{run_id}")
         def get_atlas_run(run_id: str) -> dict[str, Any]:
             detail = runtime.run_detail(run_id)
             if detail is None:
@@ -743,6 +854,25 @@ class DashboardApp:
                 "actions": actions.model_dump(mode="json"),
             }
 
+        @app.post("/api/models-assets/endpoint")
+        def register_endpoint(req: RegisterEndpointRequest) -> dict[str, Any]:
+            if not req.endpoint.strip() or not req.model_name.strip():
+                raise HTTPException(status_code=400, detail="endpoint and model_name are required")
+            try:
+                record = models.register_endpoint(
+                    req.name.strip(),
+                    req.endpoint.strip(),
+                    req.model_name.strip(),
+                    asset_id=req.asset_id,
+                    api_key_env=req.api_key_env,
+                )
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from None
+            return {
+                "record": record.model_dump(mode="json"),
+                "actions": models.eligibility(record, self._budget).model_dump(mode="json"),
+            }
+
         @app.get("/api/models-assets/{asset_id}/actions")
         def asset_actions(asset_id: str) -> dict[str, Any]:
             asset = models.get_model_asset(asset_id)
@@ -857,6 +987,14 @@ class DashboardApp:
 
         @app.post("/api/eval-jobs")
         def create_eval_job(cfg: EvaluationConfig) -> dict[str, Any]:
+            if cfg.model_id != "mock":
+                asset = self._models.get_model_asset(cfg.model_asset_id)
+                if asset is None or asset.asset_id != cfg.model_id:
+                    raise HTTPException(status_code=400, detail="select a registered model asset")
+                if not asset.runnable:
+                    raise HTTPException(
+                        status_code=400, detail=f"model asset is not runnable: {asset.name}"
+                    )
             job = eval_svc.launch(cfg, name=f"evaluate {cfg.model_id}")
             return job.model_dump(mode="json")
 

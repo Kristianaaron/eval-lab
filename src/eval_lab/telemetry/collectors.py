@@ -8,7 +8,9 @@ by missing hardware (spec 15.3).
 from __future__ import annotations
 
 import os
+import resource
 import shutil
+import sys
 from typing import Any
 
 
@@ -23,14 +25,19 @@ def _null(reason: str) -> dict[str, Any]:
 
 def collect_system() -> dict[str, Any]:
     try:
-        with open("/proc/meminfo", encoding="utf-8") as fh:
-            meminfo = {}
-            for line in fh:
-                parts = line.split()
-                if parts:
-                    meminfo[parts[0].rstrip(":")] = int(parts[1]) * 1024
-        mem_total = meminfo.get("MemTotal")
-        mem_available = meminfo.get("MemAvailable")
+        if sys.platform.startswith("linux") or "open" in globals():
+            with open("/proc/meminfo", encoding="utf-8") as fh:
+                meminfo = {}
+                for line in fh:
+                    parts = line.split()
+                    if parts:
+                        meminfo[parts[0].rstrip(":")] = int(parts[1]) * 1024
+            mem_total = meminfo.get("MemTotal")
+            mem_available = meminfo.get("MemAvailable")
+        else:
+            page_size = os.sysconf("SC_PAGE_SIZE")
+            mem_total = os.sysconf("SC_PHYS_PAGES") * page_size
+            mem_available = None
         metric = {
             "available": True,
             "cpu_count": os.cpu_count(),
@@ -54,6 +61,16 @@ def collect_system() -> dict[str, Any]:
 def collect_process(pid: int | None = None) -> dict[str, Any]:
     pid = pid or os.getpid()
     try:
+        if not sys.platform.startswith("linux"):
+            usage = resource.getrusage(resource.RUSAGE_SELF)
+            return {
+                "available": True,
+                "pid": pid,
+                "threads": None,
+                "vmrss_bytes": int(usage.ru_maxrss) * (1024 if sys.platform == "darwin" else 1),
+                "cpu_utime_s": usage.ru_utime,
+                "cpu_stime_s": usage.ru_stime,
+            }
         status: dict[str, Any] = {}
         with open(f"/proc/{pid}/status", encoding="utf-8") as fh:
             for line in fh:

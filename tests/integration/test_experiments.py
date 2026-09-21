@@ -115,7 +115,7 @@ def _client(tmp_path: Path) -> TestClient:
 
 
 def _import(c, run_id: str) -> dict:
-    r = c.post("/api/atlas-bridge/import", json={"run_id": run_id})
+    r = c.post("/api/cebu-bridge/import", json={"run_id": run_id})
     assert r.status_code == 200, r.text
     return r.json()
 

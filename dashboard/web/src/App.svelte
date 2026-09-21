@@ -33,8 +33,8 @@
     if (h.startsWith("/evaluation/run/")) return { name: "evaluation", runId: h.slice("/evaluation/run/".length) };
     if (h.startsWith("/evaluation/job/")) return { name: "evaluation", jobId: h.slice("/evaluation/job/".length) };
     if (h === "/evaluation") return { name: "evaluation" };
-    if (h === "/atlas") return { name: "atlas" };
-    if (h.startsWith("/atlas/run/")) return { name: "atlas-run", runId: h.slice("/atlas/run/".length) };
+    if (h === "/cebu") return { name: "cebu" };
+    if (h.startsWith("/cebu/run/")) return { name: "cebu-run", runId: h.slice("/cebu/run/".length) };
     if (h === "/experiments") return { name: "experiments" };
     if (h === "/comparisons") return { name: "comparisons" };
     if (h === "/jobs") return { name: "jobs" };
@@ -57,7 +57,7 @@
     { key: "models", label: "Models", href: "#/models", icon: Boxes },
     { key: "explorer", label: "Explorer", href: "#/explorer", icon: FolderSearch },
     { key: "evaluation", label: "Evaluation", href: "#/evaluation", icon: Gauge },
-    { key: "atlas", label: "Atlas Lab", href: "#/atlas", icon: Sparkles },
+    { key: "cebu", label: "Cebu Profiler", href: "#/cebu", icon: Sparkles },
     { key: "experiments", label: "Experiments", href: "#/experiments", icon: FlaskConical },
     { key: "comparisons", label: "Comparisons", href: "#/comparisons", icon: Scale },
     { key: "jobs", label: "Jobs", href: "#/jobs", icon: ListChecks },
@@ -77,9 +77,9 @@
         <span>{a.label}</span>
       </a>
     {/each}
-    <a class="nav extern" href="http://{location.hostname}:8011/atlas_qa.html" target="_blank">
+    <a class="nav extern" href="http://{location.hostname}:8011/" target="_blank">
       <Sparkles size={16} />
-      <span>Atlas Profile &#8599;</span>
+      <span>Cebu Profiler &#8599;</span>
     </a>
   </nav>
 
@@ -98,9 +98,9 @@
       <ModelDetail assetId={route.id} />
     {:else if route.name === "evaluation"}
       <Evaluation runId={route.runId} jobId={route.jobId} />
-    {:else if route.name === "atlas"}
+    {:else if route.name === "cebu"}
       <AtlasLab />
-    {:else if route.name === "atlas-run"}
+    {:else if route.name === "cebu-run"}
       <AtlasRunDetail runId={route.runId} />
     {:else if route.name === "experiments"}
       <Experiments />
