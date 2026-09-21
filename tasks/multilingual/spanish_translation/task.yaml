@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: multilingual.spanish_translation.001
+name: 'Spanish translation'
+description: 'Translate a short everyday phrase into Spanish.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['multilingual']
+  capabilities: ['instruction_following']
+  modalities: ['text']
+  difficulty: easy
+  trajectory_stages: ['inspect', 'execute']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: null
+  initial_state_hash: null
+
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: null
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: regex
+    weight: 1.0
+    required: true
+    config: {"pattern": "(?i)hola"}
+repetitions:
+  default: 1
+  seeds: []

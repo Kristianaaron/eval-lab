@@ -1,0 +1,23 @@
+schema_version: '1.0'
+id: suite.user.eval-factuality.001
+name: Eval factuality
+description: 'User suite from domains: general_reasoning, long_context, research'
+version: 1
+family: user
+tasks:
+- task_id: general.knowledge.capital_facts.001
+  weight: 1.0
+- task_id: longcontext.citation_lookup.001
+  weight: 1.0
+- task_id: longcontext.contract_obligations.001
+  weight: 1.0
+- task_id: longcontext.document_retrieval.001
+  weight: 1.0
+- task_id: longcontext.log_analysis.001
+  weight: 1.0
+- task_id: reasoning.exists_statement.001
+  weight: 1.0
+- task_id: reasoning.reverse_string.001
+  weight: 1.0
+- task_id: toolcall.json_query_autonomy.001
+  weight: 1.0

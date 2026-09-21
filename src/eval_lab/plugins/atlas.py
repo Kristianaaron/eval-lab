@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 else:
     _App = Any
 
-DEFAULT_ATLAS_URL = os.environ.get("MODEL_ATLAS_URL", "http://127.0.0.1:8011/")
+DEFAULT_ATLAS_URL = os.environ.get("CEBU_PROFILER_URL", "http://127.0.0.1:8011/")
 CONNECTION_FILE = os.environ.get(
     "ATLAS_CONNECTION_FILE", str(Path.home() / ".eval-lab" / "atlas_connection.json")
 )
@@ -128,13 +128,10 @@ def disconnect() -> dict[str, Any]:
 
 def install_instructions() -> dict[str, str]:
     return {
-        "package": "model-atlas",
-        "home": "https://github.com/Kristianaaron/model-atlas",
-        "install_command": "pip install model-atlas",
-        "serve_command": (
-            "model-atlas dashboard --out site/index.html; "
-            "python -m http.server 8011 --directory site"
-        ),
+        "package": "cebu-profiler",
+        "home": "https://github.com/Kristianaaron/cebu-profiler",
+        "install_command": "pip install cebu-profiler",
+        "serve_command": "cebu-profiler lab --models-dir /path/to/checkpoints",
         "connect_url_hint": "http://127.0.0.1:8200/",
     }
 
@@ -146,23 +143,23 @@ def register_atlas_routes(app: _App) -> None:
     """Attach Atlas integration routes (status / connect / disconnect / install)."""
     from fastapi.responses import RedirectResponse
 
-    @app.get("/api/atlas/install", tags=["atlas"])
+    @app.get("/api/cebu/install", tags=["cebu"])
     def atlas_install() -> dict[str, Any]:
         return install_instructions()
 
-    @app.get("/api/atlas", tags=["atlas"])
+    @app.get("/api/cebu", tags=["cebu"])
     def api_atlas() -> dict[str, Any]:
         return connection_status()
 
-    @app.post("/api/atlas/connect", tags=["atlas"])
+    @app.post("/api/cebu/connect", tags=["cebu"])
     def atlas_connect(url: str = "") -> dict[str, Any]:
         return connect(url)
 
-    @app.post("/api/atlas/disconnect", tags=["atlas"])
+    @app.post("/api/cebu/disconnect", tags=["cebu"])
     def atlas_disconnect() -> dict[str, Any]:
         return disconnect()
 
-    @app.get("/atlas", include_in_schema=True, tags=["atlas"])
+    @app.get("/cebu", include_in_schema=True, tags=["cebu"])
     def atlas_redirect() -> RedirectResponse:
         """Open the connected Atlas engine (redirect to its dashboard)."""
         return RedirectResponse(atlas_dashboard_url())

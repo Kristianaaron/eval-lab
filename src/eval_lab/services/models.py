@@ -144,6 +144,28 @@ class ModelAssetService:
     def register_asset(self, record: ModelAssetRecord) -> ModelAssetRecord:
         return self.store.save(record)
 
+    def register_endpoint(
+        self,
+        name: str,
+        endpoint: str,
+        model_name: str,
+        *,
+        asset_id: str | None = None,
+        api_key_env: str | None = None,
+    ) -> ModelAssetRecord:
+        """Register a runnable OpenAI-compatible endpoint without its secret."""
+        record = ModelAssetRecord(
+            asset_id=asset_id or self.store.new_id("endpoint"),
+            name=name,
+            asset_type=ModelAssetType.remote_endpoint,
+            endpoint=endpoint.rstrip("/"),
+            model_name=model_name,
+            api_key_env=api_key_env,
+            runnable=True,
+            validation_state=ValidationState.unvalidated,
+        )
+        return self.store.save(record)
+
     # -- queries ------------------------------------------------------------
     def get_model_asset(self, asset_id: str) -> ModelAssetRecord | None:
         return self.store.get(asset_id)

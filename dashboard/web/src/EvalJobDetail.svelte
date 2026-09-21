@@ -2,7 +2,7 @@
   import { onDestroy, onMount } from "svelte";
   import { get, post, fmtPassed } from "./lib/api.js";
 
-  let { jobId } = $props();
+  let { jobId, embedded = false } = $props();
 
   let job = $state(null);
   let error = $state(null);
@@ -43,7 +43,7 @@
   onDestroy(stop);
 </script>
 
-<a class="mut" href="#/evaluation">← Evaluation</a>
+{#if !embedded}<a class="mut" href="#/evaluation">← Evaluation</a>{/if}
 
 {#if error}
   <div class="card">Error: <span class="mut">{error}</span></div>

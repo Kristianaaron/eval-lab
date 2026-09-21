@@ -1,205 +1,44 @@
 <script>
-  import { onMount, onDestroy } from "svelte";
+  import { onMount } from "svelte";
   import { get, post } from "./lib/api.js";
-  import { Activity, Play, Pause, RotateCcw, X, Database } from "@lucide/svelte";
+  import { ArrowUpRight, CheckCircle2, ExternalLink, Info, Workflow } from "@lucide/svelte";
 
-  // -- external Atlas engine (existing connect/integrate surface) -----------
   let status = $state(null);
   let install = $state(null);
   let url = $state("");
   let working = $state(false);
   let error = $state(null);
   let notice = $state(null);
-
-  // -- build-atlas wizard ---------------------------------------------------
-  let cfg = $state(null);
-  let cfgError = $state(null);
-  let source = $state("");
-  let suiteRef = $state("");
-  let depth = $state("basic");
-  let budgets = $state("");
-  let estimate = $state(null);
-  let estimating = $state(false);
-  let estimateError = $state(null);
-  let launching = $state(false);
-
-  // -- job monitor ----------------------------------------------------------
-  let jobs = $state([]);
-  let jobsError = $state(null);
-
-  // -- completed runs -------------------------------------------------------
-  let runs = $state([]);
+  let bridgeRuns = $state([]);
   let runsError = $state(null);
-  let showMonitor = $state(true);
-  let monitorTab = $state("completed"); // "current" | "completed"
-  let modalOpen = $state(false);
-  let modalTab = $state("current");
 
-  const VISIBLE = 8; // line items that fit the panel height before "Show all"
+  const DEFAULT_URL = "http://127.0.0.1:8011/";
 
-  const activeJobs = $derived(jobs.filter((j) => ACTIVE.has(j.state)));
-
-  function openModal(tab) {
-    modalTab = tab;
-    modalOpen = true;
-  }
-
-  const ACTIVE = new Set([
-    "queued",
-    "running",
-    "pausing",
-    "paused",
-    "resuming",
-    "cancelling",
-    "draft",
-  ]);
-  const TERMINAL = new Set([
-    "completed",
-    "completed_with_warnings",
-    "failed",
-    "failed_recoverable",
-    "cancelled",
-  ]);
-
-  async function loadConfig() {
+  async function loadConnect() {
     try {
-      cfg = await get("/api/atlas/config");
-      const preferred = (cfg.sources ?? []).find((s) => s.atlas_compatible);
-      if (!source) source = preferred?.asset_id ?? cfg.sources?.[0]?.asset_id ?? "";
-      if (!suiteRef && cfg.suites?.length) suiteRef = cfg.suites[0].suite_ref;
-      if (!budgets) budgets = (cfg.default_keep_budgets ?? [8, 6, 4, 2]).join(",");
-    } catch (e) {
-      cfgError = String(e);
-    }
-  }
-
-  function currentSource() {
-    return (cfg?.sources ?? []).find((s) => s.asset_id === source);
-  }
-
-  function wizardPayload() {
-    return {
-      model_asset_id: source,
-      suite_ref: suiteRef,
-      trace_depth: depth,
-      keep_budgets: budgets
-        ? budgets
-            .split(",")
-            .map((b) => parseInt(b, 10))
-            .filter((n) => !Number.isNaN(n))
-        : undefined,
-    };
-  }
-
-  async function doEstimate() {
-    estimating = true;
-    estimateError = null;
-    estimate = null;
-    try {
-      estimate = await post("/api/atlas/estimate", wizardPayload());
-    } catch (e) {
-      estimateError = String(e);
-    } finally {
-      estimating = false;
-    }
-  }
-
-  async function doLaunch() {
-    launching = true;
-    error = null;
-    try {
-      await post("/api/atlas-jobs", wizardPayload());
-      await loadJobs();
-      flash("Launched build-atlas job.");
+      status = await get("/api/cebu");
+      url = status.url || DEFAULT_URL;
+      install = await get("/api/cebu/install");
     } catch (e) {
       error = String(e);
-    } finally {
-      launching = false;
     }
   }
 
-  // -- job monitor ----------------------------------------------------------
-  async function loadJobs() {
+  async function loadBridgeRuns() {
     try {
-      jobs = await get("/api/atlas-jobs");
-    } catch (e) {
-      jobsError = String(e);
-    }
-  }
-
-  async function jobAction(job_id, action) {
-    try {
-      await post(`/api/atlas-jobs/${encodeURIComponent(job_id)}/${action}`);
-    } catch (e) {
-      jobsError = String(e);
-    }
-    await loadJobs();
-  }
-
-  function jobLabel(state) {
-    const map = {
-      queued: "queued",
-      running: "tracing",
-      pausing: "pausing",
-      paused: "paused",
-      resuming: "resuming…",
-      cancelling: "cancelling",
-      cancelled: "cancelled",
-      completed: "done",
-      completed_with_warnings: "done (warnings)",
-      failed: "failed",
-      failed_recoverable: "interrupted",
-      draft: "draft",
-    };
-    return map[state] ?? state;
-  }
-
-  function jobCls(state) {
-    if (state === "completed" || state === "completed_with_warnings") return "ok";
-    if (state === "failed" || state === "cancelled") return "error";
-    if (state === "paused") return "type";
-    return "mut";
-  }
-
-  function hasActiveJobs() {
-    return jobs.some((j) => ACTIVE.has(j.state));
-  }
-  function activeJobsCount() {
-    return jobs.filter((j) => ACTIVE.has(j.state)).length;
-  }
-
-  // -- completed runs -------------------------------------------------------
-  async function loadRuns() {
-    try {
-      runs = await get("/api/atlas-runs");
+      bridgeRuns = await get("/api/cebu-bridge/runs");
     } catch (e) {
       runsError = String(e);
     }
   }
 
-  // Open a run's detail on its own page (with a back link).
-  function showRun(run_id) {
-    window.location.hash = `#/atlas/run/${encodeURIComponent(run_id)}`;
-  }
-
-  // -- connect surface ------------------------------------------------------
-  async function loadConnect() {
-    try {
-      status = await get("/api/atlas");
-      if (status.connected && status.reachable) url = status.url;
-      else if (!status.connected) url = status.url || "http://127.0.0.1:8011/";
-      if (!install) install = await get("/api/atlas/install");
-    } catch (e) {
-      error = String(e);
-    }
-  }
-
-  async function doConnect() {
+  async function connect() {
     working = true;
     error = null;
+    notice = null;
     try {
-      status = await post("/api/atlas/connect?url=" + encodeURIComponent(url));
-      if (status.error) notice = `Could not reach the Atlas at that URL: ${status.error}`;
+      status = await post("/api/cebu/connect?url=" + encodeURIComponent(url));
+      if (status.error) notice = `Could not reach Cebu Profiler at that URL: ${status.error}`;
     } catch (e) {
       error = String(e);
     } finally {
@@ -207,323 +46,124 @@
     }
   }
 
-  async function doDisconnect() {
+  async function disconnect() {
     working = true;
     try {
-      status = await post("/api/atlas/disconnect");
+      status = await post("/api/cebu/disconnect");
+      url = status.url || DEFAULT_URL;
     } catch (e) {
       error = String(e);
     } finally {
       working = false;
     }
   }
-
-  let flashMsg = $state(null);
-  function flash(msg) {
-    flashMsg = msg;
-    setTimeout(() => (flashMsg = null), 2600);
-  }
-
-  let timer = null;
-  function startPolling() {
-    if (timer) return;
-    timer = setInterval(loadJobs, 1500);
-  }
-  function stopPolling() {
-    if (timer) {
-      clearInterval(timer);
-      timer = null;
-    }
-  }
-
-  $effect(() => {
-    if (hasActiveJobs()) startPolling();
-    else stopPolling();
-  });
 
   onMount(() => {
     loadConnect();
-    loadConfig();
-    loadJobs();
-    loadRuns();
+    loadBridgeRuns();
   });
-  onDestroy(stopPolling);
 </script>
 
-<h1>Atlas Lab</h1>
+<h1>Cebu Profiler</h1>
 <p class="mut">
-  Measure which internal experts are responsible for behaviours. eval-lab's build-atlas
-  wizard runs a genuine layerwise MoE trace on a small synthetic calibration model, then
-  proposes prune topologies from the measured saliency — no fabricated numbers.
+  Cebu Profiler owns model profiling, calibration, evidence generation, quantization analysis,
+  and derivative planning. Eval Lab consumes those outputs to run capability benchmarks and
+  hold-out evaluation.
 </p>
 
 {#if error}
   <div class="card error">Error: <span class="mut">{error}</span></div>
 {/if}
-{#if flashMsg}
-  <div class="card ok" style="margin-top:10px">{flashMsg}</div>
+{#if notice}
+  <div class="card warn" style="margin-top:10px">{notice}</div>
 {/if}
 
-<div class="eval-layout" style="margin-top:12px">
-  <!-- LEFT: build wizard -->
-  <div class="card eval-config">
-    <h3><Database size="14" style="vertical-align:-2px" /> Build atlas</h3>
-
-    {#if cfgError}
-      <div class="card error">{cfgError}</div>
-      <button class="btn" on:click={loadConfig}>Retry</button>
-    {:else if cfg}
-      <label>
-        Source model
-        <select bind:value={source}>
-          {#each cfg.sources ?? [] as s (s.asset_id)}
-            <option value={s.asset_id}>
-              {s.name} ({s.asset_id}){s.atlas_compatible ? " · layerwise" : " · not layerwise"}
-            </option>
-          {/each}
-        </select>
-      </label>
-
-      <label>
-        Calibration suite
-        <select bind:value={suiteRef}>
-          {#each cfg.suites ?? [] as s (s.suite_ref)}
-            <option value={s.suite_ref}>{s.name} · {s.task_count} tasks</option>
-          {/each}
-        </select>
-      </label>
-
-      <label>
-        Trace depth
-        <select bind:value={depth}>
-          {#each cfg.trace_depths ?? [] as d (d.depth)}
-            <option value={d.depth}>
-              {d.depth} · {d.num_samples} samples × {d.seq_len} tokens
-            </option>
-          {/each}
-        </select>
-      </label>
-
-      <label>
-        Keep budgets (comma-separated)
-        <input type="text" bind:value={budgets} placeholder="e.g. 8,6,4,2" />
-      </label>
-
-      {#if currentSource() && !currentSource().atlas_compatible}
-        <p class="mut" style="font-size:12px">
-          Note: this model is not classified layerwise-compatible; atlas will still trace a
-          synthetic calibration twin for the selected source.
-        </p>
-      {/if}
-
-      <button
-        class="beam-btn"
-        on:click={doLaunch}
-        disabled={launching || !source || !suiteRef}
-      >
-        <Play size="14" style="vertical-align:-2px" /> {launching ? "Launching…" : "Build atlas"}
-      </button>
-
-      {#if !launching}
-        <div style="margin-top:8px">
-          <button class="link" on:click={doEstimate} disabled={estimating}>
-            {estimating ? "Estimating…" : "Estimate resources"}
-          </button>
-        </div>
-      {/if}
-
-      {#if estimateError}
-        <div class="card error" style="margin-top:10px">{estimateError}</div>
-      {/if}
-      {#if estimate}
-        <div class="card" style="margin-top:10px">
-          <h4>Resource estimate <span class="badge">estimated</span></h4>
-          <table>
-            <tbody>
-              <tr><th>Topology</th><td>{estimate.num_layers} layers · {estimate.num_experts} experts · top-{estimate.top_k}</td></tr>
-              <tr><th>Calibration</th><td>{estimate.num_samples} samples × {estimate.seq_len} tokens = {estimate.num_tokens} tokens</td></tr>
-              <tr><th>Ops</th><td>{Number(estimate.estimated_ops).toExponential(2)}</td></tr>
-              <tr><th>Wall time (est.)</th><td>{estimate.estimated_wall_s.toFixed(2)} s</td></tr>
-              <tr><th>Mini-MoE params</th><td>{estimate.mini_moe_params.toLocaleString()}</td></tr>
-              <tr><th>Trace bytes</th><td>≈ {(estimate.trace_bytes / 1024).toFixed(1)} KB</td></tr>
-            </tbody>
-          </table>
-          <p class="mut" style="font-size:12px;margin-top:6px">{estimate.methodology}</p>
-        </div>
-      {/if}
-    {:else}
-      <p class="mut">Loading wizard…</p>
-    {/if}
-  </div>
-
-  <!-- RIGHT: live monitor — same height as the left panel, tabbed, 'show all' -> modal -->
-  <div class="rows-panel">
-    <section class="card mon-card">
-      <h3 style="margin:0 0 8px;display:flex;align-items:center;gap:8px"><Activity size="14" /> Builds</h3>
-      <div class="tab-bar">
-        <button class="tab-btn {monitorTab === 'current' ? 'on' : ''}" on:click={() => (monitorTab = "current")}>
-          In progress <span class="badge {activeJobsCount() ? 'pass' : ''}">{activeJobsCount()}</span>
-        </button>
-        <button class="tab-btn {monitorTab === 'completed' ? 'on' : ''}" on:click={() => (monitorTab = "completed")}>
-          Completed <span class="badge">{runs.length}</span>
-        </button>
-        <button class="btn small" style="margin-left:auto" on:click={monitorTab === "current" ? loadJobs : loadRuns}>
-          Refresh
-        </button>
-      </div>
-
-      <div class="mon-list">
-        {#if monitorTab === "current"}
-          {#if jobsError}<div class="card error mon-msg">{jobsError}</div>{/if}
-          {#if !activeJobs.length && !jobsError}<p class="mut mon-msg">No builds in progress. Completed builds appear under Completed.</p>{/if}
-          {#each activeJobs.slice(0, VISIBLE) as j (j.job_id)}
-            <div class="job-row">
-              <span class="mono job-id">{j.job_id}</span>
-              <span class="{jobCls(j.state)} job-state">{jobLabel(j.state)}</span>
-              <span class="mut job-stage">{j.current_stage ?? "—"}</span>
-              <span class="mut job-src">{j.config?.model_asset_id ?? "—"}</span>
-              <span class="job-actions">
-                {#if j.progress?.total}
-                  <span class="job-prog">{Math.round((j.progress.done / j.progress.total) * 100)}%</span>
-                {/if}
-                {#if j.state === "running"}
-                  <button class="btn small" on:click={() => jobAction(j.job_id, "pause")}><Pause size="12" /></button>
-                {:else if j.state === "paused" || j.state === "failed_recoverable"}
-                  <button class="btn small" on:click={() => jobAction(j.job_id, "resume")}><RotateCcw size="12" /></button>
-                {/if}
-                {#if ACTIVE.has(j.state) && j.state !== "paused"}
-                  <button class="btn small danger" on:click={() => jobAction(j.job_id, "cancel")}><X size="12" /></button>
-                {/if}
-                {#if j.config?.atlas_run_id && TERMINAL.has(j.state)}
-                  <button class="btn small" on:click={() => showRun(j.config.atlas_run_id)}>View</button>
-                {/if}
-              </span>
-            </div>
-          {/each}
-          {#if activeJobs.length > VISIBLE}
-            <button class="btn small show-all" on:click={() => openModal("current")}>
-              Show all ({activeJobs.length})
-            </button>
-          {/if}
-        {:else}
-          {#if runsError}<div class="card error mon-msg">{runsError}</div>{/if}
-          {#if !runs.length && !runsError}<p class="mut mon-msg">No completed runs recorded yet.</p>{/if}
-          {#each runs.slice(0, VISIBLE) as r (r.atlas_run_id)}
-            <div class="job-row">
-              <span class="mono job-id">{r.atlas_run_id}</span>
-              <span class="{r.status === 'completed' ? 'ok' : 'mut'} job-state">{r.status ?? "—"}</span>
-              <span class="mut job-stage">{r.source_arch ?? "—"}</span>
-              <span class="mut job-src">{r.calibration_suite_id ?? "—"}</span>
-              <span class="job-actions"><button class="btn small" on:click={() => showRun(r.atlas_run_id)}>Details</button></span>
-            </div>
-          {/each}
-          {#if runs.length > VISIBLE}
-            <button class="btn small show-all" on:click={() => openModal("completed")}>
-              Show all ({runs.length})
-            </button>
-          {/if}
-        {/if}
-      </div>
-    </section>
-  </div>
-
-  <!-- ALL-JOBS MODAL (mirrors the tab filter; shows the full active tab list) -->
-  {#if modalOpen}
-    <div class="modal-backdrop" on:click={() => (modalOpen = false)}></div>
-    <div class="modal" role="dialog" aria-label="All jobs">
-      <div class="modal-head">
-        <h3 style="margin:0">All {modalTab === "current" ? "current jobs" : "completed runs"}</h3>
-        <button class="btn small" on:click={() => (modalOpen = false)}>Close</button>
-      </div>
-      <div class="tab-bar" style="padding:0 18px;margin:12px 0 0">
-        <button class="tab-btn {modalTab === 'current' ? 'on' : ''}" on:click={() => (modalTab = "current")}>
-          In progress <span class="badge {activeJobsCount() ? 'pass' : ''}">{activeJobsCount()}</span>
-        </button>
-        <button class="tab-btn {modalTab === 'completed' ? 'on' : ''}" on:click={() => (modalTab = "completed")}>
-          Completed <span class="badge">{runs.length}</span>
-        </button>
-        <button class="btn small" style="margin-left:auto" on:click={modalTab === "current" ? loadJobs : loadRuns}>Refresh</button>
-      </div>
-      <div class="modal-body">
-        {#if modalTab === "current"}
-          {#if !activeJobs.length}<p class="mut">No builds in progress.</p>{/if}
-          {#each activeJobs as j (j.job_id)}
-            <div class="job-row">
-              <span class="mono job-id">{j.job_id}</span>
-              <span class="{jobCls(j.state)} job-state">{jobLabel(j.state)}</span>
-              <span class="mut job-stage">{j.current_stage ?? "—"}</span>
-              <span class="mut job-src">{j.config?.model_asset_id ?? "—"}</span>
-              <span class="job-actions">
-                {#if j.state === "running"}
-                  <button class="btn small" on:click={() => jobAction(j.job_id, "pause")}><Pause size="12" /></button>
-                {:else if j.state === "paused" || j.state === "failed_recoverable"}
-                  <button class="btn small" on:click={() => jobAction(j.job_id, "resume")}><RotateCcw size="12" /></button>
-                {/if}
-                {#if ACTIVE.has(j.state) && j.state !== "paused"}
-                  <button class="btn small danger" on:click={() => jobAction(j.job_id, "cancel")}><X size="12" /></button>
-                {/if}
-                {#if j.config?.atlas_run_id && TERMINAL.has(j.state)}
-                  <button class="btn small" on:click={() => showRun(j.config.atlas_run_id)}>View</button>
-                {/if}
-              </span>
-            </div>
-          {/each}
-        {:else}
-          {#if !runs.length}<p class="mut">No completed runs.</p>{/if}
-          {#each runs as r (r.atlas_run_id)}
-            <div class="job-row">
-              <span class="mono job-id">{r.atlas_run_id}</span>
-              <span class="{r.status === 'completed' ? 'ok' : 'mut'} job-state">{r.status ?? "—"}</span>
-              <span class="mut job-stage">{r.source_arch ?? "—"}</span>
-              <span class="mut job-src">{r.calibration_suite_id ?? "—"}</span>
-              <span class="job-actions"><button class="btn small" on:click={() => showRun(r.atlas_run_id)}>Details</button></span>
-            </div>
-          {/each}
-        {/if}
-      </div>
+<div class="cebu-info-grid" style="margin-top:16px">
+  <section class="card cebu-hero-card">
+    <div class="cebu-card-kicker"><Workflow size="14" /> Profiling pipeline</div>
+    <h2>Profile the model in Cebu Profiler</h2>
+    <p class="mut">
+      Choose the checkpoint, storage location, calibration workflow, and profiling options in
+      Cebu’s dedicated lab. Jobs persist there and the completed evidence bundle remains linked
+      to the source model.
+    </p>
+    <div class="cebu-pipeline-steps">
+      <span><b>1</b> Select model</span>
+      <span><b>2</b> Profile &amp; measure</span>
+      <span><b>3</b> Review evidence</span>
+      <span><b>4</b> Export output</span>
     </div>
-  {/if}
+    <div class="cebu-hero-actions">
+      <a class="beam-btn" href={status?.url || url || DEFAULT_URL} target="_blank" rel="noreferrer">
+        <ExternalLink size="14" /> Open Cebu Profiler
+      </a>
+      {#if status?.reachable}
+        <span class="cebu-connection-ok"><CheckCircle2 size="14" /> Connected</span>
+      {/if}
+    </div>
+  </section>
+
+  <section class="card cebu-role-card">
+    <div class="cebu-card-kicker"><Info size="14" /> Eval Lab’s role</div>
+    <h2>Benchmark the evidence here</h2>
+    <p class="mut">
+      Once Cebu exports a profile or derivative, Eval Lab imports it and makes the next action
+      explicit: benchmark the model, compare runs, or create a held-out experiment.
+    </p>
+    <a class="tile-link" href="#/experiments">Open experiments <ArrowUpRight size="13" /></a>
+    <a class="tile-link" href="#/explorer">Browse evaluation runs <ArrowUpRight size="13" /></a>
+  </section>
 </div>
 
-<!-- Atlas profiler integration (optional, native when reachable) -->
-<section class="card" style="margin-top:16px">
-  <h2 style="display:flex;align-items:center;gap:10px">
-    Atlas profiler
-    <span class="badge">{status?.connected ? "connected" : "optional / offline"}</span>
-  </h2>
-  {#if notice}
-    <div class="card warn">{notice}</div>
-  {/if}
-  {#if status && status.connected}
-    <table>
-      <tbody>
-        <tr><th>Status</th><td>{status.reachable ? "reachable" : "unreachable"}</td></tr>
-        <tr><th>Profiler URL</th><td class="mono">{status.url}</td></tr>
-        <tr><th>Package</th><td>{status.installed ? "installed" : "served separately (no install needed here)"}</td></tr>
-      </tbody>
-    </table>
-    <div style="margin-top:8px;display:flex;gap:8px">
-      <a class="btn primary" href={status.url} target="_blank" rel="noreferrer">Open Atlas Profiler (comprehensive maps · fit)</a>
-      <button class="btn danger" on:click={doDisconnect} disabled={working}>Disconnect</button>
+<section class="card cebu-connection-card" style="margin-top:16px">
+  <div class="cebu-section-head">
+    <div>
+      <h2>Connection</h2>
+      <p class="mut">Eval Lab connects to Cebu’s separately served dashboard; it does not duplicate the profiling pipeline.</p>
     </div>
-  {:else if status}
-    <p class="mut">
-      The Atlas profiler is an optional module for comprehensive profiling &amp; fit maps.
-      It isn't reachable right now — eval-lab benchmarking is unaffected. Start the profiler
-      to see the full maps, or connect to a running instance below.
-    </p>
-    <label class="mut" for="atlas-url">Atlas profiler URL</label>
-    <div style="display:flex;gap:8px;margin-top:6px">
-      <input id="atlas-url" bind:value={url} class="mono" style="width:320px" />
-      <button class="btn primary" on:click={doConnect} disabled={working || !url}>
+    <span class="badge {status?.reachable ? 'pass' : ''}">{status?.reachable ? "reachable" : "not connected"}</span>
+  </div>
+  {#if status?.reachable}
+    <div class="cebu-connection-row">
+      <span class="mono">{status.url}</span>
+      <button class="btn small danger" on:click={disconnect} disabled={working}>Disconnect</button>
+    </div>
+  {:else}
+    <div class="cebu-connect-row">
+      <input aria-label="Cebu Profiler URL" bind:value={url} class="mono" />
+      <button class="btn primary" on:click={connect} disabled={working || !url}>
         {working ? "Connecting…" : "Connect"}
       </button>
     </div>
-    {#if !status.installed}
-      <p class="mut" style="font-size:12px;margin-top:6px">
-        Package: <code>model-atlas</code>. It can be served separately
-        (<code class="mono">{install?.serve_command}</code>) — it need not be installed in eval-lab.
-      </p>
-    {/if}
+    <p class="mut cebu-install-note">
+      {install?.serve_command || "Start Cebu Profiler separately, then connect its dashboard URL here."}
+    </p>
+  {/if}
+</section>
+
+<section class="card cebu-outputs-card" style="margin-top:16px">
+  <div class="cebu-section-head">
+    <div>
+      <h2>Cebu outputs in Eval Lab</h2>
+      <p class="mut">Imported profile evidence and derivatives available for benchmarking.</p>
+    </div>
+    <a class="tile-link" href="#/experiments">Manage outputs <ArrowUpRight size="13" /></a>
+  </div>
+  {#if runsError}
+    <p class="mut">{runsError}</p>
+  {:else if !bridgeRuns.length}
+    <p class="mut cebu-empty">No Cebu profile outputs imported yet. Open Cebu Profiler to create the first one.</p>
+  {:else}
+    <div class="cebu-output-list">
+      {#each bridgeRuns.slice(0, 5) as run (run.run_id)}
+        <div class="cebu-output-row">
+          <div>
+            <strong>{run.run_id}</strong>
+            <span class="mut">{run.arch || "unknown architecture"} · {run.n_tasks ?? 0} tasks · {run.n_plans ?? 0} plans</span>
+          </div>
+          <span class="badge {run.status === 'completed' ? 'pass' : ''}">{run.status || "imported"}</span>
+        </div>
+      {/each}
+    </div>
   {/if}
 </section>

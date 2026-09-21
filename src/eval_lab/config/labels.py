@@ -29,6 +29,22 @@ _DOMAINS = {
     "product_thinking",
     "knowledge_work",
     "hardware",
+    # Curated benchmark views. These are backed by one or more existing
+    # task domains and make common evaluation intents discoverable in the UI.
+    "instruction_following",
+    "code_generation",
+    "debugging",
+    "planning",
+    "retrieval",
+    "structured_output",
+    "factuality",
+    "health",
+    "finance",
+    "legal",
+    "science",
+    "education",
+    "multilingual",
+    "safety",
 }
 
 _CAPABILITIES = {

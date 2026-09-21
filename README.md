@@ -16,6 +16,12 @@ uv pip install -e '.[serve]'      # FastAPI + uvicorn
 open http://127.0.0.1:8100
 ```
 
+To evaluate a real model from the UI, open **Models → Register model →
+OpenAI-compatible endpoint**, enter the server base URL and model name, then
+open **Evaluation** and choose the registered model. API keys are read from
+the environment variable you name and are never stored in the registry.
+The built-in mock model remains available for an offline smoke test.
+
 The API is read-only over `runs/runstore.db` + `runs/<id>/` artifacts. Endpoints:
 `/api/health`, `/api/overview`, `/api/runs`, `/api/runs/{id}`,
 `/api/runs/{id}/trace`, `/api/runs/{id}/telemetry`.

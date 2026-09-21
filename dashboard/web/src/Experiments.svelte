@@ -8,6 +8,7 @@
   let showCreate = $state(false);
   let error = $state(null);
   let working = $state(false);
+  let benchmarkRun = $state(null);
 
   let fRun = $state("");
   let fPlan = $state("");
@@ -25,7 +26,7 @@
 
   async function loadRuns() {
     try {
-      runs = await get("/api/atlas-bridge/runs");
+      runs = await get("/api/cebu-bridge/runs");
     } catch (e) {
       /* runs listing is best-effort; leave the create form empty */
     }
@@ -36,7 +37,7 @@
     runPlans = [];
     if (!fRun) return;
     try {
-      const d = await get(`/api/atlas-bridge/runs/${encodeURIComponent(fRun)}`);
+      const d = await get(`/api/cebu-bridge/runs/${encodeURIComponent(fRun)}`);
       runPlans = (d.plans ?? []).map((p) => p.name);
     } catch (e) {
       runPlans = [];
@@ -75,6 +76,19 @@
     }
   }
 
+  async function benchmark(runId) {
+    benchmarkRun = runId;
+    error = null;
+    try {
+      const result = await post(`/api/cebu-bridge/runs/${encodeURIComponent(runId)}/benchmark`, {});
+      window.location.hash = `#/evaluation/job/${result.job.job_id}`;
+    } catch (e) {
+      error = String(e);
+    } finally {
+      benchmarkRun = null;
+    }
+  }
+
   onMount(() => {
     load();
     loadRuns();
@@ -83,8 +97,8 @@
 
 <h1>Experiments</h1>
 <p class="mut">
-  Saved prune / intervention strategies, each pinned to an imported atlas run and one candidate
-  plan, preserving source expert identity from the keep-map. Create from an atlas run, then
+  Saved prune / intervention strategies, each pinned to an imported Cebu profile and one candidate
+  plan, preserving source expert identity from the keep-map. Create from a Cebu profile, then
   evaluate the linked derivative as held-out evidence.
 </p>
 
@@ -101,7 +115,7 @@
 {#if showCreate}
   <section class="card">
     <h2>New experiment</h2>
-    <label class="mut" for="exp-run">Atlas run
+    <label class="mut" for="exp-run">Cebu profile
       <select id="exp-run" bind:value={fRun} on:change={onRunChange}>
         <option value="" disabled>choose a run…</option>
         {#each runs as r (r.run_id)}
@@ -129,9 +143,24 @@
   </section>
 {/if}
 
+{#if runs.some((r) => r.has_derivative)}
+  <section class="card" style="margin-bottom:16px">
+    <h2>Cebu profiler outputs</h2>
+    <p class="mut">Quantized outputs imported from the profiler can be benchmarked directly against the default daily suite.</p>
+    {#each runs.filter((r) => r.has_derivative) as r (r.run_id)}
+      <div class="toolbar" style="justify-content:space-between">
+        <span class="mono">{r.run_id}</span>
+        <button class="btn primary" on:click={() => benchmark(r.run_id)} disabled={benchmarkRun === r.run_id}>
+          {benchmarkRun === r.run_id ? "Starting…" : "Benchmark output"}
+        </button>
+      </div>
+    {/each}
+  </section>
+{/if}
+
 {#if !experiments.length}
   <p class="mut">
-    No experiments yet. Import an atlas run under Atlas Lab, then create an experiment from one
+    No experiments yet. Import a Cebu profile, then create an experiment from one
     of its candidate plans.
   </p>
 {/if}
@@ -146,7 +175,7 @@
     </div>
     <table>
       <tbody>
-        <tr><th>Atlas run</th><td class="mono">{e.run_id}</td></tr>
+        <tr><th>Cebu profile</th><td class="mono">{e.run_id}</td></tr>
         <tr><th>Plan</th><td class="mono">{e.plan_name} ({e.experiment_type})</td></tr>
         <tr><th>Objective</th><td>{e.objective || "—"}</td></tr>
         <tr><th>Kept experts</th><td>{e.total_kept} — {Object.entries(e.kept_per_layer).map(([l, n]) => `layer ${l}: ${n}`).join(", ")}</td></tr>

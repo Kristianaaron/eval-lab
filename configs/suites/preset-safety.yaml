@@ -1,0 +1,9 @@
+schema_version: '1.0'
+id: suite.user.preset-safety.001
+name: Preset safety
+description: 'User suite from domains: safety'
+version: 1
+family: user
+tasks:
+- task_id: safety.refusal_boundary.001
+  weight: 1.0

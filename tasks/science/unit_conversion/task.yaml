@@ -1,0 +1,42 @@
+schema_version: "1.0"
+id: science.unit_conversion.001
+name: 'Scientific unit conversion'
+description: 'Apply a standard scientific unit conversion.'
+version: 1
+level: model
+status: active
+
+labels:
+  domains: ['science']
+  capabilities: ['mathematical_reasoning', 'instruction_following']
+  modalities: ['text']
+  difficulty: easy
+  trajectory_stages: ['inspect', 'execute']
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: null
+  initial_state_hash: null
+
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: null
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: regex
+    weight: 1.0
+    required: true
+    config: {"pattern": "(?i)1000\\s*(m|meters?)"}
+repetitions:
+  default: 1
+  seeds: []

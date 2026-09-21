@@ -206,7 +206,7 @@ def test_wizard_api_endpoints(tmp_path: Path) -> None:
     )
     _register_source(ModelAssetStore(tmp_path / "models"))
 
-    cfg = c.get("/api/atlas/config").json()
+    cfg = c.get("/api/cebu/config").json()
     assert cfg["sources"]
     assert {d["depth"] for d in cfg["trace_depths"]} == {
         TraceDepth.smoke.value,
@@ -215,20 +215,20 @@ def test_wizard_api_endpoints(tmp_path: Path) -> None:
     }
     assert cfg["suites"]
 
-    est = c.post("/api/atlas/estimate", json=CFG).json()
+    est = c.post("/api/cebu/estimate", json=CFG).json()
     assert est["num_tokens"] > 0
 
-    job = c.post("/api/atlas-jobs", json=CFG).json()
+    job = c.post("/api/cebu-jobs", json=CFG).json()
     assert job["job_id"].startswith("atlas-")
     for _ in range(300):
-        j = c.get(f"/api/atlas-jobs/{job['job_id']}").json()
+        j = c.get(f"/api/cebu-jobs/{job['job_id']}").json()
         if j["state"] in ("completed", "failed"):
             break
         time.sleep(0.05)
     assert j["state"] == "completed"
 
-    runs = c.get("/api/atlas-runs").json()
+    runs = c.get("/api/cebu-runs").json()
     assert runs and runs[0]["status"] == "completed"
-    d = c.get(f"/api/atlas-runs/{runs[0]['atlas_run_id']}").json()
+    d = c.get(f"/api/cebu-runs/{runs[0]['atlas_run_id']}").json()
     assert d["status"] == "completed"
     assert d["plans"]

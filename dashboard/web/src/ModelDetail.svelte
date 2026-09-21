@@ -18,7 +18,7 @@
   }
 
   function actionHref(action) {
-    if (action === "build_atlas") return "#/atlas";
+    if (action === "build_atlas") return "#/cebu";
     if (action === "evaluate_directly") return "#/evaluation";
     if (action === "create_keep_map") return "#/experiments";
     if (action === "inspect_checkpoint") return "#/models/register";
@@ -155,8 +155,8 @@
     <h3>Provenance</h3>
     <p class="mut">
       Source: {a.source_experiment_id ?? a.parent_asset_id ?? "none registered"} ·
-      Atlas run: {a.source_atlas_run_id ?? "none"} ·
-      Last atlas run: {a.last_atlas_run_id ?? "none"}
+      Cebu profile: {a.source_atlas_run_id ?? "none"} ·
+      Last Cebu profile: {a.last_atlas_run_id ?? "none"}
     </p>
   </div>
 {/if}

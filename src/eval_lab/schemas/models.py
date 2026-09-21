@@ -192,6 +192,7 @@ class ModelConfig(EvalBase):
     id: str = Field(pattern=r"^[a-z0-9-]+$")
     provider_type: str = "openai_compatible"
     endpoint: str | None = None
+    api_key: str | None = None
     model_name: str
     checkpoint: CheckpointRef | None = None
     quantization: QuantizationRef = Field(default_factory=QuantizationRef)

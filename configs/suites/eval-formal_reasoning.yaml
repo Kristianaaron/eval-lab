@@ -1,0 +1,9 @@
+schema_version: '1.0'
+id: suite.user.eval-formal_reasoning.001
+name: Eval formal_reasoning
+description: 'User suite from domains: formal_reasoning'
+version: 1
+family: user
+tasks:
+- task_id: reasoning.exists_statement.001
+  weight: 1.0

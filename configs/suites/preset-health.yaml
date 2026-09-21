@@ -1,0 +1,9 @@
+schema_version: '1.0'
+id: suite.user.preset-health.001
+name: Preset health
+description: 'User suite from domains: health'
+version: 1
+family: user
+tasks:
+- task_id: health.basic_triage.001
+  weight: 1.0

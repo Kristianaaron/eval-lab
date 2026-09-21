@@ -3,6 +3,10 @@
 
   let path = $state("");
   let name = $state("");
+  let endpoint = $state("");
+  let modelName = $state("");
+  let apiKeyEnv = $state("");
+  let mode = $state("checkpoint");
   let inspecting = $state(false);
   let inspection = $state(null);
   let error = $state(null);
@@ -44,17 +48,46 @@
     }
   }
 
+  async function registerEndpoint() {
+    error = null;
+    if (!name.trim() || !endpoint.trim() || !modelName.trim()) {
+      error = "Enter a name, endpoint URL, and endpoint model name.";
+      return;
+    }
+    inspecting = true;
+    try {
+      const r = await post("/api/models-assets/endpoint", {
+        name: name.trim(),
+        endpoint: endpoint.trim(),
+        model_name: modelName.trim(),
+        api_key_env: apiKeyEnv.trim() || null,
+      });
+      registered = r.record;
+      window.location.hash = `#/model/${r.record.asset_id}`;
+    } catch (e) {
+      error = String(e);
+    } finally {
+      inspecting = false;
+    }
+  }
+
   function issueLevel(cls) {
     return cls === "info" ? "mut" : cls === "warning" ? "warn" : "error";
   }
 </script>
 
-<h1>Register a local checkpoint</h1>
+<h1>Register a model</h1>
 <p class="mut">
-  Choose a source checkpoint directory. eval-lab inspects metadata and SafeTensors
-  headers only — it never loads full tensor payloads for an initial classification.
+  Register a local checkpoint for inspection, or connect any OpenAI-compatible
+  server (vLLM, llama.cpp, SGLang, and hosted gateways).
 </p>
 
+<div class="toolbar">
+  <button class="btn {mode === 'checkpoint' ? 'primary' : ''}" onclick={() => (mode = "checkpoint")}>Local checkpoint</button>
+  <button class="btn {mode === 'endpoint' ? 'primary' : ''}" onclick={() => (mode = "endpoint")}>OpenAI-compatible endpoint</button>
+</div>
+
+{#if mode === "checkpoint"}
 <div class="card">
   <h3>1 · Source</h3>
   <label>
@@ -73,6 +106,16 @@
     {/if}
   </div>
 </div>
+{:else}
+<div class="card">
+  <h3>Connect endpoint</h3>
+  <label>Display name<input bind:value={name} placeholder="My local model" style="width:100%" /></label>
+  <label>Base URL<input bind:value={endpoint} placeholder="http://127.0.0.1:8000/v1" style="width:100%" /></label>
+  <label>Model name<input bind:value={modelName} placeholder="Qwen/Qwen3-8B" style="width:100%" /></label>
+  <label>API key environment variable (optional)<input bind:value={apiKeyEnv} placeholder="OPENAI_API_KEY" style="width:100%" /></label>
+  <button class="btn primary" disabled={inspecting} onclick={registerEndpoint}>Register endpoint</button>
+</div>
+{/if}
 
 {#if inspecting}
   <div class="card">Inspecting…</div>
@@ -87,7 +130,7 @@
     <h3>2 · Inspection result</h3>
     <span class="badge {ins.valid ? 'pass' : 'error'}">{ins.valid ? "Valid" : "Invalid"}</span>
     <span class="badge {ins.atlas_compatible ? 'pass' : 'type'}">
-      {ins.atlas_compatible ? "Atlas compatible" : "Not atlas compatible"}
+      {ins.atlas_compatible ? "Cebu compatible" : "Not Cebu compatible"}
     </span>
     <span class="badge {ins.runnable_here ? 'pass' : 'error'}">
       {ins.runnable_here ? "Fits local run" : "Oversized for local run"}
@@ -117,7 +160,7 @@
     {/if}
     {#if ins.atlas_compatible}
       <p class="ok" style="margin-top:8px">
-        Recommended next action: <a href="#/atlas">Build atlas</a> — this checkpoint can be analysed layerwise.
+        Recommended next action: <a href="#/cebu">Run Cebu profile</a> — this checkpoint can be analysed layerwise.
       </p>
     {/if}
   </div>

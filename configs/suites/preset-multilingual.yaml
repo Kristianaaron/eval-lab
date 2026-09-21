@@ -1,0 +1,9 @@
+schema_version: '1.0'
+id: suite.user.preset-multilingual.001
+name: Preset multilingual
+description: 'User suite from domains: multilingual'
+version: 1
+family: user
+tasks:
+- task_id: multilingual.spanish_translation.001
+  weight: 1.0

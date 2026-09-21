@@ -233,7 +233,7 @@ def test_api_list_and_detail(tmp_path: Path) -> None:
     _write_fixture_dir(tmp_path, derivative=True)
     c = _client(tmp_path)
 
-    runs = c.get("/api/atlas-bridge/runs").json()
+    runs = c.get("/api/cebu-bridge/runs").json()
     assert runs == [
         {
             "run_id": RUN_ID,
@@ -245,7 +245,7 @@ def test_api_list_and_detail(tmp_path: Path) -> None:
         }
     ]
 
-    imp = c.post("/api/atlas-bridge/import", json={"run_id": RUN_ID})
+    imp = c.post("/api/cebu-bridge/import", json={"run_id": RUN_ID})
     assert imp.status_code == 200
     body = imp.json()
     assert body["n_plans"] == 1
@@ -253,17 +253,17 @@ def test_api_list_and_detail(tmp_path: Path) -> None:
     assert body["saliency"] == LAYER_SALIENCY
     assert body["manifest"]["atlas_run_id"] == RUN_ID
 
-    detail = c.get(f"/api/atlas-bridge/runs/{RUN_ID}")
+    detail = c.get(f"/api/cebu-bridge/runs/{RUN_ID}")
     assert detail.status_code == 200
     assert detail.json()["plans"][0]["keep_maps"][0]["top_k"] == 4
 
     # Optionally post-process the persisted import in a fresh service.
-    again = c.post("/api/atlas-bridge/import", json={"run_id": RUN_ID})
+    again = c.post("/api/cebu-bridge/import", json={"run_id": RUN_ID})
     assert again.json()["imported_at"] == body["imported_at"]
 
 
 def test_api_import_404_when_dir_missing(tmp_path: Path) -> None:
     c = _client(tmp_path)
-    assert c.post("/api/atlas-bridge/import", json={"run_id": "nope"}).status_code == 404
-    assert c.get("/api/atlas-bridge/runs/nope").status_code == 404
-    assert c.get("/api/atlas-bridge/runs").json() == []
+    assert c.post("/api/cebu-bridge/import", json={"run_id": "nope"}).status_code == 404
+    assert c.get("/api/cebu-bridge/runs/nope").status_code == 404
+    assert c.get("/api/cebu-bridge/runs").json() == []
