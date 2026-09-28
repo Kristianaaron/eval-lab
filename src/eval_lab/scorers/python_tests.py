@@ -50,7 +50,8 @@ class _Result(unittest.TestResult):
     def addError(self, test, err):
         super().addError(test, err); self._row(test, "error", err)
     def addSkip(self, test, reason):
-        super().addSkip(test, reason); self.rows.append({"id": test.id(), "status": "skip", "detail": reason})
+        super().addSkip(test, reason)
+        self.rows.append({"id": test.id(), "status": "skip", "detail": reason})
     def addExpectedFailure(self, test, err):
         super().addExpectedFailure(test, err); self._row(test, "pass")
     def addUnexpectedSuccess(self, test):
@@ -68,7 +69,8 @@ try:
 finally:
     sys.stdout = real
 load_errors = [r for r in res.rows if r["id"].startswith("unittest.loader")]
-print(json.dumps({"rows": res.rows, "load_error": load_errors[0]["detail"] if load_errors else None}))
+first = load_errors[0]["detail"] if load_errors else None
+print(json.dumps({"rows": res.rows, "load_error": first}))
 """
 
 _FENCE = re.compile(r"```(?:python|py|python3)?\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
@@ -76,7 +78,7 @@ _FENCE = re.compile(r"```(?:python|py|python3)?\s*\n(.*?)```", re.DOTALL | re.IG
 
 def extract_python(text: str, strategy: str = "largest") -> str:
     """Pull the solution code out of a model reply."""
-    blocks = [b for b in _FENCE.findall(text or "") if b.strip()]
+    blocks: list[str] = [str(b) for b in _FENCE.findall(text or "") if str(b).strip()]
     if not blocks:
         return text or ""
     if strategy == "last":

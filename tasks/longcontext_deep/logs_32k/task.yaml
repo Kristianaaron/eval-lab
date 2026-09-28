@@ -1,0 +1,56 @@
+schema_version: '1.0'
+id: longcontext.logs_32k.001
+name: Service log aggregation (32k)
+description: Windowed error aggregation and per-node maxima over a 1 050-line structured
+  service log (~32k tokens of context).
+version: 1
+level: model
+status: active
+data_partition: held_out_evaluation
+labels:
+  domains:
+  - long_context
+  - retrieval
+  capabilities:
+  - long_context_retrieval
+  - state_tracking
+  - instruction_following
+  modalities:
+  - text
+  - structured
+  difficulty: expert
+  trajectory_stages:
+  - inspect
+  - execute
+  failure_modes_targeted:
+  - context_forgetting
+  - plausible_but_unverified
+  intervention:
+  - quantization
+  - expert_pruning
+  atlas_labels: []
+input:
+  instruction_file: prompt.md
+  attachments:
+  - data/service.log
+  workspace_fixture: null
+  initial_state_hash: null
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 900
+  seeds:
+  - 0
+oracle:
+- type: json_exact
+  weight: 1.0
+  required: true
+  config:
+    expected:
+      q1: billing-api
+      q2: 7
+      q3: 2450
+repetitions:
+  default: 1
+  seeds: []

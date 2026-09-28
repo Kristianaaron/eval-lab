@@ -140,4 +140,3 @@ def test_inspection_recognizes_nvfp4_scale_dtypes(mini_checkpoint) -> None:
 
     assert dtype_bytes("F8_E4M3") == 1.0
     assert dtype_bytes("F8_E5M2") == 1.0
-

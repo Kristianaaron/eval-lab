@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -15,7 +16,13 @@ from eval_lab.reports.markdown import write_run_report
 from eval_lab.runners.batch import run_batch, run_suite
 from eval_lab.runners.direct import RunContext, RunResult
 from eval_lab.runners.dispatch import DispatchingRunner
-from eval_lab.schemas.models import ModelConfig, SuiteSpec, TaskLabels, TaskSpec
+from eval_lab.schemas.models import (
+    CheckpointRef,
+    ModelConfig,
+    SuiteSpec,
+    TaskLabels,
+    TaskSpec,
+)
 from eval_lab.storage.sqlite import RunStore
 from eval_lab.tasks.loader import (
     TaskLoadError,
@@ -77,6 +84,17 @@ def doctor(
     except Exception as exc:  # pragma: no cover
         ok = False
         checks.append({"check": "schema_roundtrip", "ok": False, "detail": str(exc)})
+
+    # 4: registered scorers and runners (so task authors can discover them).
+    from eval_lab.scorers import available_scorers
+
+    checks.append(
+        {
+            "check": "registry",
+            "ok": True,
+            "detail": f"scorers={','.join(available_scorers())} runners=direct,agent,perplexity",
+        }
+    )
 
     status = "ok" if ok else "failed"
     if json_out:
@@ -305,6 +323,224 @@ def perf_command(
                 f"{r.duration_s:.2f}s"
             )
     raise typer.Exit(code=0)
+
+
+@app.command("perplexity")
+def perplexity_command(
+    target: str = typer.Argument(
+        "configs/suites/benchmark-perplexity.yaml",
+        help="corpus text file, a perplexity task id, or a suite YAML path/id",
+    ),
+    model: str = typer.Option("mock", "--model", help="model id recorded on the runs"),
+    endpoint: str = typer.Option(None, "--endpoint", help="OpenAI-compatible base URL"),
+    model_name: str = typer.Option(None, "--model-name", help="endpoint model name"),
+    api_key_env: str = typer.Option(None, "--api-key-env"),
+    provider: str = typer.Option(
+        "openai_compatible", "--provider", help="openai_compatible | hf_local"
+    ),
+    window_chars: int = typer.Option(6000, "--window-chars", help="characters scored per request"),
+    stride_chars: int = typer.Option(None, "--stride-chars", help="overlap stride (< window)"),
+    max_chars: int = typer.Option(400_000, "--max-chars", help="cap on corpus characters"),
+    tasks_dir: str = typer.Option("tasks", "--tasks-dir"),
+    runs_root: str = typer.Option("runs", "--runs-root"),
+    db: str = typer.Option("runs/runstore.db", "--db"),
+    json_out: bool = typer.Option(False, "--json"),
+) -> None:
+    """Measure perplexity / bits-per-byte of a model on a corpus.
+
+    Needs a backend that returns token log-probabilities: an OpenAI-compatible
+    server supporting ``echo`` + ``logprobs`` on /completions (vLLM, SGLang), or
+    ``--provider hf_local`` with a local checkpoint path as --model-name.
+    """
+    from eval_lab.runners.perplexity import PerplexityRunner
+    from eval_lab.schemas.models import ExecutionSpec, InputSpec, Level, ScorerRef, TaskSpec
+
+    adapter = _build_model(model, endpoint, model_name, api_key_env=api_key_env, provider=provider)
+    params = {"window_chars": window_chars, "max_chars": max_chars}
+    if stride_chars:
+        params["stride_chars"] = stride_chars
+    extra: dict[str, object] = {"perplexity": params}
+
+    target_path = Path(target)
+    tasks: list[TaskSpec] = []
+    if target_path.is_file() and target_path.suffix not in (".yaml", ".yml"):
+        tasks.append(
+            TaskSpec(
+                id=f"perplexity.adhoc.{_slugify(target_path.stem)}",
+                name=f"Perplexity: {target_path.name}",
+                description="ad-hoc corpus",
+                level=Level.model,
+                input=InputSpec(instruction_file=str(target_path.resolve())),
+                execution=ExecutionSpec(runner="perplexity"),
+                oracle=[ScorerRef(type="perplexity")],
+            ).with_source_dir(target_path.resolve().parent)
+        )
+        extra["corpus_text"] = target_path.read_text(encoding="utf-8", errors="replace")
+    elif target_path.is_file() or not Path(target).exists():
+        try:
+            suite = _resolve_suite(target, tasks_dir)
+            index = _index_tasks(tasks_dir)
+            tasks = [index[r.task_id] for r in suite.tasks if r.task_id in index]
+        except typer.Exit:
+            found = _find_task_by_id(target, tasks_dir)
+            if found is None:
+                _err(f"not a corpus file, task id or suite: {target}")
+                raise typer.Exit(code=1) from None
+            tasks = [load_task_yaml(found)]
+    if not tasks:
+        _err("nothing to score")
+        raise typer.Exit(code=1)
+
+    store = RunStore(db)
+    runner = PerplexityRunner()
+    results: list[RunResult] = []
+    try:
+        for task in tasks:
+            if task.execution.runner != "perplexity":
+                continue
+            results.append(
+                runner.execute_task(
+                    task,
+                    RunContext(
+                        task=task,
+                        model=adapter,
+                        model_id=model,
+                        runs_root=runs_root,
+                        store=store,
+                        extra=extra,
+                    ),
+                )
+            )
+    finally:
+        store.close()
+
+    if json_out:
+        _emit_json([{**_result_summary(r), "metrics": r.manifest.get("metrics")} for r in results])
+    else:
+        typer.echo(
+            f"{'task':<40} {'perplexity':>11} {'bits/byte':>10} {'bits/tok':>9} {'tokens':>8}"
+        )
+        for r in results:
+            metrics_raw = r.manifest.get("metrics")
+            m: dict[str, Any] = metrics_raw if isinstance(metrics_raw, dict) else {}
+            if r.error:
+                typer.echo(f"{r.manifest.get('task_id'):<40} ERROR: {r.error}")
+                continue
+            typer.echo(
+                f"{r.manifest.get('task_id'):<40} {m.get('perplexity', 0):>11.3f} "
+                f"{m.get('bits_per_byte', 0):>10.4f} {m.get('bits_per_token', 0):>9.4f} "
+                f"{m.get('tokens', 0):>8}"
+            )
+    raise typer.Exit(code=0 if all(r.error is None for r in results) else 1)
+
+
+@app.command("benchmark")
+def benchmark_command(
+    model: str = typer.Option(
+        ..., "--model", help="model id recorded on the runs (e.g. qwen3-32b-q4)"
+    ),
+    endpoint: str = typer.Option(None, "--endpoint", help="OpenAI-compatible base URL"),
+    model_name: str = typer.Option(None, "--model-name", help="endpoint model name"),
+    api_key_env: str = typer.Option(None, "--api-key-env"),
+    provider: str = typer.Option("openai_compatible", "--provider"),
+    groups: str = typer.Option(
+        "core,coding_deep,long_context,perplexity",
+        "--groups",
+        help="comma-separated benchmark groups to run",
+    ),
+    tasks_dir: str = typer.Option("tasks", "--tasks-dir"),
+    runs_root: str = typer.Option("runs", "--runs-root"),
+    db: str = typer.Option("runs/runstore.db", "--db"),
+    out_dir: str = typer.Option("reports", "--out-dir"),
+    max_tokens: int = typer.Option(4096, "--max-tokens"),
+    skip_run: bool = typer.Option(False, "--scorecard-only", help="only render the scorecard"),
+    json_out: bool = typer.Option(False, "--json"),
+) -> None:
+    """Run the standalone benchmark (all groups) against a model and print the scorecard.
+
+    Groups: core (capabilities), coding_deep (hidden-test coding + agentic
+    repository tasks), long_context (multi-hop retrieval over 8k-64k tokens)
+    and perplexity (intrinsic LM quality). Every task is executed by its own
+    runner; results are indexed so the dashboard's Benchmark page and
+    ``eval-lab compare`` see them.
+    """
+    from eval_lab.services.scorecard import (
+        BENCHMARK_GROUPS,
+        build_scorecard,
+        render_scorecard_markdown,
+    )
+
+    wanted = [g.strip() for g in groups.split(",") if g.strip()]
+    unknown = [g for g in wanted if g not in BENCHMARK_GROUPS]
+    if unknown:
+        _err(f"unknown benchmark group(s): {', '.join(unknown)}")
+        raise typer.Exit(code=2)
+
+    if not skip_run:
+        adapter = _build_model(
+            model, endpoint, model_name, api_key_env=api_key_env, provider=provider
+        )
+        index = _index_tasks(tasks_dir)
+        runner = DispatchingRunner()
+        extra = {"sampling": {"max_tokens": max_tokens, "temperature": 0.0}}
+        store = RunStore(db)
+        try:
+            for key in wanted:
+                suite_path = BENCHMARK_GROUPS[key]["suite"]
+                if not Path(suite_path).is_file():
+                    typer.echo(f"[{key}] suite missing: {suite_path} (skipped)")
+                    continue
+                suite = load_suite_yaml(suite_path)
+                typer.echo(f"[{key}] {suite.name}: {len(suite.tasks)} task(s)")
+                for ref in suite.tasks:
+                    task = index.get(ref.task_id)
+                    if task is None:
+                        typer.echo(f"  {ref.task_id:<44} MISSING")
+                        continue
+                    r = runner.execute_task(
+                        task,
+                        RunContext(
+                            task=task,
+                            model=adapter,
+                            model_id=model,
+                            runs_root=runs_root,
+                            store=store,
+                            extra=extra,
+                        ),
+                    )
+                    mark = (
+                        "pass"
+                        if r.aggregate and r.aggregate.passed
+                        else ("ERR " if r.error else "fail")
+                    )
+                    score = f"{r.aggregate.total:.3f}" if r.aggregate else "  —  "
+                    typer.echo(f"  {task.id:<44} {mark}  {score}  {r.duration_s:6.1f}s")
+        finally:
+            store.close()
+
+    store = RunStore(db)
+    try:
+        card = build_scorecard(store, model, runs_root=runs_root, tasks_dir=tasks_dir)
+    finally:
+        store.close()
+    markdown = render_scorecard_markdown(card)
+    out_path = Path(out_dir) / f"scorecard_{model}.md"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(markdown, encoding="utf-8")
+    if json_out:
+        _emit_json({**card.to_dict(), "report": str(out_path)})
+    else:
+        typer.echo("")
+        typer.echo(markdown)
+        typer.echo(f"wrote scorecard: {out_path}")
+    raise typer.Exit(code=0)
+
+
+def _slugify(text: str) -> str:
+    import re
+
+    out = re.sub(r"[^a-z0-9_-]+", "-", text.lower()).strip("-")
+    return out or "corpus"
 
 
 @app.command("serve")
@@ -698,7 +934,7 @@ def _build_model(
                 id=model_id,
                 provider_type="hf_local",
                 model_name=model_name or model_id,
-                checkpoint={"source": "local", "path": model_name or model_id},
+                checkpoint=CheckpointRef(source="local", path=model_name or model_id),
             )
         )
     if model_id == "mock" or provider == "mock" or not endpoint:

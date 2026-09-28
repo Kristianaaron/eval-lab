@@ -269,9 +269,7 @@ class DashboardApp:
         if asset is None:
             raise ValueError(f"model asset not found: {cfg.model_asset_id}")
         if asset.asset_id != cfg.model_id:
-            raise ValueError(
-                f"model_id {cfg.model_id!r} does not match asset {asset.asset_id!r}"
-            )
+            raise ValueError(f"model_id {cfg.model_id!r} does not match asset {asset.asset_id!r}")
         if not asset.runnable:
             raise ValueError(f"model asset is not runnable: {asset.name}")
         if not asset.endpoint or not asset.model_name:
@@ -507,9 +505,7 @@ class DashboardApp:
             return rec.model_dump(mode="json")
 
         @app.post("/api/cebu-bridge/runs/{run_id}/benchmark")
-        def benchmark_profiler_output(
-            run_id: str, req: ProfilerBenchmarkRequest
-        ) -> dict[str, Any]:
+        def benchmark_profiler_output(run_id: str, req: ProfilerBenchmarkRequest) -> dict[str, Any]:
             """Import a Cebu Profiler export and launch Eval Lab in one action."""
             try:
                 atlas.import_run(run_id)
@@ -965,11 +961,25 @@ class DashboardApp:
                         "task_count": len(s.tasks),
                     }
                 )
+            from eval_lab.services.scorecard import BENCHMARK_GROUPS, suite_task_ids
+
+            benchmarks = [
+                {
+                    "key": key,
+                    "name": meta["name"],
+                    "description": meta["description"],
+                    "suite_ref": meta["suite"],
+                    "task_count": len(suite_task_ids(meta["suite"])),
+                }
+                for key, meta in BENCHMARK_GROUPS.items()
+            ]
             return {
                 "models": models,
                 "suites": suites,
+                "benchmarks": benchmarks,
                 "domains": _available_domains(),
                 "harnesses": [
+                    {"harness_id": "auto", "name": "Per task (direct / agent / perplexity)"},
                     {"harness_id": "direct", "name": "Direct (model-level)"},
                     {"harness_id": "agent-react", "name": "Agent (react + tools)"},
                 ],
@@ -1015,6 +1025,121 @@ class DashboardApp:
             if job is None:
                 raise HTTPException(status_code=404, detail=f"eval job not found: {job_id}")
             return job.model_dump(mode="json")
+
+        # -- standalone benchmark scorecard + perplexity ---------------------
+        @app.get("/api/benchmark/groups")
+        def benchmark_groups() -> list[dict[str, Any]]:
+            """The standard benchmark groups with their suite and task counts."""
+            from eval_lab.services.scorecard import BENCHMARK_GROUPS, suite_task_ids
+
+            out: list[dict[str, Any]] = []
+            for key, meta in BENCHMARK_GROUPS.items():
+                ids = suite_task_ids(meta["suite"])
+                out.append(
+                    {
+                        "key": key,
+                        "name": meta["name"],
+                        "description": meta["description"],
+                        "suite_ref": meta["suite"],
+                        "task_count": len(ids),
+                        "task_ids": ids,
+                    }
+                )
+            return out
+
+        @app.get("/api/benchmark/scorecard")
+        def benchmark_scorecard(model_id: str) -> dict[str, Any]:
+            from eval_lab.services.scorecard import build_scorecard
+
+            return build_scorecard(self._store, model_id, runs_root=self.runs_root).to_dict()
+
+        @app.get("/api/benchmark/models")
+        def benchmark_models() -> list[dict[str, Any]]:
+            """Every model with runs, with its overall scorecard numbers (leaderboard)."""
+            from eval_lab.services.scorecard import build_scorecard
+
+            models = sorted(
+                {
+                    str(r.get("model_id"))
+                    for r in self._store.list_runs(limit=100_000)
+                    if r.get("model_id")
+                }
+            )
+            rows: list[dict[str, Any]] = []
+            for mid in models:
+                card = build_scorecard(self._store, mid, runs_root=self.runs_root)
+                ppl = [p["perplexity"] for p in card.perplexity.values() if p.get("perplexity")]
+                rows.append(
+                    {
+                        "model_id": mid,
+                        "total_runs": card.total_runs,
+                        "scored_tasks": card.scored_tasks,
+                        "overall_score": card.overall_score,
+                        "overall_pass_rate": card.overall_pass_rate,
+                        "groups": {
+                            k: {
+                                "mean_score": g.mean_score,
+                                "pass_rate": g.pass_rate,
+                                "task_count": g.task_count,
+                            }
+                            for k, g in card.groups.items()
+                        },
+                        "mean_perplexity": round(sum(ppl) / len(ppl), 3) if ppl else None,
+                    }
+                )
+            rows.sort(key=lambda r: (r["overall_score"] is None, -(r["overall_score"] or 0)))
+            return rows
+
+        @app.get("/api/perplexity")
+        def perplexity_runs(
+            model_id: str | None = None, limit: int = Query(200, ge=1, le=10_000)
+        ) -> list[dict[str, Any]]:
+            """Perplexity runs (latest first) with their metrics."""
+            out: list[dict[str, Any]] = []
+            for r in self._store.list_runs(limit=100_000):
+                if model_id and r.get("model_id") != model_id:
+                    continue
+                run_dir = self.runs_root / str(r["run_id"])
+                manifest = _read_json(run_dir / "manifest.json") or {}
+                metrics = manifest.get("metrics")
+                if not isinstance(metrics, dict) or "perplexity" not in metrics:
+                    continue
+                out.append(
+                    {
+                        "run_id": r["run_id"],
+                        "model_id": r.get("model_id"),
+                        "task_id": r.get("task_id"),
+                        "status": r.get("status"),
+                        "created_at": r.get("created_at"),
+                        "score": r.get("aggregate_score"),
+                        "passed": r.get("passed"),
+                        **{
+                            k: metrics.get(k)
+                            for k in (
+                                "perplexity",
+                                "bits_per_byte",
+                                "bits_per_token",
+                                "tokens",
+                                "bytes",
+                                "windows",
+                                "elapsed_s",
+                            )
+                        },
+                    }
+                )
+                if len(out) >= limit:
+                    break
+            return out
+
+        @app.get("/api/runs/{run_id}/perplexity")
+        def run_perplexity(run_id: str) -> dict[str, Any]:
+            """Full per-window perplexity metrics for one run."""
+            metrics = _read_json(self.runs_root / run_id / "metrics.json")
+            if metrics is None:
+                raise HTTPException(
+                    status_code=404, detail=f"no perplexity metrics for run {run_id}"
+                )
+            return metrics
 
         # -- comparisons (Phase 5 engine via typed service) ------------------
         @app.get("/api/comparisons/compare")
