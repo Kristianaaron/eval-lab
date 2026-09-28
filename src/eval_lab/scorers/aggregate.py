@@ -7,6 +7,8 @@ from typing import Any
 
 # Import registers deterministic scorers (exact/regex/json_schema).
 import eval_lab.scorers.deterministic  # noqa: F401  (side-effect registration)
+import eval_lab.scorers.perplexity  # noqa: F401
+import eval_lab.scorers.python_tests  # noqa: F401
 from eval_lab.schemas.models import ScoreResult, TaskSpec
 from eval_lab.scorers.base import Scorer, get_scorer
 

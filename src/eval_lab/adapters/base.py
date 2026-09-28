@@ -33,6 +33,9 @@ class GenerationRequest:
     seed: int | None = None
     structured_schema: dict[str, Any] | None = None
     messages: list[dict[str, Any]] | None = None
+    # OpenAI-style tool definitions ({"type": "function", "function": {...}}).
+    # When set, adapters advertise them so the model can emit native tool calls.
+    tools: list[dict[str, Any]] | None = None
 
 
 @dataclass
@@ -95,3 +98,39 @@ class StreamingModelAdapter(Protocol):
     def generate_stream(
         self, request: GenerationRequest, on_token: TokenCallback
     ) -> GenerationResult: ...
+
+
+# ---------------------------------------------------------------------------
+# Token log-probabilities (perplexity evaluation, spec 13.4)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class TokenLogprob:
+    token: str
+    logprob: float | None  # None for the first token (no conditioning context)
+
+
+@dataclass
+class LogprobResult:
+    """Per-token log-probabilities of a *given* text under the model.
+
+    ``tokens`` covers the prompt text in order. ``error`` is set when the
+    backend cannot score text (no echo/logprobs support): perplexity must then
+    be reported as unavailable, never silently as zero.
+    """
+
+    tokens: list[TokenLogprob] = field(default_factory=list)
+    error: str | None = None
+    raw: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def scored(self) -> list[float]:
+        return [t.logprob for t in self.tokens if t.logprob is not None]
+
+
+@runtime_checkable
+class LogprobModelAdapter(Protocol):
+    """An adapter that can return log-probabilities of a supplied text."""
+
+    def prompt_logprobs(self, text: str) -> LogprobResult: ...

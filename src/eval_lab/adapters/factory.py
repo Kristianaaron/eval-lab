@@ -12,14 +12,29 @@ def build_adapter(config: ModelConfig, *, answer_map: dict[str, str] | None = No
     """Build a ModelAdapter from a ModelConfig (Phase 1: mock + openai_compatible)."""
     if config.provider_type == "mock":
         return MockModelAdapter(answer_map=answer_map)
-    if config.provider_type in ("openai_compatible", "vllm", "sglang", "llama_cpp"):
+    if config.provider_type in ("openai_compatible", "vllm", "sglang", "llama_cpp", "ollama"):
         if not config.endpoint:
             raise ValueError(f"provider {config.provider_type} requires an endpoint")
         key = _resolve_api_key(config)
+        extra = dict((config.runtime.arguments if config.runtime else {}) or {})
         return OpenAICompatibleAdapter(
             base_url=config.endpoint,
             model_name=config.model_name,
             api_key=key,
+            extra_body=extra.get("extra_body")
+            if isinstance(extra.get("extra_body"), dict)
+            else None,
+        )
+    if config.provider_type == "hf_local":
+        from eval_lab.adapters.hf_local import HFLocalAdapter
+
+        path = config.checkpoint.path if config.checkpoint else config.model_name
+        args = dict((config.runtime.arguments if config.runtime else {}) or {})
+        return HFLocalAdapter(
+            path,
+            device=args.get("device"),
+            dtype=args.get("dtype"),
+            trust_remote_code=bool(args.get("trust_remote_code", False)),
         )
     raise ValueError(f"unsupported provider_type: {config.provider_type}")
 

@@ -9,10 +9,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 from eval_lab.adapters.base import ModelAdapter
 from eval_lab.adapters.mock import MockModelAdapter
-from eval_lab.runners.direct import DirectRunner, RunContext
+from eval_lab.runners.direct import RunContext
+from eval_lab.runners.dispatch import runner_for
 from eval_lab.schemas.evaluation import EvaluationConfig
 from eval_lab.schemas.job import Job, JobResult, JobState
 from eval_lab.schemas.models import SuiteSpec, TaskSpec
@@ -101,22 +103,29 @@ def make_evaluation_executor(
         ctx.set_stage("running_tasks")
 
         store = RunStore(db) if db else RunStore(Path(runs_root) / "runstore.db")
-        runner = DirectRunner()
         run_ids: list[str] = []
+        extra: dict[str, Any] = {
+            "sampling": dict(cfg.sampling),
+            "warm_state": "cold" if cfg.cold_start else "model",
+        }
         try:
             for idx, (task, seed) in enumerate(expanded, start=1):
                 if ctx.should_stop():
                     raise JobCancelled()
                 ctx.set_progress(idx - 1, len(expanded), detail=task.id)
-                rec = runner.execute_task(
+                # Each task declares its own runner (direct / agent / perplexity);
+                # the harness id is recorded on the run for identity.
+                rec = runner_for(task).execute_task(
                     task,
                     RunContext(
                         task=task,
                         model=model,
                         model_id=cfg.model_id,
+                        harness_id=cfg.harness_id,
                         seed=seed,
                         runs_root=cfg.runs_root or str(runs_root),
                         store=store,
+                        extra=extra,
                     ),
                 )
                 run_ids.append(rec.run_id)

@@ -6,7 +6,6 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any, Protocol
 
 from eval_lab.adapters.base import GenerationRequest, ModelAdapter
@@ -14,6 +13,7 @@ from eval_lab.schemas.models import RunManifest, TaskSpec
 from eval_lab.scorers.aggregate import score_oracle
 from eval_lab.storage.artifacts import RunWorkspace
 from eval_lab.storage.sqlite import RunStore
+from eval_lab.tasks.resolve import build_prompt
 from eval_lab.traces.recorder import TraceRecorder
 
 
@@ -56,16 +56,12 @@ class DirectRunner:
         run_id = uuid.uuid4().hex[:12]
         ws = RunWorkspace(context.runs_root, run_id)
 
-        # Load instruction: prefer an explicit prompt in context; else read the
-        # task's instruction file text; else fall back to the raw file name.
+        # Load instruction: prefer an explicit prompt in context; else build it
+        # from the task package (instruction file + attachments, resolved
+        # relative to the task directory).
         prompt = context.extra.get("prompt")
         if prompt is None:
-            ifcand = Path(task.input.instruction_file)
-            prompt = (
-                ifcand.read_text(encoding="utf-8")
-                if ifcand.exists()
-                else task.input.instruction_file
-            )
+            prompt = build_prompt(task)
 
         recorder = TraceRecorder(run_id, ws.trace_path())
         recorder.record(
@@ -82,7 +78,8 @@ class DirectRunner:
         request = self._build_request(prompt, context)
         try:
             recorder.record(
-                "model_request", {"prompt_tokens": None, "max_tokens": request.max_tokens}
+                "model_request",
+                {"prompt_chars": len(prompt), "max_tokens": request.max_tokens},
             )
             result = context.model.generate(request)
             output = result.text
@@ -170,6 +167,7 @@ class DirectRunner:
             prompt=prompt,
             system_prompt=context.extra.get("system_prompt"),
             temperature=float(settings.get("temperature", 0.0)),
+            top_p=float(settings.get("top_p", 1.0)),
             max_tokens=int(settings.get("max_tokens", 4096)),
             seed=context.seed,
             structured_schema=structured,

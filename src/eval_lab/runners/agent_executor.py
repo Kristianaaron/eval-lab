@@ -3,10 +3,17 @@
 Wires sandbox + agent executor + trace + workspace hashing + budgets + scoring
 into a RunResult matching the Executor protocol (execute_task), so the CLI and
 batch/suite runners handle agent tasks uniformly with direct tasks.
+
+Scoring happens *inside* the sandbox workspace before it is destroyed: a
+``unit_test`` oracle runs the task's test command against the files the agent
+actually produced, and a snapshot of that workspace is kept under the run
+directory for audit.
 """
 
 from __future__ import annotations
 
+import json
+import shutil
 import time
 import uuid
 from datetime import UTC, datetime
@@ -20,7 +27,11 @@ from eval_lab.sandboxes.base import build_sandbox
 from eval_lab.schemas.models import RunManifest, TaskSpec
 from eval_lab.scorers.aggregate import AggregateScore, score_oracle
 from eval_lab.storage.artifacts import RunWorkspace, fingerprint_dir
+from eval_lab.tasks.resolve import build_prompt, fixture_dir
 from eval_lab.traces.recorder import TraceRecorder
+
+_SNAPSHOT_IGNORE = shutil.ignore_patterns("__pycache__", ".pytest_cache", "*.pyc", ".git")
+_SNAPSHOT_MAX_BYTES = 8 * 1024 * 1024
 
 
 class AgentRunner:
@@ -40,32 +51,36 @@ class AgentRunner:
             {"phase": "run_start", "warm_state": warm_state, "cold_start": warm_state == "cold"},
         )
 
-        # Build prompt from instruction file text.
         prompt = context.extra.get("prompt")
         if prompt is None:
-            ifcand = Path(task.input.instruction_file)
-            prompt = (
-                ifcand.read_text(encoding="utf-8")
-                if ifcand.exists()
-                else task.input.instruction_file
-            )
+            prompt = build_prompt(task)
 
-        # Sandbox.
+        # Sandbox seeded from the task's workspace fixture unless overridden.
+        seed_ws = context.extra.get("seed_workspace")
+        if seed_ws is None:
+            fixture = fixture_dir(task)
+            seed_ws = str(fixture) if fixture else None
         kind = task.execution.sandbox or "local_process"
         try:
             sandbox = build_sandbox(
                 kind,
                 {
-                    "seed_workspace": context.extra.get("seed_workspace"),
+                    "seed_workspace": seed_ws,
                     "image": task.execution.image,
+                    "network": "none" if task.execution.network == "disabled" else "bridge",
                 },
             )
         except Exception as exc:
             recorder.record("exception", {"error": str(exc)})
             recorder.close()
-            return self._error_result(run_id, ws, task, context, str(exc), recorder)
+            return self._error_result(run_id, ws, task, context, str(exc))
 
+        sampling = context.extra.get("sampling") or {}
         ws_before = None
+        aggregate: AggregateScore | None = None
+        scores: list[Any] = []
+        duration = 0.0
+        agent_run = AgentRun(status="error", error="sandbox failed before the agent started")
         try:
             sandbox.prepare()
             ws_before = fingerprint_dir(sandbox.workspace_path())
@@ -80,22 +95,36 @@ class AgentRunner:
                 max_turns=task.execution.max_turns or 30,
                 max_tool_calls=task.execution.max_tool_calls or 120,
                 allowed_tools=task.execution.allowed_tools or None,
+                max_tokens=int(sampling.get("max_tokens", 4096)),
+                temperature=float(sampling.get("temperature", 0.0)),
+                seed=context.seed,
             )
             duration = time.monotonic() - start
             ws_after = fingerprint_dir(sandbox.workspace_path())
 
             recorder.record(
                 "run_completion",
-                {"status": agent_run.status, "turns": len(agent_run.turns), "duration_s": duration},
+                {
+                    "status": agent_run.status,
+                    "turns": len(agent_run.turns),
+                    "tool_calls": agent_run.tool_call_count,
+                    "duration_s": duration,
+                },
             )
 
-            # Score the final answer against the oracle.
-            aggregate = None
-            scores = []
-            if agent_run.status == "completed" and not agent_run.error:
-                aggregate = score_oracle(task, output=agent_run.final_answer, run_dir=ws.root)
+            # Score inside the sandbox workspace: exhausted budgets still get
+            # scored (the tests decide), only a hard model/harness error does not.
+            if agent_run.status != "error":
+                aggregate = score_oracle(
+                    task, output=agent_run.final_answer, run_dir=sandbox.workspace_path()
+                )
                 scores = aggregate.scores
                 ws.append_scores([s.model_dump() for s in scores])
+
+            _snapshot_workspace(sandbox.workspace_path(), ws.root / "workspace")
+            (ws.artifacts_dir / "transcript.json").write_text(
+                json.dumps(agent_run.messages, indent=2, default=str), encoding="utf-8"
+            )
 
             manifest = self._manifest(
                 task, context, run_id, ws, aggregate, duration, agent_run, ws_before, ws_after
@@ -104,12 +133,18 @@ class AgentRunner:
             ws.write_result(
                 {
                     "run_id": run_id,
+                    "output": agent_run.final_answer,
                     "final_answer": agent_run.final_answer,
                     "error": agent_run.error,
                     "status": agent_run.status,
+                    "agent_status": agent_run.status,
                     "turns": len(agent_run.turns),
+                    "tool_calls": agent_run.tool_call_count,
+                    "prompt_tokens": agent_run.prompt_tokens,
+                    "completion_tokens": agent_run.completion_tokens,
                     "workspace_before": ws_before,
                     "workspace_after": ws_after,
+                    "workspace_changed": ws_before != ws_after,
                     "aggregate": aggregate.total if aggregate else None,
                     "passed": bool(aggregate.passed) if aggregate else False,
                     "scores": [s.model_dump() for s in scores] if scores else [],
@@ -117,21 +152,18 @@ class AgentRunner:
                 }
             )
             write_run_report(ws.root)
-            recorder.close()
         finally:
             sandbox.destroy()
             recorder.close()
 
-        status = (
-            "completed" if (aggregate is not None and not agent_run.error) else agent_run.status
-        )
+        status = "completed" if aggregate is not None else agent_run.status
         if context.store:
             context.store.insert_run(manifest)
             if scores:
                 context.store.insert_scores(run_id, [s.model_dump() for s in scores])
             context.store.update_status(
                 run_id,
-                "completed" if status == "completed" else status,
+                status,
                 aggregate=aggregate.total if aggregate else None,
                 passed=bool(aggregate.passed) if aggregate else False,
             )
@@ -155,7 +187,6 @@ class AgentRunner:
         task: TaskSpec,
         context: RunContext,
         error: str,
-        recorder: TraceRecorder,
     ) -> RunResult:
         manifest = RunManifest(
             run_id=run_id,
@@ -172,7 +203,11 @@ class AgentRunner:
             "passed": False,
         }
         ws.write_manifest(manifest)
+        ws.write_result({"run_id": run_id, "error": error, "status": "error", "scores": []})
         write_run_report(ws.root)
+        if context.store:
+            context.store.insert_run(manifest)
+            context.store.update_status(run_id, "error")
         return RunResult(
             run_id=run_id,
             run_dir=str(ws.root),
@@ -203,17 +238,16 @@ class AgentRunner:
             task_id=task.id,
             task_version=task.version,
             model_id=context.model_id,
-            harness_id=context.harness_id,
+            harness_id=context.harness_id or "agent-react",
             random_seed=context.seed,
+            sampling=context.extra.get("sampling") or {},
             budgets={
                 "timeout_seconds": task.execution.timeout_seconds,
                 "max_turns": task.execution.max_turns,
                 "max_tool_calls": task.execution.max_tool_calls,
             },
-            warm_state="model",
-            result_status="completed"
-            if (aggregate is not None and not agent_run.error)
-            else agent_run.status,
+            warm_state=context.extra.get("warm_state", "model"),
+            result_status="completed" if aggregate is not None else agent_run.status,
         ).model_dump(mode="json") | {
             "run_dir": str(ws.root),
             "level": task.level.value,
@@ -221,6 +255,23 @@ class AgentRunner:
             "passed": bool(aggregate.passed) if aggregate else False,
             "duration_s": duration,
             "turns": len(agent_run.turns),
+            "tool_calls": agent_run.tool_call_count,
+            "agent_status": agent_run.status,
             "workspace_before": ws_before,
             "workspace_after": ws_after,
         }
+
+
+def _snapshot_workspace(src: str, dst: Path) -> None:
+    """Copy the final sandbox workspace into the run dir (bounded, best effort)."""
+    try:
+        total = sum(p.stat().st_size for p in Path(src).rglob("*") if p.is_file())
+        if total > _SNAPSHOT_MAX_BYTES:
+            dst.mkdir(parents=True, exist_ok=True)
+            (dst / "SNAPSHOT_SKIPPED.txt").write_text(
+                f"workspace is {total} bytes (> {_SNAPSHOT_MAX_BYTES}); snapshot skipped\n"
+            )
+            return
+        shutil.copytree(src, dst, ignore=_SNAPSHOT_IGNORE, dirs_exist_ok=True)
+    except OSError:
+        pass

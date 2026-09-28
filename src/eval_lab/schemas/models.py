@@ -10,9 +10,10 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from enum import StrEnum
+from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
 
 from eval_lab.config.labels import (
     validate,
@@ -56,7 +57,7 @@ class InputSpec(EvalBase):
 
 
 class ExecutionSpec(EvalBase):
-    runner: Literal["direct", "agent"] = "agent"
+    runner: Literal["direct", "agent", "perplexity"] = "agent"
     sandbox: str | None = None
     image: str | None = None
     network: Literal["enabled", "disabled"] = "disabled"
@@ -67,6 +68,9 @@ class ExecutionSpec(EvalBase):
     allowed_tools: list[str] = Field(default_factory=list)
     environment: dict[str, str] = Field(default_factory=dict)
     seeds: list[int] = Field(default_factory=list)
+    # Runner-specific parameters (e.g. perplexity windowing). Free-form so a
+    # new runner does not require a schema bump; runners validate what they use.
+    parameters: dict[str, Any] = Field(default_factory=dict)
 
 
 class ScorerRef(EvalBase):
@@ -132,6 +136,19 @@ class TaskSpec(EvalBase):
     oracle: list[ScorerRef] = Field(default_factory=list)
     artifacts: list[ArtifactRef] = Field(default_factory=list)
     repetitions: Repetitions = Field(default_factory=Repetitions)
+
+    # Directory the task package was loaded from (set by the loader). Not part
+    # of the persisted contract: instruction files, attachments and workspace
+    # fixtures are resolved relative to it at run time.
+    _source_dir: str | None = PrivateAttr(default=None)
+
+    @property
+    def source_dir(self) -> str | None:
+        return self._source_dir
+
+    def with_source_dir(self, path: str | Path) -> TaskSpec:
+        self._source_dir = str(path)
+        return self
 
 
 # ---------------------------------------------------------------------------
