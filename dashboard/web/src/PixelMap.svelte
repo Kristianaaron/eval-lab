@@ -1,8 +1,8 @@
 <script>
   // Pixel-grid map (reference image 2): every task is a small outlined square,
-  // filled with the heat palette by score; rulers with zero-padded labels on
+  // filled with the text colour at an opacity equal to the score; rulers on
   // the top and left edges and a "dist" legend below.
-  import { heat, pad } from "./lib/fmt.js";
+  import { HEAT, heat, pad } from "./lib/fmt.js";
 
   let { cells = [], cols = 12, cell = 12, gap = 3, legend = "score", href = null } = $props();
 
@@ -15,7 +15,7 @@
   const colTicks = $derived(Array.from({ length: cols }, (_, i) => i));
   const rowTicks = $derived(Array.from({ length: rows }, (_, i) => i));
   const gid = `heat-${Math.floor(Math.random() * 1e6)}`;
-  const stops = ["#160b39", "#420a68", "#6b186e", "#932667", "#bc3754", "#dd513a", "#f37819", "#fca50a", "#f6d746"];
+  const stops = HEAT;
 </script>
 
 <svg class="pixmap" viewBox={`0 0 ${width} ${height}`} width={width} height={height} role="img" aria-label="Task score map">

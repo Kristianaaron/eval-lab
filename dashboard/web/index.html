@@ -8,6 +8,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" />
+    <style>
+      /* Söhne Mono is licensed (Klim Type Foundry): drop the woff2 files into
+         dashboard/web/public/fonts/ (see the README there). Each face falls
+         back to the locally installed font, then to JetBrains Mono. */
+      @font-face { font-family: "Söhne Mono"; font-weight: 400; font-style: normal; font-display: swap;
+        src: local("Söhne Mono Buch"), local("SoehneMono-Buch"), local("Söhne Mono"), url("/fonts/soehne-mono-buch.woff2") format("woff2"); }
+      @font-face { font-family: "Söhne Mono"; font-weight: 500; font-style: normal; font-display: swap;
+        src: local("Söhne Mono Kräftig"), local("SoehneMono-Kraftig"), url("/fonts/soehne-mono-kraftig.woff2") format("woff2"); }
+      @font-face { font-family: "Söhne Mono"; font-weight: 400; font-style: italic; font-display: swap;
+        src: local("Söhne Mono Buch Kursiv"), local("SoehneMono-BuchKursiv"), url("/fonts/soehne-mono-buch-kursiv.woff2") format("woff2"); }
+    </style>
     <!-- favicon: monochrome pixel glyph for the seed "eval-lab" (see src/Glyph.svelte) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%22-0.5%20-0.5%206%206%22%20width%3D%2232%22%20height%3D%2232%22%20shape-rendering%3D%22crispEdges%22%3E%3Crect%20x%3D%22-0.5%22%20y%3D%22-0.5%22%20width%3D%226%22%20height%3D%226%22%20fill%3D%22%23070707%22%2F%3E%3Crect%20x%3D%221.1%22%20y%3D%220.1%22%20width%3D%220.8%22%20height%3D%220.8%22%20fill%3D%22%23e8e4d8%22%2F%3E%3Crect%20x%3D%223.1%22%20y%3D%220.1%22%20width%3D%220.8%22%20height%3D%220.8%22%20fill%3D%22%23e8e4d8%22%2F%3E%3Crect%20x%3D%221.1%22%20y%3D%221.1%22%20width%3D%220.8%22%20height%3D%220.8%22%20fill%3D%22%23e8e4d8%22%2F%3E%3Crect%20x%3D%223.1%22%20y%3D%221.1%22%20width%3D%220.8%22%20height%3D%220.8%22%20fill%3D%22%23e8e4d8%22%2F%3E%3Crect%20x%3D%222.1%22%20y%3D%221.1%22%20width%3D%220.8%22%20height%3D%220.8%22%20fill%3D%22%23e8e4d8%22%2F%3E%3Crect%20x%3D%220.1%22%20y%3D%222.1%22%20width%3D%220.8%22%20height%3D%220.8%22%20fill%3D%22%23e8e4d8%22%2F%3E%3Crect%20x%3D%224.1%22%20y%3D%222.1%22%20width%3D%220.8%22%20height%3D%220.8%22%20fill%3D%22%23e8e4d8%22%2F%3E%3Crect%20x%3D%220.1%22%20y%3D%223.1%22%20width%3D%220.8%22%20height%3D%220.8%22%20fill%3D%22%23e8e4d8%22%2F%3E%3Crect%20x%3D%224.1%22%20y%3D%223.1%22%20width%3D%220.8%22%20height%3D%220.8%22%20fill%3D%22%23e8e4d8%22%2F%3E%3Crect%20x%3D%222.1%22%20y%3D%223.1%22%20width%3D%220.8%22%20height%3D%220.8%22%20fill%3D%22none%22%20stroke%3D%22%23e8e4d8%22%20stroke-width%3D%220.12%22%2F%3E%3Crect%20x%3D%222.1%22%20y%3D%224.1%22%20width%3D%220.8%22%20height%3D%220.8%22%20fill%3D%22none%22%20stroke%3D%22%23e8e4d8%22%20stroke-width%3D%220.12%22%2F%3E%3C%2Fsvg%3E" />
     <title>eval-lab</title>

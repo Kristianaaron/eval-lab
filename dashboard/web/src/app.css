@@ -1,7 +1,8 @@
 /* ==========================================================================
    eval-lab design system — instrument sheet
    Near-black ground, monospace everywhere, cream hairlines, one warm accent
-   used sparingly, a heat palette only inside data maps and meters.
+   used only for the active marker, cursor and failures; every data scale is
+   the text colour at an opacity equal to the value.
    Every legacy class name is preserved; only the styling changed.
    ========================================================================== */
 
@@ -20,12 +21,15 @@
   /* accent: one warm orange-red, key numbers + active marker only */
   --accent: #e8623c;
   --accent-rgb: 232, 98, 60;
-  /* heat palette: data maps and meters only */
-  --heat-0: #160b39; --heat-1: #420a68; --heat-2: #6b186e; --heat-3: #932667; --heat-4: #bc3754;
-  --heat-5: #dd513a; --heat-6: #f37819; --heat-7: #fca50a; --heat-8: #f6d746;
-  --heat-gradient: linear-gradient(90deg, var(--heat-0), var(--heat-1), var(--heat-2), var(--heat-3), var(--heat-4), var(--heat-5), var(--heat-6), var(--heat-7), var(--heat-8));
+  /* value scale: the text colour at increasing opacity (data maps and meters) */
+  --heat-0: rgba(var(--text-rgb), 0.08); --heat-1: rgba(var(--text-rgb), 0.2); --heat-2: rgba(var(--text-rgb), 0.31);
+  --heat-3: rgba(var(--text-rgb), 0.43); --heat-4: rgba(var(--text-rgb), 0.54); --heat-5: rgba(var(--text-rgb), 0.66);
+  --heat-6: rgba(var(--text-rgb), 0.77); --heat-7: rgba(var(--text-rgb), 0.89); --heat-8: rgba(var(--text-rgb), 1);
+  --heat-gradient: linear-gradient(90deg, rgba(var(--text-rgb), 0.06), rgba(var(--text-rgb), 1));
   /* type */
-  --mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace;
+  /* Söhne Mono (Klim) first: served from public/fonts when the licensed files
+     are present, else the locally installed face, else JetBrains Mono. */
+  --mono: "Söhne Mono", "Soehne Mono", "JetBrains Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace;
   --font: var(--mono);
   --radius: 0;
   /* legacy aliases used by pages outside this restyle */
@@ -65,7 +69,7 @@ a:hover { text-decoration: underline; text-decoration-color: var(--line); }
 code { font-family: var(--mono); font-size: 0.95em; color: var(--text); }
 ::selection { background: rgba(var(--text-rgb), 0.18); }
 
-.accent { color: var(--accent); }
+.accent { color: var(--text); }
 .mono { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
 .mut { color: var(--muted); }
 .right { text-align: right; }
@@ -236,12 +240,12 @@ button.link:hover { text-decoration: underline; }
 .reticle .seg { fill: none; stroke-linecap: butt; cursor: default; transition: opacity 0.4s; }
 .reticle .seg.hollow { stroke: rgba(var(--text-rgb), 0.16) !important; stroke-dasharray: 1.5 1.5; }
 .reticle .seg[role="link"] { cursor: pointer; }
-.reticle .seg.scan { filter: brightness(1.6); }
+.reticle .seg.scan { stroke: var(--text) !important; }
 .reticle .arc-track { fill: none; stroke: rgba(var(--text-rgb), 0.12); stroke-width: 1; }
 .reticle .arc { fill: none; stroke: var(--text); stroke-width: 1.5; }
-.reticle.accent .arc { stroke: var(--accent); }
+.reticle.accent .arc { stroke: var(--text); }
 .reticle .arc-end { fill: var(--text); }
-.reticle.accent .arc-end { fill: var(--accent); }
+.reticle.accent .arc-end { fill: var(--text); }
 .reticle .ring-track { fill: none; stroke: rgba(var(--text-rgb), 0.1); stroke-width: 1; stroke-dasharray: 2 2; }
 .reticle .ring { fill: none; stroke: rgba(var(--text-rgb), 0.75); stroke-width: 1; }
 .reticle .sweep { stroke: var(--accent); stroke-width: 1; opacity: 0.7; }
@@ -251,7 +255,7 @@ button.link:hover { text-decoration: underline; }
 .reticle .core-pulse { fill: none; stroke: var(--accent); stroke-width: 1; animation: reticle-pulse 2.4s ease-out infinite; transform-origin: center; transform-box: fill-box; }
 @keyframes reticle-pulse { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(9); opacity: 0; } }
 .reticle .val { fill: var(--text); font-family: var(--mono); font-size: 13px; }
-.reticle.accent .val { fill: var(--accent); }
+.reticle.accent .val { fill: var(--text); }
 .reticle .sub, .reticle .cap { fill: var(--muted); font-family: var(--mono); font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; }
 .reticle.large .sub { font-size: 9px; }
 .reticle-readout { font-family: var(--mono); font-size: 10.5px; color: var(--muted); display: flex; align-items: center; gap: 6px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -272,9 +276,9 @@ button.link:hover { text-decoration: underline; }
 .gauge line.long { stroke: rgba(var(--text-rgb), 0.5); }
 .gauge line.lit { stroke: var(--text); }
 .gauge .arc { fill: none; stroke: var(--text); stroke-width: 1; }
-.gauge.accent .arc { stroke: var(--accent); }
+.gauge.accent .arc { stroke: var(--text); }
 .gauge .val { fill: var(--text); font-family: var(--mono); font-size: 11px; }
-.gauge.accent .val { fill: var(--accent); }
+.gauge.accent .val { fill: var(--text); }
 .gauge .sub { fill: var(--muted); font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.08em; text-transform: uppercase; }
 .pixmap { display: block; max-width: 100%; height: auto; }
 .pixmap .rule { stroke: var(--line); stroke-width: 1; }
@@ -291,7 +295,7 @@ button.link:hover { text-decoration: underline; }
 .statusbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; align-items: flex-end; gap: 28px; padding: 8px 20px 9px; background: var(--bg); border-top: 1px solid var(--line); font-size: 12.5px; overflow-x: auto; white-space: nowrap; }
 .sb-cell { display: inline-flex; flex-direction: column; gap: 3px; }
 .sb-cell b { font-weight: 400; color: var(--muted); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
-.sb-cell .accent { color: var(--accent); }
+.sb-cell .accent { color: var(--text); }
 .sb-brand b { color: var(--text); font-size: 11px; }
 .sb-brand span { color: var(--muted); font-size: 11px; }
 .sb-spark { margin-left: auto; }
@@ -315,7 +319,7 @@ button.link:hover { text-decoration: underline; }
 .ov-tile-head .k { flex: 1; color: var(--text); text-transform: none; letter-spacing: 0; font-size: 12.5px; }
 .ov-tile-head .mut { font-size: 11px; }
 .ov-icon { display: none; }
-.ov-health-value { font-size: 44px; line-height: 1; letter-spacing: -0.02em; margin: 22px 0 8px; color: var(--accent); }
+.ov-health-value { font-size: 44px; line-height: 1; letter-spacing: -0.02em; margin: 22px 0 8px; color: var(--text); }
 .ov-meter { height: 5px; margin: 22px 0 10px; border: 1px solid var(--line); overflow: hidden; }
 .ov-meter span { display: block; height: 100%; background: var(--text); transition: width 0.3s; }
 .ov-inline, .ov-facts { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 12px; }
@@ -434,7 +438,7 @@ button.link:hover { text-decoration: underline; }
 .eval-plan-head-actions { display: flex; align-items: center; gap: 8px; }
 .eval-plan-hide { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; font-family: var(--mono); }
 .eval-plan-hide:hover { border-color: var(--line-strong); color: var(--text); }
-.eval-selection-count, .eval-plan-total { color: var(--accent); font-size: 12px; white-space: nowrap; }
+.eval-selection-count, .eval-plan-total { color: var(--text); font-size: 12px; white-space: nowrap; }
 .eval-domain-tools { display: flex; gap: 8px; margin: 16px 0; }
 .eval-domain-tools input { flex: 1; min-width: 120px; height: 30px; }
 .eval-domain-tools .btn { white-space: nowrap; }
@@ -557,7 +561,7 @@ button.link:hover { text-decoration: underline; }
 .bm-lb .bm-lb-model { display: flex; align-items: center; gap: 9px; }
 .bm-lb .rank { color: var(--muted); width: 40px; white-space: nowrap; }
 .bm-lb tr.on td { background: var(--bg-2); }
-.bm-lb tr.on .rank { color: var(--accent); }
+.bm-lb tr.on .rank { color: var(--text); }
 .bm-mini { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 .bm-mini i { display: inline-block; width: 44px; height: 4px; border: 1px solid var(--line); overflow: hidden; }
 .bm-mini i b { display: block; height: 100%; background: var(--heat-gradient); }
@@ -639,7 +643,7 @@ button.link:hover { text-decoration: underline; }
 .job-state { flex: 0 0 auto; font-size: 12px; }
 .job-stage { flex: 1 1 auto; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .job-src { flex: 0 1 auto; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
-.job-prog { font-size: 12px; color: var(--accent); }
+.job-prog { font-size: 12px; color: var(--text); }
 .job-actions { display: flex; gap: 4px; align-items: center; flex: 0 0 auto; }
 .show-all { align-self: flex-start; margin-top: 2px; }
 

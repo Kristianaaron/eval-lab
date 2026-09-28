@@ -36,3 +36,5 @@ dashboard/web/node_modules/
 # fetched perplexity corpora (scripts/fetch_corpora.py)
 /tasks/perplexity_external/
 /configs/suites/perplexity-external.yaml
+dashboard/web/public/fonts/*.woff2
+dashboard/web/public/fonts/*.woff
