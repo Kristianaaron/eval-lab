@@ -271,7 +271,7 @@
     </section>
 
     <section class="card">
-      <div class="card-strip"><span>task map</span><span class="mut">1 square = 1 task · fill = score</span></div>
+      <div class="card-strip"><span>task map</span><span class="mut">1 square = 1 task · opacity = score</span></div>
       {#if mapCells.length}
         <div class="pixmap-wrap"><PixelMap cells={mapCells} cols={10} href={(c) => `#/explorer/run/${c.run_id}`} legend="score" /></div>
         <div class="bm-map-key">{#each GROUP_ORDER as key (key)}<span><i></i>{SHORT[key]} <b>{groupNoun(card.groups?.[key])}</b></span>{/each}</div>
