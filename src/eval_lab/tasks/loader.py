@@ -25,9 +25,10 @@ def load_task_yaml(path: str | Path) -> TaskSpec:
     if not isinstance(raw, dict):
         raise TaskLoadError(f"task file must contain a mapping, got {type(raw).__name__}: {p}")
     try:
-        return TaskSpec.model_validate(raw)
+        task = TaskSpec.model_validate(raw)
     except Exception as exc:  # pydantic ValidationError
         raise TaskLoadError(f"task validation failed for {p}: {exc}") from exc
+    return task.with_source_dir(p.resolve().parent)
 
 
 def load_suite_yaml(path: str | Path) -> SuiteSpec:

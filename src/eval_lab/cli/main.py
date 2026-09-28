@@ -13,7 +13,8 @@ from eval_lab.adapters.mock import MockModelAdapter
 from eval_lab.analysis.rows import RunRow
 from eval_lab.reports.markdown import write_run_report
 from eval_lab.runners.batch import run_batch, run_suite
-from eval_lab.runners.direct import DirectRunner, RunContext, RunResult
+from eval_lab.runners.direct import RunContext, RunResult
+from eval_lab.runners.dispatch import DispatchingRunner
 from eval_lab.schemas.models import ModelConfig, SuiteSpec, TaskLabels, TaskSpec
 from eval_lab.storage.sqlite import RunStore
 from eval_lab.tasks.loader import (
@@ -170,20 +171,38 @@ def run_command(
     ),
     endpoint: str = typer.Option(None, "--endpoint", help="OpenAI-compatible base URL"),
     model_name: str = typer.Option(None, "--model-name", help="endpoint model name"),
+    api_key_env: str = typer.Option(
+        None, "--api-key-env", help="environment variable holding the endpoint API key"
+    ),
+    provider: str = typer.Option(
+        "openai_compatible", "--provider", help="openai_compatible | hf_local | mock"
+    ),
     tasks_dir: str = typer.Option("tasks", "--tasks-dir"),
     runs_root: str = typer.Option("runs", "--runs-root"),
     db: str = typer.Option("runs/runstore.db", "--db"),
+    max_tokens: int = typer.Option(4096, "--max-tokens", help="generation budget per call"),
+    temperature: float = typer.Option(0.0, "--temperature"),
     json_out: bool = typer.Option(False, "--json"),
 ) -> None:
-    """Run a task or suite against a model and score it."""
-    adapter = _build_model(model, endpoint, model_name)
+    """Run a task or suite against a model and score it.
+
+    Every task is executed by the runner its spec declares (direct prompt,
+    tool-using agent in a sandbox, or perplexity scoring).
+    """
+    adapter = _build_model(model, endpoint, model_name, api_key_env=api_key_env, provider=provider)
     store = RunStore(db)
-    runner = DirectRunner()
+    runner = DispatchingRunner()
+    extra = {"sampling": {"max_tokens": max_tokens, "temperature": temperature}}
     try:
         if kind == "task":
             task = _resolve_task(kind, target, tasks_dir)
             context = RunContext(
-                task=task, model=adapter, model_id=model, runs_root=runs_root, store=store
+                task=task,
+                model=adapter,
+                model_id=model,
+                runs_root=runs_root,
+                store=store,
+                extra=extra,
             )
             results = run_batch(runner, [task], lambda t: context)
         elif kind == "suite":
@@ -194,7 +213,12 @@ def run_command(
                 suite,
                 tasks_by_id,
                 lambda t: RunContext(
-                    task=t, model=adapter, model_id=model, runs_root=runs_root, store=store
+                    task=t,
+                    model=adapter,
+                    model_id=model,
+                    runs_root=runs_root,
+                    store=store,
+                    extra=extra,
                 ),
             )
         else:
@@ -658,16 +682,37 @@ def _index_tasks(tasks_dir: str) -> dict[str, TaskSpec]:
     return index
 
 
-def _build_model(model_id: str, endpoint: str | None, model_name: str | None) -> ModelAdapter:
-    if model_id == "mock" or (not endpoint and model_id != "mock"):
+def _build_model(
+    model_id: str,
+    endpoint: str | None,
+    model_name: str | None,
+    *,
+    api_key_env: str | None = None,
+    provider: str = "openai_compatible",
+) -> ModelAdapter:
+    import os
+
+    if provider == "hf_local":
+        return build_adapter(
+            ModelConfig(
+                id=model_id,
+                provider_type="hf_local",
+                model_name=model_name or model_id,
+                checkpoint={"source": "local", "path": model_name or model_id},
+            )
+        )
+    if model_id == "mock" or provider == "mock" or not endpoint:
+        if model_id != "mock" and provider != "mock":
+            _err(f"no --endpoint given for model {model_id!r}; falling back to the mock adapter")
         return build_adapter(
             ModelConfig(id="mock", provider_type="mock", model_name="mock-deterministic")
         )
     return build_adapter(
         ModelConfig(
             id=model_id,
-            provider_type="openai_compatible",
+            provider_type=provider,
             endpoint=endpoint,
+            api_key=os.getenv(api_key_env) if api_key_env else None,
             model_name=model_name or model_id,
         )
     )

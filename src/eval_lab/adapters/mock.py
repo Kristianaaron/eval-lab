@@ -13,8 +13,10 @@ from eval_lab.adapters.base import (
     GenerationRequest,
     GenerationResult,
     HealthStatus,
+    LogprobResult,
     ModelAdapter,
     ModelMetadata,
+    TokenLogprob,
 )
 
 
@@ -58,6 +60,22 @@ class MockModelAdapter(ModelAdapter):
             prompt_tokens=_token_count(request.prompt),
             completion_tokens=_token_count(text),
         )
+
+    def prompt_logprobs(self, text: str) -> LogprobResult:
+        """Deterministic pseudo log-probabilities: a stable function of each token.
+
+        Whitespace tokenization; every token's logprob is derived from its own
+        CRC so repeated calls on the same text agree exactly and the perplexity
+        pipeline can be exercised offline.
+        """
+        tokens: list[TokenLogprob] = []
+        for idx, tok in enumerate(text.split()):
+            if idx == 0:
+                tokens.append(TokenLogprob(token=tok, logprob=None))
+                continue
+            digest = zlib.crc32(tok.encode("utf-8"))
+            tokens.append(TokenLogprob(token=tok, logprob=-(0.5 + (digest % 300) / 100.0)))
+        return LogprobResult(tokens=tokens)
 
     def _structured(self, request: GenerationRequest) -> GenerationResult:
         digest = _stable_token(request.prompt)
