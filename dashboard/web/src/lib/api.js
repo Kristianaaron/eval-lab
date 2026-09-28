@@ -30,7 +30,7 @@ export async function del(path) {
 }
 
 export function fmtPassed(p) {
-  if (p === 1 || p === true) return { cls: "pass", label: "pass" };
+  if (p === 1 || p === true) return { cls: "pass", label: "ok" };
   if (p === 0 || p === false) return { cls: "fail", label: "fail" };
   return { cls: "error", label: String(p) };
 }

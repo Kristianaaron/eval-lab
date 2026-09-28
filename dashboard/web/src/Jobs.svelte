@@ -26,7 +26,8 @@
   }
 </script>
 
-<h1>Jobs</h1>
+<h1>jobs</h1>
+<div class="meta-line"><span>jobs <b>{jobs.length}</b></span><span>active <b>{jobs.filter((j) => ["queued", "running", "pausing", "paused", "resuming"].includes(j.state)).length}</b></span><span>failed <b>{jobs.filter((j) => j.state.startsWith("failed")).length}</b></span></div>
 <div class="toolbar">
   <button class="btn" onclick={load}>Refresh</button>
   <span class="mut">All long-running operations survive GUI restarts.</span>
