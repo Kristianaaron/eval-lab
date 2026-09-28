@@ -39,10 +39,18 @@ import json, sys, unittest, io, os, traceback
 tests_dir, top = sys.argv[1], sys.argv[2]
 class _Result(unittest.TestResult):
     def __init__(self):
-        super().__init__(); self.rows = []
+        super().__init__(); self.rows = []; self._sub_failed = set()
     def _row(self, test, status, err=None):
         detail = "".join(traceback.format_exception(*err))[-800:] if err else ""
         self.rows.append({"id": test.id(), "status": status, "detail": detail})
+    def addSubTest(self, test, subtest, err):
+        super().addSubTest(test, subtest, err)
+        # A test whose failure happens only inside subTest() never reaches
+        # addFailure; count the parent test once as failed.
+        if err is not None and test.id() not in self._sub_failed:
+            self._sub_failed.add(test.id())
+            status = "fail" if issubclass(err[0], AssertionError) else "error"
+            self._row(test, status, err)
     def addSuccess(self, test):
         super().addSuccess(test); self._row(test, "pass")
     def addFailure(self, test, err):

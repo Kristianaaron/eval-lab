@@ -16,7 +16,8 @@ from pathlib import Path
 
 import pytest
 
-from eval_lab.scorers.aggregate import score_oracle
+from eval_lab.scorers.aggregate import _instantiate, score_oracle
+from eval_lab.scorers.base import get_scorer
 from eval_lab.tasks.loader import check_fixture_references, load_suite_yaml, load_task_yaml
 from eval_lab.tasks.resolve import build_prompt, fixture_dir
 
@@ -49,6 +50,7 @@ def test_every_task_loads_with_unique_ids_and_present_fixtures() -> None:
         if t.execution.runner == "perplexity":
             assert t.input.attachments, f"{t.id}: perplexity task needs a corpus attachment"
         for ref in t.oracle:
+            _instantiate(get_scorer(ref.type), ref.config)  # config must be accepted
             if ref.type == "python_tests":
                 tests_dir = p.parent / ref.config.get("tests", "tests")
                 assert tests_dir.is_dir(), f"{t.id}: hidden tests dir missing"

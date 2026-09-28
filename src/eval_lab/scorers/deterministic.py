@@ -36,12 +36,29 @@ class ExactScorer:
         )
 
 
+_FLAG_LETTERS = {"i": re.IGNORECASE, "s": re.DOTALL, "m": re.MULTILINE, "x": re.VERBOSE}
+
+
+def _regex_flags(flags: int | str | None) -> int:
+    """Accept ``re`` flag ints or letter strings such as ``"is"`` (task YAML form)."""
+    if flags is None:
+        return re.IGNORECASE
+    if isinstance(flags, int):
+        return flags
+    value = 0
+    for letter in flags.lower():
+        if letter not in _FLAG_LETTERS:
+            raise ValueError(f"unknown regex flag {letter!r} (use i, s, m, x)")
+        value |= _FLAG_LETTERS[letter]
+    return value
+
+
 class RegexScorer:
     scorer_id = "regex"
 
-    def __init__(self, pattern: str, flags: int = re.IGNORECASE) -> None:
+    def __init__(self, pattern: str, flags: int | str | None = None) -> None:
         self.pattern = pattern
-        self.regex = re.compile(pattern, flags)
+        self.regex = re.compile(pattern, _regex_flags(flags))
 
     def score(self, *, output: str, task: Any = None, run_dir: Any = None) -> ScoreResult:
         m = self.regex.search(output)
@@ -70,10 +87,14 @@ class JsonSchemaScorer:
         properties: dict[str, Any] | None = None,
         required: list[str] | None = None,
         *,
+        schema: dict[str, Any] | None = None,
         require_all_keys: bool = True,
     ) -> None:
         """Accept either a JSON-Schema-shaped mapping ({properties, required})
-        or flat properties/required arguments (task config form)."""
+        under ``expected`` or ``schema``, or flat properties/required arguments
+        (task config form). ``const`` on a property is checked for equality."""
+        if expected is None and schema is not None:
+            expected = schema
         if expected is not None:
             if isinstance(expected, dict) and "properties" in expected:
                 props = expected.get("properties", {})
@@ -104,18 +125,15 @@ class JsonSchemaScorer:
 
         missing = [k for k in self.required if k not in data]
         type_errors: list[str] = []
-        if (
-            isinstance(self.expected_props, dict)
-            and self.required
-            and "type" in self.expected_props
-        ):
-            # A single-object schema: {<key>: {type: ...}, ...}
+        if isinstance(self.expected_props, dict):
             for key, spec in self.expected_props.items():
-                if key not in data:
+                if key not in data or not isinstance(spec, dict):
                     continue
-                expected_type = spec.get("type") if isinstance(spec, dict) else None
+                expected_type = spec.get("type")
                 if expected_type and not _check_type(data[key], expected_type):
                     type_errors.append(f"{key}: expected {expected_type}")
+                if "const" in spec and data[key] != spec["const"]:
+                    type_errors.append(f"{key}: expected constant {spec['const']!r}")
         passed = not missing and not type_errors
         return ScoreResult(
             scorer_id=self.scorer_id,

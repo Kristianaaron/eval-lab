@@ -1,0 +1,43 @@
+schema_version: "1.0"
+id: coding.interval_scheduler.001
+name: 'Interval merging and room scheduling'
+description: 'Implement half-open interval utilities: merging, peak concurrency, free-slot computation inside a window and deterministic minimum-room scheduling with strict validation.'
+version: 1
+level: model
+status: active
+data_partition: held_out_evaluation
+
+labels:
+  domains: ['coding', 'code_generation']
+  capabilities: ['code_generation', 'planning', 'self_verification']
+  modalities: ['code']
+  difficulty: hard
+  trajectory_stages: ['plan', 'execute', 'verify']
+  failure_modes_targeted: ['loses_constraints', 'plausible_but_unverified']
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: null
+  initial_state_hash: null
+
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: null
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: python_tests
+    weight: 1.0
+    required: true
+    config: {"tests": "tests", "solution_file": "solution.py", "min_pass_fraction": 1.0, "timeout_seconds": 120}
+repetitions:
+  default: 1
+  seeds: []

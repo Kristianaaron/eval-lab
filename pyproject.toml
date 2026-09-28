@@ -48,6 +48,8 @@ pythonpath = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# Reference solutions are fixtures standing in for model replies, not project code.
+extend-exclude = ["tests/fixtures/reference_solutions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
