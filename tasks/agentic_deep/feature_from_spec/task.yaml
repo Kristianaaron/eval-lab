@@ -1,0 +1,52 @@
+schema_version: "1.0"
+id: agentic.feature_from_spec.001
+name: 'Ledger: implement a multi-module feature from a written spec'
+description: >-
+  Extend a working double-entry ledger package with multi-currency postings (rate table,
+  conversion, balancing in base currency, persistence), an account statement report with an
+  exact text layout and an RFC 4180 CSV export, wired through models, book, store, reports and
+  the CLI. Visible tests cover existing behaviour; hidden tests check the spec character for
+  character.
+version: 1
+level: system
+status: active
+data_partition: held_out_evaluation
+
+labels:
+  domains: ['agentic', 'coding', 'software_engineering', 'instruction_following']
+  capabilities: ['repository_navigation', 'code_editing', 'code_generation', 'instruction_following', 'planning', 'decomposition', 'test_execution', 'state_tracking', 'self_verification']
+  modalities: ['code']
+  difficulty: expert
+  trajectory_stages: ['inspect', 'plan', 'modify', 'execute', 'verify']
+  failure_modes_targeted: ['loses_constraints', 'premature_completion', 'fails_to_verify', 'excessive_scope']
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: 'workspace'
+  initial_state_hash: null
+
+execution:
+  runner: agent
+  sandbox: null
+  network: disabled
+  timeout_seconds: 600
+  max_turns: 40
+  max_tool_calls: 120
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: unit_test
+    weight: 1.0
+    required: true
+    config: {"command": "python -m unittest discover -s tests -t .", "workspace": "", "timeout_seconds": 120}
+  - type: python_tests
+    weight: 2.0
+    required: true
+    config: {"tests": "hidden_tests", "mode": "workspace", "min_pass_fraction": 1.0, "timeout_seconds": 180}
+repetitions:
+  default: 1
+  seeds: []

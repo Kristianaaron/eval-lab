@@ -9,23 +9,47 @@ tasks:
   weight: 1.0
 - task_id: agentic.debug_pipeline.001
   weight: 1.0
+- task_id: agentic.feature_from_spec.001
+  weight: 1.0
+- task_id: agentic.inventory_service_bugs.001
+  weight: 1.0
+- task_id: agentic.large_repo_refactor.001
+  weight: 1.0
 - task_id: agentic.multi_file_fix.001
   weight: 1.0
 - task_id: coding.binary_search.001
   weight: 1.0
+- task_id: coding.csv_reconcile.001
+  weight: 1.0
+- task_id: coding.dependency_resolver.001
+  weight: 1.0
+- task_id: coding.expression_evaluator.001
+  weight: 1.0
 - task_id: coding.fizzbuzz.001
   weight: 1.0
+- task_id: coding.interval_scheduler.001
+  weight: 1.0
 - task_id: coding.json_output.001
+  weight: 1.0
+- task_id: coding.json_path.001
+  weight: 1.0
+- task_id: coding.lru_ttl_cache.001
   weight: 1.0
 - task_id: coding.output_prediction.001
   weight: 1.0
 - task_id: coding.parse_csv.001
   weight: 1.0
+- task_id: coding.rate_limiter.001
+  weight: 1.0
 - task_id: coding.refactor_legacy.001
   weight: 1.0
 - task_id: coding.spot_bug.001
   weight: 1.0
+- task_id: coding.text_justify.001
+  weight: 1.0
 - task_id: coding.time_complexity.001
+  weight: 1.0
+- task_id: longcontext.repo_bug_hunt.001
   weight: 1.0
 - task_id: reasoning.reverse_string.001
   weight: 1.0

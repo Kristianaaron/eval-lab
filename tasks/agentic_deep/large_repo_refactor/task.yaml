@@ -1,0 +1,52 @@
+schema_version: "1.0"
+id: agentic.large_repo_refactor.001
+name: 'Large repository refactor: migrate a legacy event API across ~50 modules'
+description: >-
+  Replace a process-global string-keyed event API used at ~60 call sites across a 50-module
+  code base (services, fifteen plugins, CLI) with a precisely specified typed EventBus/Event/
+  EventType API injected through build_app, delete the legacy functions and constants, and
+  keep behaviour and every visible test intact. Hidden tests check the API contract, scan
+  every module for legacy usages, and verify end-to-end behaviour and bus isolation.
+version: 1
+level: system
+status: active
+data_partition: held_out_evaluation
+
+labels:
+  domains: ['agentic', 'coding', 'software_engineering', 'long_context']
+  capabilities: ['repository_navigation', 'code_editing', 'planning', 'decomposition', 'long_horizon_coherence', 'long_context_retrieval', 'state_tracking', 'test_execution', 'failure_recovery', 'self_verification']
+  modalities: ['code']
+  difficulty: expert
+  trajectory_stages: ['inspect', 'plan', 'modify', 'execute', 'verify']
+  failure_modes_targeted: ['premature_completion', 'context_forgetting', 'loses_constraints', 'edits_wrong_file', 'fails_to_verify']
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: 'workspace'
+  initial_state_hash: null
+
+execution:
+  runner: agent
+  sandbox: null
+  network: disabled
+  timeout_seconds: 600
+  max_turns: 40
+  max_tool_calls: 120
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: unit_test
+    weight: 1.0
+    required: true
+    config: {"command": "python -m unittest discover -s tests -t .", "workspace": "", "timeout_seconds": 120}
+  - type: python_tests
+    weight: 2.0
+    required: true
+    config: {"tests": "hidden_tests", "mode": "workspace", "min_pass_fraction": 1.0, "timeout_seconds": 180}
+repetitions:
+  default: 1
+  seeds: []
