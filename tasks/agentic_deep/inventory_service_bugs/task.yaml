@@ -1,0 +1,51 @@
+schema_version: "1.0"
+id: agentic.inventory_service_bugs.001
+name: 'Inventory service: five subtle bugs across a package'
+description: >-
+  Diagnose and fix five distinct root-cause bugs (pagination off-by-one, shared mutable
+  default state, timezone conversion, Decimal rounding, wrong exception type) spread across
+  a ten-module inventory package; three have failing visible tests, two are only described
+  as user reports. Hidden tests cover all five plus regression on existing behaviour.
+version: 1
+level: system
+status: active
+data_partition: held_out_evaluation
+
+labels:
+  domains: ['agentic', 'coding', 'software_engineering', 'debugging']
+  capabilities: ['repository_navigation', 'code_editing', 'debugging', 'error_interpretation', 'test_execution', 'failure_recovery', 'planning', 'state_tracking', 'self_verification']
+  modalities: ['code']
+  difficulty: hard
+  trajectory_stages: ['inspect', 'plan', 'modify', 'execute', 'verify']
+  failure_modes_targeted: ['premature_completion', 'fails_to_verify', 'edits_wrong_file', 'plausible_but_unverified']
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: 'workspace'
+  initial_state_hash: null
+
+execution:
+  runner: agent
+  sandbox: null
+  network: disabled
+  timeout_seconds: 600
+  max_turns: 40
+  max_tool_calls: 120
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: unit_test
+    weight: 1.0
+    required: true
+    config: {"command": "python -m unittest discover -s tests -t .", "workspace": "", "timeout_seconds": 120}
+  - type: python_tests
+    weight: 2.0
+    required: false
+    config: {"tests": "hidden_tests", "mode": "workspace", "min_pass_fraction": 1.0, "timeout_seconds": 180}
+repetitions:
+  default: 1
+  seeds: []

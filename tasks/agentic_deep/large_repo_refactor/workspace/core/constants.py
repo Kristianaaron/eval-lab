@@ -1,0 +1,43 @@
+"""Shared constants."""
+
+DEFAULT_CURRENCY = "USD"
+MAX_LINES_PER_ORDER = 25
+SUPPORTED_CARRIERS = ("ups", "dhl", "fedex")
+NOTIFICATION_CHANNELS = ("email", "sms", "ops", "slack")
+
+# Event names understood by core.events (see plugins/audit.py).
+EVENT_CUSTOMER_REGISTERED = "customer.registered"
+EVENT_CUSTOMER_UPGRADED = "customer.upgraded"
+EVENT_CART_ITEM_ADDED = "cart.item_added"
+EVENT_ORDER_CREATED = "order.created"
+EVENT_ORDER_PAID = "order.paid"
+EVENT_ORDER_CANCELLED = "order.cancelled"
+EVENT_ORDER_SHIPPED = "order.shipped"
+EVENT_INVENTORY_RESERVED = "inventory.reserved"
+EVENT_INVENTORY_RELEASED = "inventory.released"
+EVENT_INVENTORY_LOW = "inventory.low"
+EVENT_PAYMENT_CAPTURED = "payment.captured"
+EVENT_PAYMENT_FAILED = "payment.failed"
+EVENT_PAYMENT_REFUNDED = "payment.refunded"
+EVENT_SHIPMENT_DISPATCHED = "shipment.dispatched"
+EVENT_SHIPMENT_DELIVERED = "shipment.delivered"
+EVENT_NOTIFICATION_SENT = "notification.sent"
+
+ALL_EVENTS = (
+    EVENT_CUSTOMER_REGISTERED,
+    EVENT_CUSTOMER_UPGRADED,
+    EVENT_CART_ITEM_ADDED,
+    EVENT_ORDER_CREATED,
+    EVENT_ORDER_PAID,
+    EVENT_ORDER_CANCELLED,
+    EVENT_ORDER_SHIPPED,
+    EVENT_INVENTORY_RESERVED,
+    EVENT_INVENTORY_RELEASED,
+    EVENT_INVENTORY_LOW,
+    EVENT_PAYMENT_CAPTURED,
+    EVENT_PAYMENT_FAILED,
+    EVENT_PAYMENT_REFUNDED,
+    EVENT_SHIPMENT_DISPATCHED,
+    EVENT_SHIPMENT_DELIVERED,
+    EVENT_NOTIFICATION_SENT,
+)
