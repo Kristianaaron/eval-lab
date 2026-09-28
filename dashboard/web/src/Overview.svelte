@@ -3,12 +3,14 @@
   import { fmtCount, fmtScore, when } from "./lib/fmt.js";
   import Glyph from "./Glyph.svelte";
   import Globe from "./Globe.svelte";
+  import Reticle from "./Reticle.svelte";
 
   let overview = $state(null);
   let assets = $state([]);
   let env = $state(null);
   let jobs = $state([]);
   let recentRuns = $state([]);
+  let ringRuns = $state([]);
   let pplRuns = $state([]);
   let error = $state(null);
 
@@ -18,6 +20,7 @@
     get("/api/environment").then((d) => (env = d)).catch(() => {});
     get("/api/jobs").then((d) => (jobs = d)).catch(() => {});
     get("/api/runs?limit=5").then((d) => (recentRuns = d)).catch(() => {});
+    get("/api/runs?limit=48").then((d) => (ringRuns = d)).catch(() => {});
     get("/api/perplexity?limit=4").then((d) => (pplRuns = d)).catch(() => {});
   });
 
@@ -40,7 +43,7 @@
 {#if error}<div class="card error ov-error">Could not load dashboard data: {error}</div>{/if}
 
 <div class="ov-bento">
-  <section class="card ov-tile ov-health"><div class="ov-tile-head"><span class="k">evaluation health</span><span class="mut">pass rate</span></div><div class="ov-health-value">{passRate == null ? "—" : `${passRate}%`}</div><div class="mut">pass rate across {fmtCount(overview?.total_runs)} recorded runs</div><div class="ov-meter"><span style={`width:${passRate ?? 0}%`}></span></div><div class="ov-inline"><span>{fmtCount(overview?.scored_runs ?? 0)} scored</span><span>{overview?.avg_aggregate_score != null ? `avg ${overview.avg_aggregate_score.toFixed(3)}` : "awaiting scores"}</span></div></section>
+  <section class="card ov-tile ov-health"><div class="ov-tile-head"><span class="k">evaluation health</span><span class="mut">pass rate</span></div><div class="ov-health-body"><div><div class="ov-health-value">{passRate == null ? "—" : `${passRate}%`}</div><div class="mut">pass rate across {fmtCount(overview?.total_runs)} recorded runs</div><div class="ov-meter"><span style={`width:${passRate ?? 0}%`}></span></div><div class="ov-inline"><span>{fmtCount(overview?.scored_runs ?? 0)} scored</span><span>{overview?.avg_aggregate_score != null ? `avg ${overview.avg_aggregate_score.toFixed(3)}` : "awaiting scores"}</span></div></div><Reticle value={overview?.avg_aggregate_score ?? null} tickFill={passRate == null ? null : passRate / 100} label={overview?.avg_aggregate_score != null ? overview.avg_aggregate_score.toFixed(2) : "—"} sub="avg score" size={168} ticks={96} accent segments={[...ringRuns].reverse().map((r) => ({ id: r.run_id, label: `${r.model_id ?? "?"} · ${r.task_id}`, value: r.aggregate_score ?? null, href: `#/explorer/run/${r.run_id}` }))} captions={["ticks · pass rate", `segments · latest ${ringRuns.length} runs`, "sweep reads each run", "score by heat"]} active={activeJobs.length > 0} /></div></section>
 
   <section class="card ov-tile ov-kpis"><div class="ov-tile-head"><span class="k">workspace pulse</span><span class="mut">as counts</span></div><div class="ov-kpi-grid"><div><strong>{fmtCount(counts.total)}</strong><span>models</span></div><div><strong>{fmtCount(counts.runnable)}</strong><span>runnable</span></div><div><strong>{fmtCount(activeJobs.length)}</strong><span>active jobs</span></div><div><strong>{fmtCount(overview?.total_runs)}</strong><span>eval runs</span></div></div></section>
 
