@@ -88,7 +88,17 @@ def score_oracle(
 
 
 def _instantiate(cls: type[Scorer], config: dict[str, Any]) -> Scorer:
+    """Build a scorer from its task config.
+
+    A config that the scorer rejects is a task-authoring error and is raised
+    with the scorer name attached; silently falling back to a default
+    instance would score the task against the wrong expectation.
+    """
     try:
         return cls(**config)
-    except TypeError:
-        return cls()
+    except TypeError as exc:
+        if not config:
+            raise
+        raise TypeError(
+            f"scorer {getattr(cls, 'scorer_id', cls.__name__)!r} rejected config {config!r}: {exc}"
+        ) from exc

@@ -1,0 +1,43 @@
+schema_version: "1.0"
+id: coding.lru_ttl_cache.001
+name: 'LRU cache with per-key TTL'
+description: 'Implement an LRU cache with per-key time-to-live, an injectable clock, deterministic eviction order and hit/miss/eviction statistics.'
+version: 1
+level: model
+status: active
+data_partition: held_out_evaluation
+
+labels:
+  domains: ['coding', 'code_generation']
+  capabilities: ['code_generation', 'planning', 'self_verification']
+  modalities: ['code']
+  difficulty: hard
+  trajectory_stages: ['plan', 'execute', 'verify']
+  failure_modes_targeted: ['loses_constraints', 'plausible_but_unverified']
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: []
+  workspace_fixture: null
+  initial_state_hash: null
+
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 300
+  max_turns: null
+  max_tool_calls: null
+  allowed_tools: []
+  seeds: [0]
+
+oracle:
+  - type: python_tests
+    weight: 1.0
+    required: true
+    config: {"tests": "tests", "solution_file": "solution.py", "min_pass_fraction": 1.0, "timeout_seconds": 120}
+repetitions:
+  default: 1
+  seeds: []
