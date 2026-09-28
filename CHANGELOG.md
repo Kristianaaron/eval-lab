@@ -2,6 +2,63 @@
 
 All notable changes to eval-lab are documented here. Format: Keep a Changelog.
 
+## [0.18.0] - 2026-09-28
+
+Standalone benchmark: perplexity, deep coding, genuine long context, and a
+new visual identity for the dashboard.
+
+### Harness fixes (real models now run end-to-end)
+- Task packages remember their source directory; `prompt.md`, attachments and
+  workspace fixtures resolve relative to it. Previously a real model was sent
+  the literal string `prompt.md` and long-context attachments were never
+  included in the prompt.
+- CLI `run` and GUI evaluation jobs dispatch each task to the runner its spec
+  declares (`direct` / `agent` / `perplexity`) instead of running everything
+  through the direct runner.
+- Agent loop: OpenAI-style tool definitions are sent to the model
+  (`tools` + `tool_choice`), the conversation keeps real assistant/tool
+  messages, budgets are enforced by wall clock, and runs are scored inside
+  the sandbox workspace (the unit-test oracle previously ran in the run output
+  directory, never seeing the agent's edits). Final workspace and transcript
+  are snapshotted into the run directory; exhausted budgets are still scored.
+- OpenAI-compatible adapter: no more `tools: null`, `top_p` forwarded, HTTP
+  errors surfaced with body, per-server `extra_body` from runtime arguments.
+
+### New metrics and scorers
+- `perplexity` runner + scorer: windowed teacher-forced scoring via
+  `/completions` echo+logprobs (vLLM, SGLang) or the optional `hf_local`
+  provider (torch + transformers); reports perplexity, bits/token, bits/byte.
+- `python_tests` scorer: hidden stdlib unittest suites with per-test partial
+  credit, in extract (direct) or workspace (agent) mode.
+- `json_exact` scorer: multi-question JSON answers with per-key credit.
+
+### Benchmark content
+- `tasks/perplexity/`: three fixed corpora (original prose, technical docs,
+  Python source).
+- `tasks/coding_deep/`: eight expert-level specification tasks with 15–35
+  hidden tests each.
+- `tasks/agentic_deep/`: package-level bug hunt, feature-from-spec, and a
+  generated 40-call-site API migration across ~45 modules.
+- `tasks/longcontext_deep/`: generated multi-hop policy compendia (8k/32k/64k
+  tokens), 32k-token log aggregation, and a whole-repository bug hunt;
+  `scripts/generate_long_context.py` reproduces them byte-for-byte.
+- Suites `benchmark-core`, `benchmark-coding-deep`, `benchmark-long-context`,
+  `benchmark-perplexity`; `eval-lab benchmark` runs them and renders a
+  scorecard; `eval-lab perplexity` scores any corpus.
+- `tests/integration/test_task_catalogue.py` validates every task, suite and
+  reference solution in CI.
+
+### API and dashboard
+- `/api/benchmark/groups`, `/api/benchmark/scorecard`, `/api/benchmark/models`,
+  `/api/perplexity`, `/api/runs/{id}/perplexity`; `/api/eval-config` lists the
+  benchmark groups and an `auto` harness.
+- New Benchmark page (scorecard, per-window perplexity chart, leaderboard),
+  Standard-benchmark launcher on the Evaluation page, perplexity tile on the
+  Overview.
+- Visual redesign: bioluminescent dark theme, HUD hairlines and corner
+  brackets, procedural neural-field background, deterministic pixel glyphs for
+  models.
+
 ## [0.17.2] - 2026-08-08
 
 Recommendations tray tidy-up (visual + fit communication).

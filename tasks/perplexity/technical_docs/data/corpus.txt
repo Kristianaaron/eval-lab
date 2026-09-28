@@ -1,0 +1,407 @@
+# Architecture — eval-lab (Phase 0)
+
+## Purpose
+
+eval-lab is an agent-agnostic evaluation operating layer for local language
+models and complete model-plus-agent systems. It must answer which configuration
+(model checkpoint, quantization, runtime, sampling, harness, context policy,
+code revision) performs best on real local workloads, and which capabilities
+regress after compression or runtime changes.
+
+## Design principles (spec 4)
+
+- **Oracle first** — deterministic oracles outrank model judges.
+- **Labels are first-class** — controlled vocabularies, not free text.
+- **Trace what's needed** — reproducible runs, no secret or bulk tensor storage.
+- **Separate capability from efficiency** — report dimensions independently.
+- **Harness effects are explicit** — same checkpoint under two agent loops is
+  two evaluated systems.
+- **Small gold set before scale** — quality over quantity up front.
+
+## Evaluated system identity
+
+A result is never attributed to a model alone. A **RunManifest** must capture:
+task + suite identity/version, model + checkpoint + quantization, runtime and
+launch args, harness config, hardware topology, env lock hash, seed, sampling,
+budgets, warm/cold state, repetition index, and result status. Model identity
+and harness identity are separate first-class objects (see
+`docs/adr/0001-model-and-harness-identity.md`).
+
+## Module map (Phase 0 subset)
+
+| Path | Responsibility |
+|------|----------------|
+| `src/eval_lab/schemas/models.py` | Versioned Pydantic data contracts |
+| `src/eval_lab/config/labels.py` | Controlled label vocabularies + validation |
+| `src/eval_lab/tasks/loader.py` | YAML task/suite loading + fixture checks |
+| `src/eval_lab/adapters/mock.py` | Deterministic offline model adapter |
+| `src/eval_lab/cli/main.py` | Typer CLI (`doctor`, `validate`, `list`) |
+| `tasks/` | Task YAML catalogue |
+| `tests/` | Unit / integration / golden / smoke |
+| `runs/` | Run output workspace |
+
+Phase 0 deliberately ships **no** runners, tools, sandboxes, telemetry, judges,
+scorers (only schema types), storage, or UI. Those arrive with their own phases.
+
+## Object model
+
+- `TaskSpec` — one task (inputs, execution budget, oracle scorer refs, labels).
+- `SuiteSpec` — ordered references to tasks with weights/repetitions.
+- `ModelConfig` — endpoint + checkpoint + quantization + runtime + sampling.
+- `HarnessConfig` — agent loop, context/recovery/completion policy.
+- `RunManifest` — full evaluated-system identity for one run.
+- `ScoreResult` — one scorer's result; required failures may gate the task.
+- `TraceEvent` — append-only event with monotonic sequence (spec 6.5).
+
+## Validation & strictness
+
+- `extra="forbid"` everywhere: unknown required fields are rejected.
+- `schema_version` is persisted on every object.
+- Labels are validated against the registry; unknown labels raise `LabelError`.
+- Duplicate/unknown fixture references are surfaced by the loader and CLI.
+- Enums are `StrEnum`; ids follow strict dotted or dashed patterns.
+
+## CLI exit-code contract
+
+| Condition | Exit code |
+|-----------|-----------|
+| Healthy / valid / success | 0 |
+| Invalid task/suite, missing file, failed doctor | 1 |
+| Unknown subcommand kind | 2 |
+
+## Future phases (not built here)
+
+Phase 1 direct runner → Phase 2 agent loop/sandbox → Phase 3 telemetry →
+Phase 4 scorers/judge cal → Phase 5 suites/compare → Phase 6 task catalogue →
+Phase 7 local-model integration → Phase 8 atlas/intervention traces.
+# Data Contracts — eval-lab (Phase 0)
+
+All persisted objects are Pydantic models with `extra="forbid"` and carry a
+`schema_version` field (currently `"1.0"`). A schema version bump must accompany
+any incompatible field/behavior change; old results are never silently
+reinterpreted under a new schema.
+
+## Schema index
+
+Defined in `src/eval_lab/schemas/models.py`:
+
+- `SCHEMA_VERSION` — `"1.0"`
+- `TaskSpec`, `SuiteSpec`
+- `ModelConfig`, `HarnessConfig`
+- `RunManifest`
+- `ScoreResult`, `TraceEvent`
+
+## TaskSpec
+
+```yaml
+schema_version: "1.0"
+id: mathematics.basic.addition.001   # dotted: domain.category.slug.nn
+name: Two-number addition
+description: Given two integers, return their exact sum.
+version: 1                          # task revision; changes must bump
+level: model | system
+status: active | draft | deprecated
+
+labels:
+  domains: [mathematics]            # controlled vocab (see label ontology)
+  capabilities: [mathematical_reasoning]
+  modalities: [text]
+  difficulty: easy
+  trajectory_stages: []
+  failure_modes_targeted: []
+  intervention: []
+  atlas_labels: []
+
+input:
+  instruction_file: prompt.md
+  attachments: []
+  workspace_fixture: null           # optional path validated against disk
+  initial_state_hash: null
+
+execution:
+  runner: direct | agent
+  sandbox: null
+  image: null
+  network: disabled
+  timeout_seconds: 60
+  seeds: [0]
+
+oracle:
+  - type: exact                     # scorer type reference
+    weight: 1.0
+    required: true
+
+repetitions:
+  default: 1
+  seeds: [0]
+```
+
+Validation invariants:
+
+- `id` must match `^[a-z0-9]+(\.[a-z0-9_-]+)+$`.
+- `labels.*` values must belong to the label registry; unknown values raise.
+- `workspace_fixture` and `attachments` are checked against a base directory by
+  the loader (`check_fixture_references`).
+- Unknown top-level or nested fields are rejected.
+
+## Label ontology
+
+Registry in `src/eval_lab/config/labels.py` (`LABEL_SCHEMA_VERSION = "1.0"`).
+Vocabularies:
+
+- `domain`, `capability`, `modality`, `difficulty`, `level`,
+  `failure_mode`, `intervention`, `trajectory_stage`
+
+Aliases (e.g. `sw-eng` → `software_engineering`, case/separator-insensitive)
+are resolved to canonical spellings by `labels.validate` / `validate_many`.
+
+## SuiteSpec
+
+```yaml
+schema_version: "1.0"
+id: suite.smoke.001
+name: Smoke
+description: ""
+version: 1
+family: smoke                  # optional
+tasks:
+  - task_id: mathematics.basic.addition.001
+    weight: 1.0
+    repetitions: null          # optional override
+```
+
+## ModelConfig (spec 6.2)
+
+```yaml
+schema_version: "1.0"
+id: deepseek-v4-flash-nvfp4-vllm     # dashed id
+provider_type: openai_compatible
+endpoint: http://localhost:8000/v1
+model_name: deepseek-v4-flash
+checkpoint: { source: local, path: ..., revision: null }
+quantization: { format: nvfp4, details: vendor_checkpoint }
+runtime: { name: vllm, version: ..., arguments: {...} }
+sampling_defaults: { temperature: 0.0, top_p: 1.0, max_tokens: 4096 }
+capabilities: { chat: true, images: false, tools: true }
+```
+
+## HarnessConfig (spec 6.3)
+
+```yaml
+schema_version: "1.0"
+id: local-shell-agent-v1   # dashed id
+agent_loop: react_tool_feedback
+system_prompt_file: null
+workspace_policy: isolated_copy
+context_policy:
+  strategy: rolling_summary_plus_recent
+  max_context_tokens: null
+  retain_tool_outputs: selective
+recovery_policy:
+  max_retries_per_tool: 0
+  require_error_inspection: false
+completion_contract:
+  require_final_summary: false
+  require_verification_evidence: false
+tool_adapter_version: "1.0.0"
+```
+
+## RunManifest (spec 6.4)
+
+Constrains timestamps to UTC (`datetime.now(UTC)`). Fields cover every aspect of
+evaluated-system identity so a single run is fully reproducible.
+
+## ScoreResult (spec 13.1)
+
+```json
+{
+  "scorer_id": "unit-tests-v1",
+  "score": 0.85,
+  "passed": false,
+  "confidence": 1.0,
+  "required": true,
+  "details": {},
+  "evidence_artifacts": [],
+  "error": null
+}
+```
+
+`required=true` may force task failure independent of the weighted mean.
+
+## TraceEvent (spec 6.5)
+
+Append-only, monotonic `sequence`, monotonic clock `time_monotonic_ns`, optional
+span/parent-span ids, and a free-form `payload`. Event types are extended in
+later phases (model request, tool result, validation, telemetry sample, ...).
+# ADR-0001: Model and harness identity are separate
+
+Status: Accepted  
+Date: 2026-07-31  
+Decision: `ModelConfig` and `HarnessConfig` are distinct, independently
+versioned schema objects. A `RunManifest` may reference either or both, but a
+run is never identified by "the model" alone.
+
+## Context
+
+The spec (4.6, 4.8) states that the same checkpoint under two agent loops is two
+different evaluated systems, and that every result must identify the full
+evaluation configuration (6.4). Collapsing "model" and "harness" into a single
+identity would let a harness regression masquerade as a model improvement, or
+vice versa — exactly what the platform exists to detect (spec 27: harness design
+materially affects agent results).
+
+## Decision
+
+- `ModelConfig` captures provider, endpoint, checkpoint, quantization, runtime,
+  sampling, capabilities — the answer to "which weights, served how".
+- `HarnessConfig` captures agent loop, system prompt, workspace policy, context
+  policy, recovery policy, completion contract, tool adapter version — the
+  answer to "which agent machinery wraps those weights".
+- `RunManifest` carries `model_id` and `harness_id` as separate optional fields,
+  so a run can be direct (model, no harness) or system (model + harness).
+
+## Consequences
+
+- Comparing a K3 student across two keep-maps requires only changing `ModelConfig`;
+  comparing two agent loops requires only changing `HarnessConfig`. Neither
+  change invalidates the other object's versioning.
+- Direct and system runs cannot be silently merged (spec 2) because level and
+  harness identity are retained distinctly.
+- Cost: a run manifest is slightly larger and callers must know which identity
+  changed. Worth it — this is the core regression-detection contract.
+
+## Alternatives considered
+
+- Single "configuration" blob: rejected — cannot isolate harness vs model effect.
+- Free-text tags: rejected — violates reproducible-identity requirement.
+# eval-lab
+
+Agent-agnostic local model and agent evaluation harness.
+
+Versioned schemas, label registry, YAML task loader, direct/agent/perf
+runners, deterministic + advanced scorers, LLM judge calibration, telemetry,
+and a 38-task catalogue.
+
+## Dashboard (web UI)
+
+Read-only eval-results dashboard: Python (FastAPI) backend + Svelte SPA.
+
+```bash
+uv pip install -e '.[serve]'      # FastAPI + uvicorn
+.venv/bin/eval-lab serve --port 8100   # serves API + built SPA
+open http://127.0.0.1:8100
+```
+
+To evaluate a real model from the UI, open **Models → Register model →
+OpenAI-compatible endpoint**, enter the server base URL and model name, then
+open **Evaluation** and choose the registered model. API keys are read from
+the environment variable you name and are never stored in the registry.
+The built-in mock model remains available for an offline smoke test.
+
+The API is read-only over `runs/runstore.db` + `runs/<id>/` artifacts. Endpoints:
+`/api/health`, `/api/overview`, `/api/runs`, `/api/runs/{id}`,
+`/api/runs/{id}/trace`, `/api/runs/{id}/telemetry`.
+
+### Frontend development
+
+```bash
+cd dashboard/web
+npm install
+npm run dev        # Vite dev server, proxies /api to :8100
+npm run build      # emit dashboard/web/dist (served by `eval-lab serve`)
+```
+
+See `docs/architecture.md`, `docs/data-contracts.md`, and `docs/adr/`.
+See `PHASE_0_REPORT.md`, `PHASE_3_REPORT.md`, `PHASE_4_REPORT.md`, `PHASE_6_REPORT.md`
+for phase exit-gate evidence.
+# Eval-Harness GUI — Milestone 1 Report
+
+**Status:** Milestone 1 complete (per spec §19, stop after M1 for review)
+**Date:** 2026-08-01 · **Branch:** main · **Version:** 0.9.0
+
+---
+
+## A. §19 prerequisite — repository inspection
+
+### 1. Frontend framework and component system
+- **Svelte 5 (runes) + Vite SPA** at `dashboard/web/`, bundled to `dashboard/web/dist/` and served by FastAPI. Entry `main.js` mounts `App.svelte`.
+- Hash-based router in `App.svelte` (`parse(hash)` → overview/models/evaluation/atlas/experiments/comparisons/model/:id/models/register), no router lib.
+- Styling: single `app.css` with a dark theme via CSS custom properties (`--bg/--panel/--accent/--green/--red/--amber`).
+- Existing views before M1: `Overview`, `Runs` (filterable run table), `RunDetail`; `lib/api.js` fetch helpers.
+
+### 2. Backend APIs and services
+- `src/eval_lab/dashboard/api.py` — read-only FastAPI over run data: `/api/health`, `/api/overview`, `/api/models`, `/api/runs`(+filters), `/api/runs/{id}`(+`/trace`, `/telemetry`). Serves the built SPA.
+- No application-facing **service layer** existed; routes called `RunStore` directly. (Gap: spec §11 requires a stable typed service layer.)
+
+### 3. Schemas relevant to models/suites/runs/telemetry/traces/reports
+- `schemas/models.py`: `TaskSpec`, `SuiteSpec`, `ModelConfig`, `HarnessConfig`, `RunManifest`, `ScoreResult`, `TraceEvent` (all versioned Pydantic).
+- `schemas/model_asset.py` (new, M1): `ModelAssetRecord`, `CheckpointInspection`, `ActionEligibility`, `EnvBudget`, request/result DTOs.
+- Analysis schemas (`analysis/*`) from Phase 5 cover comparisons, slices, Pareto.
+
+### 4. Worker/job infrastructure
+- **None.** Runners (`direct`, `agent`, `batch`, `perf`) are synchronous in-process; no background job manager, no persistent job state machine, no progress-event stream. (Major dependency for Milestones 2/3 — atlas/eval job monitoring.)
+
+### 5. Persistence layer
+- `storage/sqlite.py` `RunStore` (runs + scores index) + portable JSON/JSONL artifacts under `runs/<id>/` (manifest/result/scores/trace/report).
+- `storage/model_assets.py` (new, M1): JSON-file registry under `models/`.
+
+### 6. Missing contracts needed by the spec (not in M1 scope)
+- Atlas job model + state machine (§12 atlas/derv states), evaluation run state machine, resource estimator, keep-map/precision/residency-map schemas, source↔derivative expert identity, calibration↔held-out leakage registry, telemetry/hardware node status, event-streaming progress API.
+- Enforcement: action-eligibility and model classification are provided in M1; the remaining flows consume them.
+
+### 7. Proposed implementation order
+Milestone 1 (this) → M2 evaluation launch/monitoring → M3 atlas job setup/monitoring (needs a background worker + persisted state machine) → M4 atlas exploration → M5 experiment creation → M6 derivative build + comparison. Matches spec §15.
+
+### 8. Conflicts with existing architecture
+- The read-only run API and SPA named it a “dashboard”; the spec needs a management GUI. This is additive, not a conflict.
+- Existing runs are keyed by `model_id` string; the spec needs **registered model assets** (stable `asset_id`). M1 introduces assets as a separate first-class registry and does **not** retrofit the run pipeline onto it (a documented M2+ interface decision).
+- `.gitignore` anchors `/reports/` to root so source `src/eval_lab/reports/` and `configs/reports/` remain tracked.
+- No arm64 Chromium is available on this host, so live-GUI screenshots could not be captured (bundled headless Chrome is x86-64). Evidence is provided via API responses, test results, and the built bundle.
+
+---
+
+## B. Milestone 1 deliverables
+
+### Backend
+- **Typed schemas** `schemas/model_asset.py`: `ModelAssetRecord`, `CheckpointInspection`, `ActionEligibility`/`AvailableAction`, `EnvBudget`, request/result DTOs (all `extra="forbid"`).
+- **Application service layer** `services/models.py`: `ModelAssetService` (`register_local_checkpoint`, `inspect` via inspection, `get/list/delete`, `eligibility`) + pure `resolve_available_actions(asset, budget)`.
+- **Checkpoint inspection** `inspection/checkpoint.py`: reads `config.json` + SafeTensors **headers only** (never tensor payloads); detects model type/architecture/layers/routed experts/top-k/quantization, file & shard counts, stored size, per-dtype params and resident estimate; classifies `atlas_compatible` (sparse MOE) and `runnable_here` vs envelope.
+- **Persistent registry** `storage/model_assets.py`: JSON-file store under `models/` (survives restarts; idempotent synthetic seeding on first start: `kimi-k3-official`, `deepseek-v4-flash`, `qwen3.5-2b-vision`, `k3-agent-96`).
+- **API** (`dashboard/api.py`): `GET /api/models-assets`, `GET|DELETE /api/models-assets/{id}`, `GET …/{id}/actions`, `POST /api/models-assets` (register), `POST /api/models-assets/inspect` (mid-wizard, no registration), `POST …/fixtures`. Model routes are registered **before** the SPA static mount so the catch-all `/` no longer shadows them.
+- **Oversized-source protection** is structural: `build_atlas` is the valid action for K3; `evaluate_directly` is disabled with an explanatory reason until a runnable endpoint or fitting envelope exists.
+
+### Frontend (Svelte 5)
+- **Nav shell** with the six top-level areas: Overview, Models, Evaluation, Atlas Lab, Experiments, Comparisons. Evaluation/Atlas/Experiments/Comparisons show Milestone-N placeholders (no fabricated functionality).
+- **Models list** — cards with type badge, stored/resident size, architecture, atlas compatibility, warnings, delete; “Register model” action.
+- **Model detail** — full asset table + **action-eligibility panel** rendering each action as available/enabled or unavailable-with-reason (e.g. direct eval of K3 disabled with an explanation), plus warnings and provenance (parent/atlas).
+- **Register-local-checkpoint wizard** — 1) path/name → 2) *Inspect checkpoint* (streams a real inspection: model type, layers, experts, top-k, shards, sizes, atlas/runnable classification, recommended *Build atlas* for sparse checkpoints) → 3) *Register model* → navigates to the new asset.
+- **Overview** — operational cards (model/runnable/source counts, active jobs, hardware envelope) + shortcuts; not a decorative analytics board.
+- **Retained existing functionality**: run table + run detail are reachable under Evaluation (unchanged), plus the model-selector feature.
+
+---
+
+## C. Tests and evidence
+
+New:
+- `tests/unit/test_model_assets.py` (10) — eligibility rules (oversized source, runnable, remote, keep-map/compare gating) + inspection classification (sparse, missing config, non-dir, memory-envelope).
+- `tests/integration/test_model_assets_api.py` (7) — fixture seeding, detail+eligibility, register→persist→reload, invalid path, delete, type derivation from inspection.
+- `tests/conftest.py` — synthetic real SafeTensors checkpoint builder (no full-model load; CI-safe).
+
+Full suite: **138 passed** (was 121; +17 M1). `ruff check`, `ruff format --check`, `mypy src` all clean (70 source files).
+
+Exit gate (spec §19 M1) — demonstrated:
+- user can register a fake/small checkpoint → `POST /api/models-assets` + inspect endpoint, verified via TestClient + live curl;
+- inspection results render correctly → detail/inspect API returns classification; SPA bundles the views;
+- impossible actions show explanatory reasons → `resolve_available_actions` returns `{evaluate_directly: {available: false, reason: "…exceeds the current memory budget."}}`, shown in the UI as disabled-with-reason;
+- state persists across restart → JSON registry on disk (`models/*.json`) re-read on new `ModelAssetService`; verified by re-loading a freshly registered asset.
+
+Note: live GUI screenshots were not captured — no arm64 Chromium exists on this host (bundled headless Chrome is x86-64, ENOEXEC). All interactive evidence above is over the real running server (`127.0.0.1:8100`) via HTTP and the Svelte build.
+
+---
+
+## D. Unresolved backend dependencies (recorded, not silently mocked)
+1. **Background job/worker layer with persistent state machines** (all of M2/M3 job flows).
+2. **Atlas runtime** (layerwise trace, saliency/keep-map computation) — the CLI/schema contracts are reserved by Phase 8 trace fields, not implemented.
+3. **Real model endpoints** for direct evaluation (OpenAI-compatible + vLLM/SGLang adapters exist; a GUI-facing evaluation service is M2).
+4. **Hardware/node telemetry API** to populate live memory/NVMe in the Overview.
+5. **Leakage registry** connecting calibration suites to held-out promotion gating.

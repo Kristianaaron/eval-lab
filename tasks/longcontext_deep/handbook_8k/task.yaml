@@ -1,0 +1,57 @@
+schema_version: '1.0'
+id: longcontext.handbook_8k.001
+name: Policy compendium multi-hop (8k)
+description: Four multi-hop questions over a numbered policy compendium with supersession
+  chains and a staff directory (~7k tokens of context).
+version: 1
+level: model
+status: active
+data_partition: held_out_evaluation
+labels:
+  domains:
+  - long_context
+  - retrieval
+  capabilities:
+  - long_context_retrieval
+  - state_tracking
+  - instruction_following
+  modalities:
+  - text
+  - structured
+  difficulty: hard
+  trajectory_stages:
+  - inspect
+  - execute
+  failure_modes_targeted:
+  - context_forgetting
+  - plausible_but_unverified
+  intervention:
+  - quantization
+  - expert_pruning
+  atlas_labels: []
+input:
+  instruction_file: prompt.md
+  attachments:
+  - data/handbook.txt
+  workspace_fixture: null
+  initial_state_hash: null
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 900
+  seeds:
+  - 0
+oracle:
+- type: json_exact
+  weight: 1.0
+  required: true
+  config:
+    expected:
+      q1: Security
+      q2: BC-C492
+      q3: 6396
+      q4: 2
+repetitions:
+  default: 1
+  seeds: []

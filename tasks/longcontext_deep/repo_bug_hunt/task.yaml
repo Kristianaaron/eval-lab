@@ -1,0 +1,40 @@
+schema_version: "1.0"
+id: longcontext.repo_bug_hunt.001
+name: 'Repository bug hunt from a single long prompt'
+description: 'Locate the defective module in a complete 19-file library listing by reconciling code against the README contract, and output the corrected file; hidden tests exercise the fixed module.'
+version: 1
+level: model
+status: active
+data_partition: held_out_evaluation
+
+labels:
+  domains: ['long_context', 'coding', 'debugging']
+  capabilities: ['long_context_retrieval', 'repository_navigation', 'debugging', 'code_editing']
+  modalities: ['code', 'text']
+  difficulty: expert
+  trajectory_stages: ['inspect', 'plan', 'modify']
+  failure_modes_targeted: ['edits_wrong_file', 'plausible_but_unverified', 'context_forgetting']
+  intervention: ['quantization', 'expert_pruning']
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: ['data/repository.txt']
+  workspace_fixture: null
+  initial_state_hash: null
+
+execution:
+  runner: direct
+  sandbox: null
+  network: disabled
+  timeout_seconds: 900
+  seeds: [0]
+
+oracle:
+  - type: python_tests
+    weight: 1.0
+    required: true
+    config: {"tests": "tests", "solution_file": "flowkit/aggregate.py", "support_files": ["src/flowkit"], "extract": "largest", "min_pass_fraction": 1.0, "timeout_seconds": 120}
+repetitions:
+  default: 1
+  seeds: []

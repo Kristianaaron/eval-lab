@@ -140,6 +140,88 @@ def _check_type(value: Any, expected: str) -> bool:
     return checker(value) if checker else True
 
 
+class JsonExactScorer:
+    """Compare a JSON object answer key-by-key with per-key partial credit.
+
+    Long-context tasks ask several questions at once and expect
+    ``{"q1": ..., "q2": ...}``. Each key is compared after normalization
+    (case/whitespace-insensitive; numbers compared numerically), the score is
+    the fraction of keys that match, and ``passed`` requires every key. A reply
+    that is not a JSON object (or a fenced JSON block) scores 0.
+    """
+
+    scorer_id = "json_exact"
+
+    def __init__(self, expected: dict[str, Any]) -> None:
+        if not isinstance(expected, dict) or not expected:
+            raise ValueError("json_exact requires a non-empty 'expected' mapping")
+        self.expected = expected
+
+    def score(self, *, output: str, task: Any = None, run_dir: Any = None) -> ScoreResult:
+        data = _parse_json_object(output)
+        if data is None:
+            return ScoreResult(
+                scorer_id=self.scorer_id,
+                score=0.0,
+                passed=False,
+                details={"expected": self.expected, "error": "no JSON object found in output"},
+            )
+        matched: list[str] = []
+        mismatched: dict[str, Any] = {}
+        for key, want in self.expected.items():
+            got = data.get(key)
+            if _values_match(got, want):
+                matched.append(key)
+            else:
+                mismatched[key] = {"expected": want, "got": got}
+        fraction = len(matched) / len(self.expected)
+        return ScoreResult(
+            scorer_id=self.scorer_id,
+            score=fraction,
+            passed=not mismatched,
+            details={"matched": matched, "mismatched": mismatched},
+        )
+
+
+_FENCED_JSON = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
+
+
+def _parse_json_object(text: str) -> dict[str, Any] | None:
+    candidates = [text.strip()]
+    candidates += _FENCED_JSON.findall(text or "")
+    start, end = text.find("{"), text.rfind("}")
+    if start != -1 and end > start:
+        candidates.append(text[start : end + 1])
+    for cand in candidates:
+        try:
+            data = json.loads(cand)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if isinstance(data, dict):
+            return data
+    return None
+
+
+def _values_match(got: Any, want: Any) -> bool:
+    if isinstance(want, bool) or isinstance(got, bool):
+        return bool(got == want)
+    if isinstance(want, (int, float)) or isinstance(got, (int, float)):
+        try:
+            return abs(float(got) - float(want)) < 1e-9
+        except (TypeError, ValueError):
+            return False
+    if isinstance(want, list):
+        return (
+            isinstance(got, list)
+            and len(got) == len(want)
+            and all(_values_match(g, w) for g, w in zip(got, want, strict=False))
+        )
+    if got is None or want is None:
+        return bool(got == want)
+    return _norm(str(got)).strip(".") == _norm(str(want)).strip(".")
+
+
 register_scorer("exact", ExactScorer)
+register_scorer("json_exact", JsonExactScorer)
 register_scorer("regex", RegexScorer)
 register_scorer("json_schema", JsonSchemaScorer)

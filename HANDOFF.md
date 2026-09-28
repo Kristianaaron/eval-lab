@@ -1,4 +1,44 @@
-# HANDOFF — eval-lab (M1–M6 built; M3 Atlas Lab just shipped)
+# HANDOFF — eval-lab
+
+## PICKUP CONTEXT (session 2026-09-28, "standalone benchmark + new UI", v0.18)
+
+What shipped (branch `claude/awesome-einstein-fszl1r`, see CHANGELOG 0.18.0):
+
+- **Real-model path fixed**: prompts/attachments/fixtures resolve relative to
+  the task package (`src/eval_lab/tasks/resolve.py`); CLI `run` and GUI eval
+  jobs dispatch per task runner (`runners/dispatch.py`); the agent loop sends
+  native tool schemas and scores inside the sandbox (`runners/agent.py`,
+  `runners/agent_executor.py`).
+- **Perplexity**: `runners/perplexity.py` + `scorers/perplexity.py`; backends
+  = OpenAI-compatible `/completions` echo+logprobs (vLLM/SGLang) or
+  `adapters/hf_local.py` (torch+transformers, optional `hf` extra, **untested
+  here — no torch in the build container**). llama.cpp server does not return
+  prompt logprobs → use hf_local for GGUF-family checkpoints.
+- **Hidden-test scoring**: `scorers/python_tests.py` (extract / workspace
+  modes, partial credit), `json_exact` for multi-question answers.
+- **Content**: `tasks/perplexity`, `tasks/coding_deep`, `tasks/agentic_deep`,
+  `tasks/longcontext_deep` (+ `scripts/generate_long_context.py`,
+  `scripts/gen_large_repo_refactor.py`, `scripts/fetch_corpora.py`), suites
+  `configs/suites/benchmark-*.yaml`, CLI `eval-lab benchmark` /
+  `eval-lab perplexity`, `services/scorecard.py`, API `/api/benchmark/*`,
+  `/api/perplexity`. `tests/integration/test_task_catalogue.py` validates every
+  task + reference solution.
+- **UI**: new design system in `dashboard/web/src/app.css`, `NeuralField.svelte`
+  (procedural neural background), `Glyph.svelte` (pixel glyph marks),
+  `Benchmark.svelte` page. The owner's reference images (an "eval style"
+  folder on their Mac) were never visible from the build container: the look
+  was designed from their written description (futuristic thin lines, alien
+  pixel/organic art, neural/nervous-system motifs). Expect a tuning pass once
+  they compare it against the images.
+
+Next steps to verify on the real box: run `eval-lab benchmark --model … --endpoint …`
+against the GLM-5.2 vLLM host and check the Benchmark page; try
+`--provider hf_local` for perplexity on a local checkpoint (needs
+`uv pip install -e '.[hf]'`).
+
+---
+
+# Earlier handoff (M1–M6 built; M3 Atlas Lab)
 
 **Session end.** Everything committed and pushed; server running. Pick up here.
 

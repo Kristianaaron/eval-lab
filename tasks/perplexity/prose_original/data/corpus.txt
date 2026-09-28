@@ -1,0 +1,101 @@
+The Lighthouse Keeper's Ledger
+
+Every lighthouse keeps two records. The first is the log required by the harbour authority: the hour the lamp was lit, the hour it was extinguished, the state of the sea, the names of vessels sighted and the direction of their passage. The second record is the one the keeper keeps for himself, and nobody has ever asked to see it.
+
+Tomas Ferrand had kept the second record for eleven years by the time the automation crew arrived. He wrote it in a school exercise book with a blue cover, one book per year, and he stored the finished books in a biscuit tin under the stairs where the damp could not reach them. He did not write in it every night. He wrote when something happened that the first record had no column for: the evening a pod of pilot whales moved through the channel so slowly that he could count them twice, the winter morning the fog was thick enough to hide the base of the tower from the gallery, the afternoon a girl from the village walked the causeway at low tide to ask whether the light could be seen from the mainland and, when he said it could, seemed disappointed.
+
+The crew came in a white van with the authority's crest on the door. There were three of them, and they were polite in the way people are polite when they have been told in advance that someone might be upset. The engineer in charge, a woman called Ines Okafor, explained the arrangement while the other two unloaded crates. The lamp would be replaced with a sealed LED array. A sensor would measure ambient light and switch it on at dusk. A second sensor would report faults to a control room a hundred and forty kilometres away. There would be a battery, a solar panel, a small wind turbine, and a modem. The tower would not need a keeper. The tower would not, strictly speaking, need anybody.
+
+"You'll still own the cottage," she said. "That was in the letter."
+
+"I read the letter."
+
+"Then you know it's not personal."
+
+He knew it was not personal. That was, in a sense, the whole problem. If it had been personal there would have been someone to argue with.
+
+The work took four days. Tomas made the crew coffee in the mornings and stayed out of the lamp room while they were in it. On the second afternoon the younger of the two technicians, a boy who could not have been more than twenty, came down to the kitchen with a question about the old clockwork. The lens had once rotated on a bath of mercury driven by a weight that fell slowly through the centre of the tower, and the weight had to be wound back up by hand every four hours. The boy wanted to know whether that was true.
+
+"It was true until 1972," Tomas said. "Then they put a motor in."
+
+"Every four hours? Through the night?"
+
+"Every four hours through the night."
+
+"What did you do between?"
+
+Tomas thought about it. "Read. Mended things. Watched."
+
+"Watched what?"
+
+He did not have an answer that would make sense to the boy, so he said "the water," which was true and was not the answer.
+
+On the fourth day Ines asked him to come up to the gallery so she could show him the new array. It was smaller than he had expected, a flat honeycomb of lenses no larger than a dinner plate, and it sat where the great rotating lens had been like a coin dropped into an empty bowl. She switched it on. It was very bright and very white and it did not move.
+
+"The character is the same," she said. "One flash every ten seconds. Ships won't know the difference."
+
+"They'll know," Tomas said, though he could not have explained how.
+
+She was kind enough not to argue. She showed him the panel where the fault codes would appear and the small red button he could press if he ever needed to force the light on, and she gave him a card with a telephone number. Then she and the crew loaded the crates back into the van, and the old lens went with them, wrapped in blankets, and by the time the tide came in the causeway was empty.
+
+He did not write in the exercise book that night. He sat at the kitchen table and listened to the light. That was the strange thing: it made no sound. The old lamp had hissed, and the motor had ticked, and the lens on its bath of mercury had turned with a low continuous note like a finger on the rim of a glass. He had not noticed the sound in years, and now that it had stopped he could hear nothing else.
+
+---
+
+On the mainland, a hundred and forty kilometres away, the control room received its first report from the tower at 18:42 that evening. The report consisted of a timestamp, a station identifier, a battery voltage, a lamp status, and a checksum. A program compared the report with the previous report, found nothing unusual, and filed it. Nobody looked at it. Nobody was supposed to look at it. The point of the system was that nobody had to.
+
+Ines Okafor drove home along the coast road and thought about the keeper. She had done nineteen of these conversions. Most of the keepers had already left by the time she arrived; the towers had been on part-time attendance for a decade, and the people who remained were caretakers rather than keepers in the old sense. Ferrand was different. He had stayed in the cottage. He had, she suspected, never really believed the letter until the van came.
+
+She was not sentimental about it. The array was better than the lamp. It would not fail on a night when the weight had not been wound, it would not dim as the mantle aged, it would not need a man to climb ninety-three steps in a gale to see why the flash had stopped. The sea did not care who tended the light, and the ships needed the light more than they needed the keeper. All of that was true.
+
+What she could not stop thinking about was the boy's question and the keeper's answer. Watched what? The water. She had spent her working life building instruments that watched things—voltages, light levels, the presence or absence of faults—and it had never occurred to her that watching might be something a person did with the whole of themselves and for no reason that could be written into a specification.
+
+---
+
+The first fault came in November. A gale took a corner of the solar panel and the battery voltage began to fall, slowly at first and then not slowly. The control room's program noticed at 03:10 and, following its rules, sent a text message to the duty engineer, who was asleep. He read it at 06:15, checked the forecast, decided the tower could not be reached by boat until the wind dropped, and scheduled a visit for two days later.
+
+At 04:00, before anyone on the mainland had read anything, the light had gone out.
+
+Tomas was awake. He was often awake in the small hours now; the habit of the four-hour winding had outlived its purpose by half a century and it had not left him. He saw the flash stop from the kitchen window. He counted to twenty, and then to forty, and then he put on his coat.
+
+The panel in the lamp room showed a code he did not know and a voltage he did not like. He pressed the red button. Nothing happened, because there was nothing left in the battery for the button to spend. He stood for a while in the dark with the wind pressing on the glass.
+
+Then he went down to the store under the stairs, past the biscuit tin, and came back up with the paraffin lamp he had kept from the days before the motor, and a can of fuel he had kept for no reason he could have named, and he lit it and set it in the middle of the array's honeycomb where it threw a soft yellow light out through the salt-streaked glass. It did not flash. It did not have the character. But it was light, and it was on the tower, and any ship that knew the coast would know what it meant.
+
+He sat with it until dawn, refilling it twice, and he wrote in the exercise book for the first time since the van had come. He did not write much. He recorded the hour the fault appeared, the hour he lit the lamp, the state of the sea, and one sentence that did not belong to either record: The light needs a keeper; it has never needed anything else.
+
+---
+
+Ines came out herself when the wind dropped. She found the panel patched, the array running, and the paraffin lamp cleaned and put away. The keeper made her coffee and did not mention it, and she read about it only later, in the log the authority required, in his careful upright hand: 04:00 fault; 04:20 auxiliary light established; 07:05 auxiliary light extinguished.
+
+Auxiliary light. She turned the phrase over. There was no column for it, so he had made one.
+
+She went back to the control room and wrote a proposal. It was short, and it was refused, and she wrote it again the following year with better numbers, and it was refused again, and the third time it was accepted because a ship had gone onto the rocks at a different tower on a night when the modem had failed and nobody had known for six hours. The proposal was for a line item that the authority had not budgeted for in forty years: a retained attendant, paid a small sum to live near each tower and to hold a key, whose only duty was to notice.
+
+The first attendant appointed under the new scheme was Tomas Ferrand. The letter said that the appointment was not personal. He put it in the biscuit tin with the exercise books.
+
+---
+
+Notes toward a description of a small harbour town, written for no one
+
+The town has two names, one for the map and one for the people who live there, and the second is older. It sits at the end of a road that goes nowhere else, which the residents regard as a feature. There is a harbour wall built of granite blocks so large that no one now living can say how they were lifted, a slipway green with weed, a chapel with a bell that is rung for the tide rather than for services, and a shop that sells everything on the principle that if you cannot buy it here you will have to drive an hour to buy it anywhere.
+
+The weather comes from the west and announces itself a day early in the colour of the light. Locals read the sky the way other people read headlines: with a glance, and with an accuracy that visitors find annoying. Rain is not remarked upon. Wind is remarked upon only above a certain force, and the force is not stated but is understood.
+
+Children learn to swim in the harbour, where the water is cold enough to make the lesson short. They learn to row before they learn to ride a bicycle, because a bicycle is of limited use in a place with one road. They learn the names of the rocks between the harbour and the point, each of which has a name and a story, and most of the stories end badly for somebody, which is why the names are remembered.
+
+The lighthouse stands on an island that becomes a peninsula twice a day. The causeway is marked with posts, and the posts are painted, and the paint is renewed each spring by whoever loses the argument about whose turn it is. People walk out at low tide to look at the tower and walk back before the water comes, and once every few years somebody does not, and is collected by the lifeboat, and is not sympathised with.
+
+The town is not picturesque, or rather it is picturesque only from a distance and only to people who do not have to live in it. Up close it is practical: nets, ropes, engines under tarpaulins, gutted fish, gulls, a smell that visitors describe as fresh and residents do not describe at all. It has never been prosperous and has never quite failed. It persists. Persisting is, in the end, what it is for.
+
+---
+
+On measurement
+
+There is a temptation, when a thing can be measured, to suppose that the measurement is the thing. A thermometer reports a number, and we say the room is warm, and most of the time no harm is done. But the number is not the warmth; it is a shadow the warmth casts on an instrument, and instruments are chosen by people with purposes, and purposes leave things out.
+
+The lighthouse authority measured the light. It had a specification: so many candela, such a character, such a range in clear weather. Against that specification the sealed array was superior in every respect, and the decision to remove the keeper followed as naturally as a conclusion follows from its premises. What the specification did not measure was the keeper's habit of being awake at four in the morning, or the paraffin lamp under the stairs, or the sentence in the blue exercise book. Those things had no units. They could not be compared, or budgeted, or reported to a control room. They were, in the language of the specification, out of scope.
+
+And yet when the battery failed it was the out-of-scope things that kept the light on.
+
+This is not an argument against measurement. It is an argument for humility about what a measurement can see. A benchmark is a lighthouse specification: it is precise, it is repeatable, it is indispensable, and it is blind to whatever nobody thought to put in a column. The right response is not to stop measuring but to keep a second book—one where the things that happened without a column are written down anyway, in the hope that someone will one day read it and add the column.

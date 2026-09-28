@@ -35,8 +35,11 @@ class HFLocalAdapter(ModelAdapter):
         max_length: int = 8192,
     ) -> None:
         try:
-            import torch
-            from transformers import AutoModelForCausalLM, AutoTokenizer
+            import torch  # type: ignore[import-not-found]
+            from transformers import (  # type: ignore[import-not-found]
+                AutoModelForCausalLM,
+                AutoTokenizer,
+            )
         except ImportError as exc:  # pragma: no cover - optional dependency
             raise RuntimeError(
                 "hf_local provider requires the 'hf' extra: uv pip install -e '.[hf]'"

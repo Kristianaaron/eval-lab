@@ -1,0 +1,980 @@
+"""Deterministic scorers: exact, normalized-exact, regex, json_schema (spec 13.2)."""
+
+from __future__ import annotations
+
+import json
+import re
+from typing import Any
+
+from eval_lab.schemas.models import ScoreResult
+from eval_lab.scorers.base import register_scorer
+
+
+def _norm(text: str) -> str:
+    """Normalize for comparison: lowercase, collapse whitespace, strip punct arts."""
+    return re.sub(r"\s+", " ", text.strip().lower())
+
+
+class ExactScorer:
+    scorer_id = "exact"
+
+    def __init__(self, expected: str, normalized: bool = True) -> None:
+        self.expected = expected
+        self.normalized = normalized
+
+    def score(self, *, output: str, task: Any = None, run_dir: Any = None) -> ScoreResult:
+        lhs = _norm(output) if self.normalized else output.strip()
+        rhs = _norm(self.expected) if self.normalized else self.expected.strip()
+        passed = lhs == rhs
+        return ScoreResult(
+            scorer_id=self.scorer_id,
+            score=1.0 if passed else 0.0,
+            passed=passed,
+            confidence=1.0,
+            required=False,
+            details={"expected": self.expected, "output": output},
+        )
+
+
+class RegexScorer:
+    scorer_id = "regex"
+
+    def __init__(self, pattern: str, flags: int = re.IGNORECASE) -> None:
+        self.pattern = pattern
+        self.regex = re.compile(pattern, flags)
+
+    def score(self, *, output: str, task: Any = None, run_dir: Any = None) -> ScoreResult:
+        m = self.regex.search(output)
+        passed = m is not None
+        return ScoreResult(
+            scorer_id=self.scorer_id,
+            score=1.0 if passed else 0.0,
+            passed=passed,
+            confidence=1.0,
+            required=False,
+            details={"pattern": self.pattern, "match": m.group(0) if m else None},
+        )
+
+
+class JsonSchemaScorer:
+    """Validate that output parses as JSON matching expected properties.
+
+    Supports: required top-level keys, exact values, and ``type`` checks.
+    """
+
+    scorer_id = "json_schema"
+
+    def __init__(
+        self,
+        expected: dict[str, Any] | None = None,
+        properties: dict[str, Any] | None = None,
+        required: list[str] | None = None,
+        *,
+        require_all_keys: bool = True,
+    ) -> None:
+        """Accept either a JSON-Schema-shaped mapping ({properties, required})
+        or flat properties/required arguments (task config form)."""
+        if expected is not None:
+            if isinstance(expected, dict) and "properties" in expected:
+                props = expected.get("properties", {})
+                req = expected.get("required", list(props.keys()))
+            else:
+                props = expected
+                req = list(props.keys())
+        else:
+            props = properties if properties is not None else {}
+            req = required if required is not None else list(props.keys())
+        self.expected_props = props
+        self.required = req
+        self.require_all_keys = require_all_keys
+
+    def score(self, *, output: str, task: Any = None, run_dir: Any = None) -> ScoreResult:
+        try:
+            data = json.loads(output)
+        except json.JSONDecodeError as exc:
+            return ScoreResult(
+                scorer_id=self.scorer_id,
+                score=0.0,
+                passed=False,
+                confidence=1.0,
+                required=False,
+                error=f"invalid JSON: {exc}",
+                details={"expected_required": self.required},
+            )
+
+        missing = [k for k in self.required if k not in data]
+        type_errors: list[str] = []
+        if (
+            isinstance(self.expected_props, dict)
+            and self.required
+            and "type" in self.expected_props
+        ):
+            # A single-object schema: {<key>: {type: ...}, ...}
+            for key, spec in self.expected_props.items():
+                if key not in data:
+                    continue
+                expected_type = spec.get("type") if isinstance(spec, dict) else None
+                if expected_type and not _check_type(data[key], expected_type):
+                    type_errors.append(f"{key}: expected {expected_type}")
+        passed = not missing and not type_errors
+        return ScoreResult(
+            scorer_id=self.scorer_id,
+            score=1.0 if passed else 0.0,
+            passed=passed,
+            confidence=1.0,
+            required=False,
+            details={"missing": missing, "type_errors": type_errors},
+        )
+
+
+def _check_type(value: Any, expected: str) -> bool:
+    mapping = {
+        "string": lambda v: isinstance(v, str),
+        "integer": lambda v: isinstance(v, int) and not isinstance(v, bool),
+        "number": lambda v: isinstance(v, (int, float)) and not isinstance(v, bool),
+        "boolean": lambda v: isinstance(v, bool),
+        "object": lambda v: isinstance(v, dict),
+        "array": lambda v: isinstance(v, list),
+    }
+    checker = mapping.get(expected)
+    return checker(value) if checker else True
+
+
+register_scorer("exact", ExactScorer)
+register_scorer("regex", RegexScorer)
+register_scorer("json_schema", JsonSchemaScorer)
+"""unit_test scorer: run a shell command and reward exit 0 (spec 13.3)."""
+
+from __future__ import annotations
+
+import subprocess
+import time
+from pathlib import Path
+from typing import Any
+
+from eval_lab.schemas.models import ScoreResult
+from eval_lab.scorers.base import register_scorer
+
+_STD_HEAD = 2000
+
+
+class UnitTestScorer:
+    """Run ``command`` in a workspace; pass iff the process exits 0.
+
+    Config:
+        command          the shell command to run (required).
+        workspace        working directory (default: run_dir, else cwd).
+        timeout_seconds  subprocess timeout (default 60).
+
+    A failure to *launch* the process is a setup failure and reports ``error``
+    (never a silent zero, never a raised exception). A non-zero exit is a
+    legitimate 0.0 failure.
+    """
+
+    scorer_id = "unit_test"
+
+    def __init__(
+        self, command: str, workspace: str | None = None, timeout_seconds: int = 60
+    ) -> None:
+        if not command or not command.strip():
+            raise ValueError("unit_test requires a non-empty command")
+        if timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be positive")
+        self.command = command
+        self.workspace = workspace
+        self.timeout_seconds = timeout_seconds
+
+    def score(self, *, output: str, task: Any = None, run_dir: Any = None) -> ScoreResult:
+        base: str
+        if self.workspace:
+            base = self.workspace
+        elif run_dir is not None:
+            base = str(run_dir)
+        else:
+            base = str(Path.cwd())
+
+        start = time.monotonic()
+        try:
+            proc = subprocess.run(
+                self.command,
+                shell=True,
+                cwd=base,
+                capture_output=True,
+                text=True,
+                timeout=self.timeout_seconds,
+            )
+            duration_s = round(time.monotonic() - start, 3)
+        except subprocess.TimeoutExpired as exc:
+            return ScoreResult(
+                scorer_id=self.scorer_id,
+                score=0.0,
+                passed=False,
+                details={
+                    "command": self.command,
+                    "workspace": base,
+                    "exit_code": None,
+                    "timed_out": True,
+                    "duration_s": float(self.timeout_seconds),
+                    "stdout_head": _maybe_head(exc.stdout),
+                    "stderr_head": _maybe_head(exc.stderr),
+                },
+            )
+        except OSError as exc:
+            # Setup failure: process could not be launched -> error.
+            return ScoreResult(
+                scorer_id=self.scorer_id,
+                score=0.0,
+                passed=False,
+                error=f"failed to run command in {base!r}: {exc}",
+                details={"command": self.command, "workspace": base},
+            )
+
+        passed = proc.returncode == 0
+        return ScoreResult(
+            scorer_id=self.scorer_id,
+            score=1.0 if passed else 0.0,
+            passed=passed,
+            details={
+                "command": self.command,
+                "workspace": base,
+                "exit_code": proc.returncode,
+                "duration_s": duration_s,
+                "stdout_head": proc.stdout[:_STD_HEAD],
+                "stderr_head": proc.stderr[:_STD_HEAD],
+            },
+        )
+
+
+def _maybe_head(text: object) -> str:
+    if not isinstance(text, str):
+        return ""
+    return text[:_STD_HEAD]
+
+
+register_scorer("unit_test", UnitTestScorer)
+"""SQLite-backed storage for run metadata (spec 16).
+
+Stores indexed metadata for querying while JSON/JSONL remain the portable
+source artifacts on disk (runs/<run-id>/...).
+"""
+
+from __future__ import annotations
+
+import json
+import sqlite3
+import threading
+import uuid
+from datetime import UTC, datetime
+from pathlib import Path
+
+
+class RunStore:
+    def __init__(self, db_path: str | Path) -> None:
+        self.db_path = Path(db_path)
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        self.conn.row_factory = sqlite3.Row
+        self._lock = threading.RLock()
+        self._migrate()
+
+    def _migrate(self) -> None:
+        with self._lock:
+            self.conn.executescript(
+                """
+                CREATE TABLE IF NOT EXISTS runs (
+                    run_id TEXT PRIMARY KEY,
+                    created_at TEXT NOT NULL,
+                    task_id TEXT,
+                    task_version INTEGER,
+                    model_id TEXT,
+                    harness_id TEXT,
+                    suite_id TEXT,
+                    level TEXT,
+                    status TEXT,
+                    aggregate_score REAL,
+                    passed INTEGER,
+                    run_dir TEXT
+                );
+                CREATE TABLE IF NOT EXISTS scores (
+                    run_id TEXT NOT NULL,
+                    scorer_id TEXT NOT NULL,
+                    required INTEGER,
+                    passed INTEGER,
+                    score REAL,
+                    details TEXT,
+                    PRIMARY KEY (run_id, scorer_id)
+                );
+                CREATE TABLE IF NOT EXISTS meta (
+                    schema_version TEXT
+                );
+                """
+            )
+            self.conn.execute("INSERT OR IGNORE INTO meta (schema_version) VALUES ('1.0')")
+            self.conn.commit()
+
+    def insert_run(self, manifest: dict[str, object]) -> str:
+        run_id_raw = manifest.get("run_id")
+        run_id: str = run_id_raw if isinstance(run_id_raw, str) else uuid.uuid4().hex[:12]
+        with self._lock:
+            self.conn.execute(
+                """INSERT OR REPLACE INTO runs
+                   (run_id, created_at, task_id, task_version, model_id, harness_id,
+                    suite_id, level, status, aggregate_score, passed, run_dir)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    run_id,
+                    manifest.get("created_at") or datetime.now(UTC).isoformat(),
+                    manifest.get("task_id"),
+                    manifest.get("task_version"),
+                    manifest.get("model_id"),
+                    manifest.get("harness_id"),
+                    manifest.get("suite_id"),
+                    manifest.get("level"),
+                    manifest.get("result_status", "pending"),
+                    manifest.get("aggregate_score"),
+                    1 if manifest.get("passed") else 0,
+                    manifest.get("run_dir"),
+                ),
+            )
+            self.conn.commit()
+        return run_id
+
+    def insert_scores(self, run_id: str, scores: list[dict[str, object]]) -> None:
+        with self._lock:
+            for s in scores:
+                self.conn.execute(
+                    """INSERT OR REPLACE INTO scores
+                       (run_id, scorer_id, required, passed, score, details)
+                       VALUES (?,?,?,?,?,?)""",
+                    (
+                        run_id,
+                        s.get("scorer_id"),
+                        1 if s.get("required") else 0,
+                        1 if s.get("passed") else 0,
+                        s.get("score"),
+                        json.dumps(s.get("details", {}), default=str),
+                    ),
+                )
+            self.conn.commit()
+
+    def update_status(
+        self,
+        run_id: str,
+        status: str,
+        *,
+        aggregate: float | None = None,
+        passed: bool | None = None,
+    ) -> None:
+        with self._lock:
+            self.conn.execute(
+                "UPDATE runs SET status=? WHERE run_id=?",
+                (status, run_id),
+            )
+            if aggregate is not None or passed is not None:
+                self.conn.execute(
+                    "UPDATE runs SET aggregate_score=?, passed=? WHERE run_id=?",
+                    (aggregate, 1 if passed else 0, run_id),
+                )
+            self.conn.commit()
+
+    def get_run(self, run_id: str) -> dict[str, object] | None:
+        with self._lock:
+            row = self.conn.execute("SELECT * FROM runs WHERE run_id=?", (run_id,)).fetchone()
+        return dict(row) if row else None
+
+    def list_runs(self, *, limit: int = 100) -> list[dict[str, object]]:
+        with self._lock:
+            rows = self.conn.execute(
+                "SELECT run_id, task_id, model_id, status, aggregate_score, "
+                "passed, created_at FROM runs ORDER BY created_at DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def run_scores(self, run_id: str) -> list[dict[str, object]]:
+        with self._lock:
+            rows = self.conn.execute(
+                "SELECT scorer_id, required, passed, score, details "
+                "FROM scores WHERE run_id=? ORDER BY rowid",
+                (run_id,),
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def close(self) -> None:
+        with self._lock:
+            self.conn.close()
+"""Run workspace layout and artifact persistence (spec 16)."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import shutil
+from pathlib import Path
+
+
+class RunWorkspace:
+    """Materializes the runs/<run-id>/ layout with manifest, result, traces."""
+
+    def __init__(self, runs_root: str | Path, run_id: str) -> None:
+        self.root = Path(runs_root) / run_id
+        self.root.mkdir(parents=True, exist_ok=True)
+        self.artifacts_dir = self.root / "artifacts"
+        self.artifacts_dir.mkdir(exist_ok=True)
+        self.validator_dir = self.root / "validator"
+        self.validator_dir.mkdir(exist_ok=True)
+
+    # -- paths --
+    def manifest_path(self) -> Path:
+        return self.root / "manifest.json"
+
+    def result_path(self) -> Path:
+        return self.root / "result.json"
+
+    def trace_path(self) -> Path:
+        return self.root / "trace.jsonl"
+
+    def scores_path(self) -> Path:
+        return self.root / "scores.jsonl"
+
+    def report_path(self) -> Path:
+        return self.root / "report.md"
+
+    # -- writers --
+    def write_manifest(self, manifest: dict[str, object]) -> None:
+        self.manifest_path().write_text(
+            json.dumps(manifest, indent=2, default=str), encoding="utf-8"
+        )
+
+    def write_result(self, result: dict[str, object]) -> None:
+        self.result_path().write_text(json.dumps(result, indent=2, default=str), encoding="utf-8")
+
+    def append_scores(self, scores: list[dict[str, object]]) -> None:
+        lines = [json.dumps(s, default=str) + "\n" for s in scores]
+        with self.scores_path().open("a", encoding="utf-8") as fh:
+            fh.writelines(lines)
+
+    def store_artifact(self, name: str, data: bytes | str) -> str:
+        """Write an artifact, return its relative path for the manifest."""
+        rel = self.artifacts_dir / name
+        raw = data.encode("utf-8") if isinstance(data, str) else data
+        rel.write_bytes(raw)
+        return str(rel.relative_to(self.root.parent.parent))
+
+
+def sha256_of(path: str | Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def fingerprint_dir(path: str | Path) -> str:
+    """A deterministic content hash of a directory (sorted rel paths + hashes)."""
+    base = Path(path)
+    if not base.exists():
+        return "MISSING"
+    lines: list[str] = []
+    for p in sorted(base.rglob("*")):
+        if p.is_file():
+            lines.append(f"{p.relative_to(base)}:{sha256_of(p)}")
+    return hashlib.sha256("\n".join(lines).encode()).hexdigest()
+
+
+def copy_tree(src: str | Path, dst: str | Path) -> None:
+    shutil.copytree(src, dst)
+"""Run-row data model and loaders for analysis (Phase 5).
+
+Analysis works over lightweight, immutable :class:`RunRow` records rather than
+the persistence layer directly, so every comparison/slice function is pure and
+unit-testable. Rows are loaded from the SQLite index plus the portable run
+manifest (for duration), with task labels resolved from the task catalogue.
+"""
+
+from __future__ import annotations
+
+import json
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+from eval_lab.schemas.models import TaskLabels
+from eval_lab.storage.sqlite import RunStore
+
+# Resolves a task id to its labels (None when the catalog cannot resolve it).
+LabelResolver = Callable[[str], TaskLabels | None]
+
+
+def task_labels_to_map(labels: TaskLabels) -> dict[str, frozenset[str]]:
+    """Export the label dimensions that slicing can group by."""
+    return {
+        "domain": frozenset(labels.domains),
+        "capability": frozenset(labels.capabilities),
+        "modality": frozenset(labels.modalities),
+        "trajectory_stage": frozenset(labels.trajectory_stages),
+        "failure_mode": frozenset(labels.failure_modes_targeted),
+        "intervention": frozenset(labels.intervention),
+        "difficulty": frozenset([labels.difficulty]),
+    }
+
+
+@dataclass(frozen=True)
+class RunRow:
+    """One executed task repetition ready for aggregation."""
+
+    run_id: str
+    task_id: str
+    task_version: int
+    model_id: str
+    suite_id: str | None
+    task_level: str | None
+    seed: int | None
+    score: float | None
+    passed: bool | None
+    duration_s: float | None
+    labels: Mapping[str, frozenset[str]] = field(default_factory=dict)
+    # Extra numeric resources (e.g. peak memory) for resource-delta comparison.
+    resources: Mapping[str, float] = field(default_factory=dict)
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _manifest_duration(run_dir: str | Path) -> float | None:
+    """Read ``duration_s`` from a run manifest, tolerating a missing file."""
+    data = _read_json(Path(run_dir) / "manifest.json")
+    value = data.get("duration_s")
+    return float(value) if isinstance(value, (int, float)) else None
+
+
+def load_run_rows(
+    store: RunStore,
+    *,
+    model_id: str | None = None,
+    suite_id: str | None = None,
+    label_resolver: LabelResolver | None = None,
+    runs_root: str | Path | None = None,
+) -> list[RunRow]:
+    """Load completed runs from the index as :class:`RunRow` records.
+
+    ``runs_root`` locates manifests for duration (defaults to the store's db
+    parent). Only indexed runs are returned; the caller filters by model/suite.
+    """
+    rows: list[RunRow] = []
+    base = Path(runs_root) if runs_root is not None else store.db_path.parent
+    for r in store.list_runs(limit=100_000):
+        mid = r.get("model_id")
+        sid = r.get("suite_id")
+        if model_id is not None and mid != model_id:
+            continue
+        if suite_id is not None and sid != suite_id:
+            continue
+        task_id = str(r["task_id"])
+        task_spec = label_resolver(task_id) if label_resolver else None
+        labels = task_labels_to_map(task_spec) if task_spec else {}
+        run_dir = r.get("run_dir")
+        run_dir_path = Path(str(run_dir)) if run_dir else base / str(r["run_id"])
+        score_raw = r.get("aggregate_score")
+        passed_raw = r.get("passed")
+        task_version_raw = r.get("task_version")
+        rows.append(
+            RunRow(
+                run_id=str(r["run_id"]),
+                task_id=task_id,
+                task_version=(
+                    int(task_version_raw) if isinstance(task_version_raw, (int, float)) else 0
+                ),
+                model_id=str(mid) if mid else "",
+                suite_id=str(sid) if sid else None,
+                task_level=str(r["level"]) if r.get("level") else None,
+                seed=None,
+                score=float(score_raw) if isinstance(score_raw, (int, float)) else None,
+                passed=bool(passed_raw) if passed_raw is not None else None,
+                duration_s=_manifest_duration(run_dir_path),
+                labels=labels,
+            )
+        )
+    return rows
+"""Load and validate task specs from YAML (spec 6.1, 8)."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import yaml
+
+from eval_lab.schemas.models import SuiteSpec, TaskSpec
+
+
+class TaskLoadError(ValueError):
+    """Raised when a task or suite file cannot be parsed or validated."""
+
+
+def load_task_yaml(path: str | Path) -> TaskSpec:
+    """Load and validate a single task YAML file."""
+    p = Path(path)
+    if not p.exists():
+        raise TaskLoadError(f"task file not found: {p}")
+    try:
+        raw = yaml.safe_load(p.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:  # pragma: no cover - defensive
+        raise TaskLoadError(f"invalid YAML in {p}: {exc}") from exc
+    if not isinstance(raw, dict):
+        raise TaskLoadError(f"task file must contain a mapping, got {type(raw).__name__}: {p}")
+    try:
+        task = TaskSpec.model_validate(raw)
+    except Exception as exc:  # pydantic ValidationError
+        raise TaskLoadError(f"task validation failed for {p}: {exc}") from exc
+    return task.with_source_dir(p.resolve().parent)
+
+
+def load_suite_yaml(path: str | Path) -> SuiteSpec:
+    """Load and validate a single suite YAML file."""
+    p = Path(path)
+    if not p.exists():
+        raise TaskLoadError(f"suite file not found: {p}")
+    try:
+        raw = yaml.safe_load(p.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:  # pragma: no cover - defensive
+        raise TaskLoadError(f"invalid YAML in {p}: {exc}") from exc
+    if not isinstance(raw, dict):
+        raise TaskLoadError(f"suite file must contain a mapping, got {type(raw).__name__}: {p}")
+    try:
+        return SuiteSpec.model_validate(raw)
+    except Exception as exc:
+        raise TaskLoadError(f"suite validation failed for {p}: {exc}") from exc
+
+
+def check_fixture_references(task: TaskSpec, base_dir: str | Path) -> list[str]:
+    """Check that workspace fixtures referenced by a task exist relative to base_dir.
+
+    Returns a list of missing fixture paths (empty when all resolve).
+    """
+    base = Path(base_dir)
+    missing: list[str] = []
+    fixture = task.input.workspace_fixture
+    if fixture:
+        candidate = base / fixture
+        if not candidate.exists():
+            missing.append(str(candidate))
+    for attachment in task.input.attachments:
+        candidate = base / attachment
+        if not candidate.exists():
+            missing.append(str(candidate))
+    return missing
+"""Append-only trace recorder (spec 6.5)."""
+
+from __future__ import annotations
+
+import json
+import time
+from pathlib import Path
+
+
+class TraceRecorder:
+    """Write append-only JSON lines with monotonic sequence numbers."""
+
+    def __init__(self, run_id: str, path: str | Path) -> None:
+        self.run_id = run_id
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._fh = self.path.open("a", encoding="utf-8")
+        self._seq = 0
+
+    def record(
+        self,
+        event_type: str,
+        payload: dict[str, object],
+        *,
+        span_id: str | None = None,
+        parent_span_id: str | None = None,
+    ) -> None:
+        event = {
+            "schema_version": "1.0",
+            "run_id": self.run_id,
+            "sequence": self._seq,
+            "time_monotonic_ns": time.monotonic_ns(),
+            "event_type": event_type,
+            "span_id": span_id,
+            "parent_span_id": parent_span_id,
+            "payload": payload,
+        }
+        self._seq += 1
+        self._fh.write(json.dumps(event) + "\n")
+        self._fh.flush()
+
+    def close(self) -> None:
+        self._fh.close()
+"""Shell and filesystem tools (spec 12.2)."""
+
+from __future__ import annotations
+
+import os
+import subprocess
+from pathlib import Path
+from typing import Any
+
+from eval_lab.tools.protocol import SideEffect, ToolContext, ToolResult, register_tool
+
+
+class ShellTool:
+    name: str = "shell"
+    side_effect: SideEffect = "workspace"
+    input_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {"command": {"type": "string"}},
+        "required": ["command"],
+    }
+
+    def execute(self, args: dict[str, Any], context: ToolContext) -> ToolResult:
+        command = args.get("command", "")
+        cwd = context.workspace_root
+        try:
+            proc = subprocess.run(
+                command,
+                shell=True,
+                cwd=cwd,
+                capture_output=True,
+                text=True,
+                timeout=context.timeout_s,
+                env={**os.environ, "PYTHONHASHSEED": "0"},
+            )
+        except subprocess.TimeoutExpired:
+            return ToolResult(ok=False, output="", error="command timed out", truncated=True)
+        except Exception as exc:
+            return ToolResult(ok=False, output="", error=str(exc))
+        combined = (proc.stdout or "") + (proc.stderr or "")
+        truncated = len(combined) > context.max_output_chars
+        if truncated:
+            combined = combined[: context.max_output_chars] + "\n... [truncated]"
+        return ToolResult(
+            ok=proc.returncode == 0,
+            output=combined,
+            exit_code=proc.returncode,
+            error=None if proc.returncode == 0 else "command returned nonzero",
+            truncated=truncated,
+        )
+
+
+class FileReadTool:
+    name: str = "file_read"
+    side_effect: SideEffect = "none"
+    input_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {"path": {"type": "string"}},
+        "required": ["path"],
+    }
+
+    def execute(self, args: dict[str, Any], context: ToolContext) -> ToolResult:
+        raw = args.get("path", "")
+        if context.workspace_root:
+            p = _resolve_within(raw, Path(context.workspace_root))
+        else:
+            p = Path(raw)
+        if not p.exists() or not p.is_file():
+            return ToolResult(ok=False, output="", error=f"file not found: {raw}")
+        content = p.read_text(encoding="utf-8", errors="replace")
+        truncated = len(content) > context.max_output_chars
+        if truncated:
+            content = content[: context.max_output_chars] + "\n... [truncated]"
+        return ToolResult(ok=True, output=content, truncated=truncated)
+
+
+class FileWriteTool:
+    name: str = "file_write"
+    side_effect: SideEffect = "workspace"
+    input_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {"path": {"type": "string"}, "content": {"type": "string"}},
+        "required": ["path", "content"],
+    }
+
+    def execute(self, args: dict[str, Any], context: ToolContext) -> ToolResult:
+        raw = args.get("path", "")
+        content = args.get("content", "")
+        if context.workspace_root:
+            p = _resolve_within(raw, Path(context.workspace_root))
+        else:
+            p = Path(raw)
+        try:
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(content, encoding="utf-8")
+        except Exception as exc:
+            return ToolResult(ok=False, output="", error=str(exc))
+        return ToolResult(ok=True, output=f"wrote {p}")
+
+
+class ListFilesTool:
+    name: str = "list_files"
+    side_effect: SideEffect = "none"
+    input_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {"path": {"type": "string"}},
+        "required": [],
+    }
+
+    def execute(self, args: dict[str, Any], context: ToolContext) -> ToolResult:
+        base = Path(context.workspace_root) if context.workspace_root else Path.cwd()
+        rel = args.get("path", ".")
+        p = (base / rel).resolve() if rel != "." else base
+        if not p.exists():
+            return ToolResult(ok=False, output="", error=f"path not found: {rel}")
+        entries = [
+            str(x.relative_to(base)) + ("/" if x.is_dir() else "") for x in sorted(p.iterdir())
+        ]
+        return ToolResult(ok=True, output="\n".join(entries) if entries else "(empty)")
+
+
+def _resolve_within(raw: str, root: Path) -> Path:
+    """Resolve raw path but refuse to escape the workspace root."""
+    p = (root / raw).resolve()
+    root_resolved = root.resolve()
+    if not p.is_relative_to(root_resolved):
+        raise ValueError(f"path escapes workspace: {raw}")
+    return p
+
+
+register_tool(ShellTool())
+register_tool(FileReadTool())
+register_tool(FileWriteTool())
+register_tool(ListFilesTool())
+"""Sandbox protocol and implementations (spec 12.1)."""
+
+from __future__ import annotations
+
+import os
+import shutil
+import subprocess
+import tempfile
+from typing import Any, Protocol
+
+
+class Sandbox(Protocol):
+    def prepare(self) -> str:
+        """Create the workspace, return its path."""
+        ...
+
+    def destroy(self) -> None: ...
+    def workspace_path(self) -> str: ...
+    def run_command(self, command: str, *, timeout_s: float = 30.0) -> tuple[int, str]: ...
+
+
+class LocalProcessSandbox:
+    """A lightweight local-process sandbox producing an isolated temp workspace.
+
+    For smoke/unit tests and systems where Docker is unavailable. No OS-level
+    isolation beyond an isolated temp directory (spec backs is explicitly a
+    smoke-test backend).
+    """
+
+    def __init__(self, seed_workspace: str | None = None) -> None:
+        self._seed = seed_workspace
+        self._ws: str | None = None
+
+    def prepare(self) -> str:
+        self._ws = tempfile.mkdtemp(prefix="eval-lab-ws-")
+        if self._seed:
+            shutil.copytree(self._seed, self._ws, dirs_exist_ok=True)
+        return self._ws
+
+    def destroy(self) -> None:
+        if self._ws:
+            shutil.rmtree(self._ws, ignore_errors=True)
+            self._ws = None
+
+    def workspace_path(self) -> str:
+        if self._ws is None:
+            raise RuntimeError("sandbox not prepared")
+        return self._ws
+
+    def run_command(self, command: str, *, timeout_s: float = 30.0) -> tuple[int, str]:
+        proc = subprocess.run(
+            command,
+            shell=True,
+            cwd=self.workspace_path(),
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+            env={**os.environ, "PYTHONHASHSEED": "0"},
+        )
+        return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
+
+
+class DockerSandbox:
+    """Docker-container sandbox (spec 12.1 production backend).
+
+    Best-effort using ``docker run`` with an image, no network, and a mounted
+    workspace. Raises RuntimeError if Docker is unavailable.
+    """
+
+    def __init__(self, image: str, *, network: str = "none") -> None:
+        self.image = image
+        self.network = network
+        self._container: str | None = None
+        self._ws: str | None = None
+
+    def prepare(self) -> str:
+        self._ws = tempfile.mkdtemp(prefix="eval-lab-docker-ws-")
+        # Validate docker is present.
+        if shutil.which("docker") is None:
+            raise RuntimeError("docker binary not found; use local_process sandbox")
+        # Create a container with the workspace mounted at /ws and no network.
+        cmd = [
+            "docker",
+            "run",
+            "-d",
+            "--network",
+            self.network,
+            "-v",
+            f"{self._ws}:/ws",
+            self.image,
+            "sleep",
+            "infinity",
+        ]
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        if proc.returncode != 0:
+            raise RuntimeError(f"docker run failed: {proc.stderr.strip()}")
+        self._container = proc.stdout.strip()
+        return self._ws
+
+    def destroy(self) -> None:
+        if self._container:
+            subprocess.run(["docker", "rm", "-f", self._container], capture_output=True, timeout=60)
+            self._container = None
+        if self._ws:
+            shutil.rmtree(self._ws, ignore_errors=True)
+            self._ws = None
+
+    def workspace_path(self) -> str:
+        if self._ws is None:
+            raise RuntimeError("sandbox not prepared")
+        return self._ws
+
+    def run_command(self, command: str, *, timeout_s: float = 30.0) -> tuple[int, str]:
+        if self._container is None:
+            raise RuntimeError("sandbox not prepared")
+        proc = subprocess.run(
+            ["docker", "exec", self._container, "sh", "-c", command],
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+        )
+        return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
+
+
+def build_sandbox(kind: str, config: dict[str, Any]) -> Sandbox:
+    """Build a sandbox from a task's ExecutionSpec (spec 12.1)."""
+    if kind == "local_process":
+        return LocalProcessSandbox(seed_workspace=config.get("seed_workspace"))
+    if kind == "docker":
+        return DockerSandbox(
+            image=config.get("image", "python:3.12-slim"), network=config.get("network", "none")
+        )
+    raise ValueError(f"unsupported sandbox: {kind}")

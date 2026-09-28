@@ -1,0 +1,458 @@
+MERIDIAN SYSTEMS — CORPORATE POLICY COMPENDIUM
+Consolidated edition containing 18 policies. Sections are numbered in publication order; the summary table at the head of each section is authoritative.
+
+SECTION 1: POL-664 — Expense Reimbursement
+Summary table
+  Policy id:          POL-664
+  Owning department:  Customer Support
+  Effective date:     24 November 2019
+  Review cadence:     semi-annual
+  Budget code:        BC-B287
+  Approval threshold: 250 EUR
+  Escalation contact: Rosa Kowalski
+  Supersedes:         none
+
+Purpose and scope
+The owning department reviews this document at the stated cadence and publishes a change note with every revision. This policy applies to all employees, contractors and visitors of Meridian Systems unless a written exemption has been granted by the owning department. Temporary measures introduced during an incident expire automatically after seventy-two hours unless renewed. Audit evidence is sampled twice a year and findings are reported to the relevant department head. Costs incurred under this policy are charged to the budget code listed in the summary table unless a project code has been agreed in advance.
+
+Procedure
+  1. Submit the request form with the required attachments.
+  2. Obtain approval from the line manager and, where the amount exceeds the threshold, the department head.
+  3. Schedule the follow-up review at the interval defined by the cadence.
+  4. Record the approval reference in the tracking system.
+  5. Notify the affected parties at least two working days in advance.
+  6. Verify completion and close the ticket with a short summary.
+
+Notes
+Temporary measures introduced during an incident expire automatically after seventy-two hours unless renewed. This policy applies to all employees, contractors and visitors of Meridian Systems unless a written exemption has been granted by the owning department. Records created under this policy are retained according to the schedule maintained by Data Governance.
+
+SECTION 2: POL-262 — Remote Work Equipment
+Summary table
+  Policy id:          POL-262
+  Owning department:  Security
+  Effective date:     01 September 2023
+  Review cadence:     annual
+  Budget code:        BC-H754
+  Approval threshold: 1000 EUR
+  Escalation contact: Rosa Kowalski
+  Supersedes:         none
+
+Purpose and scope
+Requests for exceptions must be submitted through the internal service desk and will be reviewed within ten working days. Temporary measures introduced during an incident expire automatically after seventy-two hours unless renewed. Audit evidence is sampled twice a year and findings are reported to the relevant department head. Managers are responsible for ensuring that the people reporting to them are aware of the obligations described here. Where this policy conflicts with a local legal requirement, the local requirement prevails and the conflict must be reported. This policy applies to all employees, contractors and visitors of Meridian Systems unless a written exemption has been granted by the owning department. The owning department reviews this document at the stated cadence and publishes a change note with every revision.
+
+Procedure
+  1. Submit the request form with the required attachments.
+  2. Obtain approval from the line manager and, where the amount exceeds the threshold, the department head.
+  3. Schedule the follow-up review at the interval defined by the cadence.
+  4. Verify completion and close the ticket with a short summary.
+  5. Record the approval reference in the tracking system.
+  6. Notify the affected parties at least two working days in advance.
+
+Notes
+Approvals may be delegated in writing for a period not exceeding ninety days. The procedure section below describes the steps in the order they must be performed.
+
+SECTION 3: POL-709 — On-Call Compensation
+Summary table
+  Policy id:          POL-709
+  Owning department:  Finance
+  Effective date:     01 October 2019
+  Review cadence:     quarterly
+  Budget code:        BC-A232
+  Approval threshold: 10000 EUR
+  Escalation contact: Ximena Adeyemi
+  Supersedes:         none
+
+Purpose and scope
+Managers are responsible for ensuring that the people reporting to them are aware of the obligations described here. This policy applies to all employees, contractors and visitors of Meridian Systems unless a written exemption has been granted by the owning department. Questions about interpretation should be directed to the escalation contact named below before any action is taken. Records created under this policy are retained according to the schedule maintained by Data Governance. The owning department reviews this document at the stated cadence and publishes a change note with every revision.
+
+Procedure
+  1. Schedule the follow-up review at the interval defined by the cadence.
+  2. Complete the checklist and file it with the records team.
+  3. Verify completion and close the ticket with a short summary.
+  4. Submit the request form with the required attachments.
+
+Notes
+Questions about interpretation should be directed to the escalation contact named below before any action is taken. Costs incurred under this policy are charged to the budget code listed in the summary table unless a project code has been agreed in advance.
+
+SECTION 4: POL-731 — Training Reimbursement
+Summary table
+  Policy id:          POL-731
+  Owning department:  Legal
+  Effective date:     17 September 2020
+  Review cadence:     biennial
+  Budget code:        BC-C492
+  Approval threshold: 10000 EUR
+  Escalation contact: Greta Rahman
+  Supersedes:         POL-159
+
+Purpose and scope
+The owning department reviews this document at the stated cadence and publishes a change note with every revision. Managers are responsible for ensuring that the people reporting to them are aware of the obligations described here. Records created under this policy are retained according to the schedule maintained by Data Governance. Audit evidence is sampled twice a year and findings are reported to the relevant department head. This policy applies to all employees, contractors and visitors of Meridian Systems unless a written exemption has been granted by the owning department. Questions about interpretation should be directed to the escalation contact named below before any action is taken. Training material supporting this policy is available on the learning portal and must be completed within thirty days of joining.
+
+Procedure
+  1. Verify completion and close the ticket with a short summary.
+  2. Schedule the follow-up review at the interval defined by the cadence.
+  3. Notify the affected parties at least two working days in advance.
+  4. Record the approval reference in the tracking system.
+
+Notes
+Records created under this policy are retained according to the schedule maintained by Data Governance. Automated reminders are issued fourteen days before any deadline defined in this policy.
+
+SECTION 5: POL-694 — Records Disposal
+Summary table
+  Policy id:          POL-694
+  Owning department:  Security
+  Effective date:     03 January 2023
+  Review cadence:     biennial
+  Budget code:        BC-C429
+  Approval threshold: 5000 EUR
+  Escalation contact: Rosa Varga
+  Supersedes:         POL-559
+
+Purpose and scope
+The procedure section below describes the steps in the order they must be performed. This policy applies to all employees, contractors and visitors of Meridian Systems unless a written exemption has been granted by the owning department. Training material supporting this policy is available on the learning portal and must be completed within thirty days of joining. Questions about interpretation should be directed to the escalation contact named below before any action is taken. Audit evidence is sampled twice a year and findings are reported to the relevant department head.
+
+Procedure
+  1. Schedule the follow-up review at the interval defined by the cadence.
+  2. Verify completion and close the ticket with a short summary.
+  3. Record the approval reference in the tracking system.
+  4. Submit the request form with the required attachments.
+  5. Complete the checklist and file it with the records team.
+
+Notes
+Automated reminders are issued fourteen days before any deadline defined in this policy. Audit evidence is sampled twice a year and findings are reported to the relevant department head. Costs incurred under this policy are charged to the budget code listed in the summary table unless a project code has been agreed in advance. Questions about interpretation should be directed to the escalation contact named below before any action is taken.
+
+SECTION 6: POL-159 — Data Retention
+Summary table
+  Policy id:          POL-159
+  Owning department:  People Operations
+  Effective date:     23 February 2020
+  Review cadence:     quarterly
+  Budget code:        BC-A415
+  Approval threshold: 2500 EUR
+  Escalation contact: Chen Mbeki
+  Supersedes:         none
+
+Purpose and scope
+Where this policy conflicts with a local legal requirement, the local requirement prevails and the conflict must be reported. Automated reminders are issued fourteen days before any deadline defined in this policy. This policy applies to all employees, contractors and visitors of Meridian Systems unless a written exemption has been granted by the owning department. Audit evidence is sampled twice a year and findings are reported to the relevant department head.
+
+Procedure
+  1. Record the approval reference in the tracking system.
+  2. Verify completion and close the ticket with a short summary.
+  3. Notify the affected parties at least two working days in advance.
+  4. Obtain approval from the line manager and, where the amount exceeds the threshold, the department head.
+
+Notes
+Audit evidence is sampled twice a year and findings are reported to the relevant department head. Temporary measures introduced during an incident expire automatically after seventy-two hours unless renewed.
+
+SECTION 7: POL-661 — Device Encryption
+Summary table
+  Policy id:          POL-661
+  Owning department:  People Operations
+  Effective date:     13 September 2023
+  Review cadence:     biennial
+  Budget code:        BC-B384
+  Approval threshold: 500 EUR
+  Escalation contact: Priya Adeyemi
+  Supersedes:         POL-234
+
+Purpose and scope
+This policy applies to all employees, contractors and visitors of Meridian Systems unless a written exemption has been granted by the owning department. Temporary measures introduced during an incident expire automatically after seventy-two hours unless renewed. Approvals may be delegated in writing for a period not exceeding ninety days. Non-compliance may result in the withdrawal of access rights and, where appropriate, disciplinary action. Managers are responsible for ensuring that the people reporting to them are aware of the obligations described here. Questions about interpretation should be directed to the escalation contact named below before any action is taken. Records created under this policy are retained according to the schedule maintained by Data Governance.
+
+Procedure
+  1. Verify completion and close the ticket with a short summary.
+  2. Complete the checklist and file it with the records team.
+  3. Schedule the follow-up review at the interval defined by the cadence.
+  4. Submit the request form with the required attachments.
+
+Notes
+Temporary measures introduced during an incident expire automatically after seventy-two hours unless renewed. Records created under this policy are retained according to the schedule maintained by Data Governance. Questions about interpretation should be directed to the escalation contact named below before any action is taken. Training material supporting this policy is available on the learning portal and must be completed within thirty days of joining.
+
+SECTION 8: POL-714 — Internal Mobility
+Summary table
+  Policy id:          POL-714
+  Owning department:  Procurement
+  Effective date:     04 January 2022
+  Review cadence:     annual
+  Budget code:        BC-G401
+  Approval threshold: 1000 EUR
+  Escalation contact: Greta Rahman
+  Supersedes:         POL-478
+
+Purpose and scope
+Training material supporting this policy is available on the learning portal and must be completed within thirty days of joining. Where this policy conflicts with a local legal requirement, the local requirement prevails and the conflict must be reported. Managers are responsible for ensuring that the people reporting to them are aware of the obligations described here. Requests for exceptions must be submitted through the internal service desk and will be reviewed within ten working days. Audit evidence is sampled twice a year and findings are reported to the relevant department head. Non-compliance may result in the withdrawal of access rights and, where appropriate, disciplinary action. Temporary measures introduced during an incident expire automatically after seventy-two hours unless renewed.
+
+Procedure
+  1. Complete the checklist and file it with the records team.
+  2. Notify the affected parties at least two working days in advance.
+  3. Obtain approval from the line manager and, where the amount exceeds the threshold, the department head.
+  4. Submit the request form with the required attachments.
+  5. Schedule the follow-up review at the interval defined by the cadence.
+  6. Verify completion and close the ticket with a short summary.
+
+Notes
+Audit evidence is sampled twice a year and findings are reported to the relevant department head. Records created under this policy are retained according to the schedule maintained by Data Governance. This policy applies to all employees, contractors and visitors of Meridian Systems unless a written exemption has been granted by the owning department.
+
+SECTION 9: POL-791 — Acceptable Use
+Summary table
+  Policy id:          POL-791
+  Owning department:  People Operations
+  Effective date:     19 October 2024
+  Review cadence:     biennial
+  Budget code:        BC-H389
+  Approval threshold: 5000 EUR
+  Escalation contact: Emeka Kowalski
+  Supersedes:         POL-559
+
+Purpose and scope
+Training material supporting this policy is available on the learning portal and must be completed within thirty days of joining. Records created under this policy are retained according to the schedule maintained by Data Governance. The owning department reviews this document at the stated cadence and publishes a change note with every revision. Requests for exceptions must be submitted through the internal service desk and will be reviewed within ten working days.
+
+Procedure
+  1. Submit the request form with the required attachments.
+  2. Schedule the follow-up review at the interval defined by the cadence.
+  3. Verify completion and close the ticket with a short summary.
+  4. Record the approval reference in the tracking system.
+  5. Notify the affected parties at least two working days in advance.
+
+Notes
+Temporary measures introduced during an incident expire automatically after seventy-two hours unless renewed. Records created under this policy are retained according to the schedule maintained by Data Governance. Where this policy conflicts with a local legal requirement, the local requirement prevails and the conflict must be reported.
+
+SECTION 10: POL-261 — Third-Party Audits
+Summary table
+  Policy id:          POL-261
+  Owning department:  Legal
+  Effective date:     08 May 2020
+  Review cadence:     quarterly
+  Budget code:        BC-H529
+  Approval threshold: 250 EUR
+  Escalation contact: Chen Varga
+  Supersedes:         none
+
+Purpose and scope
+Audit evidence is sampled twice a year and findings are reported to the relevant department head. Where this policy conflicts with a local legal requirement, the local requirement prevails and the conflict must be reported. Training material supporting this policy is available on the learning portal and must be completed within thirty days of joining. Costs incurred under this policy are charged to the budget code listed in the summary table unless a project code has been agreed in advance.
+
+Procedure
+  1. Schedule the follow-up review at the interval defined by the cadence.
+  2. Submit the request form with the required attachments.
+  3. Record the approval reference in the tracking system.
+  4. Obtain approval from the line manager and, where the amount exceeds the threshold, the department head.
+  5. Verify completion and close the ticket with a short summary.
+
+Notes
+Records created under this policy are retained according to the schedule maintained by Data Governance. Where this policy conflicts with a local legal requirement, the local requirement prevails and the conflict must be reported.
+
+SECTION 11: POL-234 — Records Disposal
+Summary table
+  Policy id:          POL-234
+  Owning department:  Legal
+  Effective date:     23 April 2019
+  Review cadence:     quarterly
+  Budget code:        BC-B953
+  Approval threshold: 500 EUR
+  Escalation contact: Emeka Kowalski
+  Supersedes:         none
+
+Purpose and scope
+Questions about interpretation should be directed to the escalation contact named below before any action is taken. Training material supporting this policy is available on the learning portal and must be completed within thirty days of joining. Costs incurred under this policy are charged to the budget code listed in the summary table unless a project code has been agreed in advance. Managers are responsible for ensuring that the people reporting to them are aware of the obligations described here.
+
+Procedure
+  1. Submit the request form with the required attachments.
+  2. Schedule the follow-up review at the interval defined by the cadence.
+  3. Notify the affected parties at least two working days in advance.
+  4. Record the approval reference in the tracking system.
+  5. Verify completion and close the ticket with a short summary.
+  6. Complete the checklist and file it with the records team.
+
+Notes
+The owning department reviews this document at the stated cadence and publishes a change note with every revision. Questions about interpretation should be directed to the escalation contact named below before any action is taken. Non-compliance may result in the withdrawal of access rights and, where appropriate, disciplinary action. Automated reminders are issued fourteen days before any deadline defined in this policy.
+
+SECTION 12: POL-238 — Data Retention
+Summary table
+  Policy id:          POL-238
+  Owning department:  Customer Support
+  Effective date:     31 March 2024
+  Review cadence:     annual
+  Budget code:        BC-F402
+  Approval threshold: 500 EUR
+  Escalation contact: Keziah Okafor
+  Supersedes:         none
+
+Purpose and scope
+Training material supporting this policy is available on the learning portal and must be completed within thirty days of joining. The procedure section below describes the steps in the order they must be performed. The owning department reviews this document at the stated cadence and publishes a change note with every revision. Costs incurred under this policy are charged to the budget code listed in the summary table unless a project code has been agreed in advance. Automated reminders are issued fourteen days before any deadline defined in this policy. Temporary measures introduced during an incident expire automatically after seventy-two hours unless renewed.
+
+Procedure
+  1. Verify completion and close the ticket with a short summary.
+  2. Schedule the follow-up review at the interval defined by the cadence.
+  3. Complete the checklist and file it with the records team.
+  4. Record the approval reference in the tracking system.
+
+Notes
+Records created under this policy are retained according to the schedule maintained by Data Governance. The procedure section below describes the steps in the order they must be performed. Audit evidence is sampled twice a year and findings are reported to the relevant department head.
+
+SECTION 13: POL-559 — Physical Key Management
+Summary table
+  Policy id:          POL-559
+  Owning department:  Data Governance
+  Effective date:     17 December 2023
+  Review cadence:     semi-annual
+  Budget code:        BC-B821
+  Approval threshold: 2500 EUR
+  Escalation contact: Nikhil Rahman
+  Supersedes:         none
+
+Purpose and scope
+Training material supporting this policy is available on the learning portal and must be completed within thirty days of joining. Requests for exceptions must be submitted through the internal service desk and will be reviewed within ten working days. Managers are responsible for ensuring that the people reporting to them are aware of the obligations described here. Questions about interpretation should be directed to the escalation contact named below before any action is taken.
+
+Procedure
+  1. Schedule the follow-up review at the interval defined by the cadence.
+  2. Verify completion and close the ticket with a short summary.
+  3. Complete the checklist and file it with the records team.
+  4. Obtain approval from the line manager and, where the amount exceeds the threshold, the department head.
+
+Notes
+Questions about interpretation should be directed to the escalation contact named below before any action is taken. Automated reminders are issued fourteen days before any deadline defined in this policy.
+
+SECTION 14: POL-692 — Records Disposal
+Summary table
+  Policy id:          POL-692
+  Owning department:  Engineering
+  Effective date:     24 April 2021
+  Review cadence:     annual
+  Budget code:        BC-A120
+  Approval threshold: 1000 EUR
+  Escalation contact: Greta Novak
+  Supersedes:         none
+
+Purpose and scope
+Questions about interpretation should be directed to the escalation contact named below before any action is taken. Costs incurred under this policy are charged to the budget code listed in the summary table unless a project code has been agreed in advance. Managers are responsible for ensuring that the people reporting to them are aware of the obligations described here. Temporary measures introduced during an incident expire automatically after seventy-two hours unless renewed. Records created under this policy are retained according to the schedule maintained by Data Governance. Audit evidence is sampled twice a year and findings are reported to the relevant department head.
+
+Procedure
+  1. Submit the request form with the required attachments.
+  2. Verify completion and close the ticket with a short summary.
+  3. Notify the affected parties at least two working days in advance.
+  4. Schedule the follow-up review at the interval defined by the cadence.
+
+Notes
+Questions about interpretation should be directed to the escalation contact named below before any action is taken. Non-compliance may result in the withdrawal of access rights and, where appropriate, disciplinary action. Training material supporting this policy is available on the learning portal and must be completed within thirty days of joining.
+
+SECTION 15: POL-478 — Open-Source Contributions
+Summary table
+  Policy id:          POL-478
+  Owning department:  Data Governance
+  Effective date:     06 March 2021
+  Review cadence:     quarterly
+  Budget code:        BC-H794
+  Approval threshold: 5000 EUR
+  Escalation contact: Priya Ferrand
+  Supersedes:         POL-791
+
+Purpose and scope
+The owning department reviews this document at the stated cadence and publishes a change note with every revision. Questions about interpretation should be directed to the escalation contact named below before any action is taken. Temporary measures introduced during an incident expire automatically after seventy-two hours unless renewed. Audit evidence is sampled twice a year and findings are reported to the relevant department head.
+
+Procedure
+  1. Record the approval reference in the tracking system.
+  2. Verify completion and close the ticket with a short summary.
+  3. Submit the request form with the required attachments.
+  4. Obtain approval from the line manager and, where the amount exceeds the threshold, the department head.
+  5. Complete the checklist and file it with the records team.
+
+Notes
+Audit evidence is sampled twice a year and findings are reported to the relevant department head. Non-compliance may result in the withdrawal of access rights and, where appropriate, disciplinary action. Training material supporting this policy is available on the learning portal and must be completed within thirty days of joining.
+
+SECTION 16: POL-618 — Incident Escalation
+Summary table
+  Policy id:          POL-618
+  Owning department:  Security
+  Effective date:     26 May 2023
+  Review cadence:     biennial
+  Budget code:        BC-G557
+  Approval threshold: 250 EUR
+  Escalation contact: Maren Kowalski
+  Supersedes:         none
+
+Purpose and scope
+Requests for exceptions must be submitted through the internal service desk and will be reviewed within ten working days. Where this policy conflicts with a local legal requirement, the local requirement prevails and the conflict must be reported. Records created under this policy are retained according to the schedule maintained by Data Governance. The procedure section below describes the steps in the order they must be performed. The owning department reviews this document at the stated cadence and publishes a change note with every revision.
+
+Procedure
+  1. Verify completion and close the ticket with a short summary.
+  2. Complete the checklist and file it with the records team.
+  3. Record the approval reference in the tracking system.
+  4. Obtain approval from the line manager and, where the amount exceeds the threshold, the department head.
+  5. Notify the affected parties at least two working days in advance.
+  6. Submit the request form with the required attachments.
+
+Notes
+Non-compliance may result in the withdrawal of access rights and, where appropriate, disciplinary action. Where this policy conflicts with a local legal requirement, the local requirement prevails and the conflict must be reported. Training material supporting this policy is available on the learning portal and must be completed within thirty days of joining. Automated reminders are issued fourteen days before any deadline defined in this policy.
+
+SECTION 17: POL-758 — Third-Party Audits
+Summary table
+  Policy id:          POL-758
+  Owning department:  People Operations
+  Effective date:     06 February 2023
+  Review cadence:     annual
+  Budget code:        BC-D611
+  Approval threshold: 2500 EUR
+  Escalation contact: Wanda Adeyemi
+  Supersedes:         none
+
+Purpose and scope
+The procedure section below describes the steps in the order they must be performed. The owning department reviews this document at the stated cadence and publishes a change note with every revision. Questions about interpretation should be directed to the escalation contact named below before any action is taken. Temporary measures introduced during an incident expire automatically after seventy-two hours unless renewed.
+
+Procedure
+  1. Complete the checklist and file it with the records team.
+  2. Notify the affected parties at least two working days in advance.
+  3. Record the approval reference in the tracking system.
+  4. Schedule the follow-up review at the interval defined by the cadence.
+  5. Obtain approval from the line manager and, where the amount exceeds the threshold, the department head.
+
+Notes
+Training material supporting this policy is available on the learning portal and must be completed within thirty days of joining. Where this policy conflicts with a local legal requirement, the local requirement prevails and the conflict must be reported. The owning department reviews this document at the stated cadence and publishes a change note with every revision.
+
+SECTION 18: POL-205 — Password Rotation
+Summary table
+  Policy id:          POL-205
+  Owning department:  Facilities
+  Effective date:     26 December 2019
+  Review cadence:     semi-annual
+  Budget code:        BC-C859
+  Approval threshold: 500 EUR
+  Escalation contact: Farid Mbeki
+  Supersedes:         none
+
+Purpose and scope
+Managers are responsible for ensuring that the people reporting to them are aware of the obligations described here. Records created under this policy are retained according to the schedule maintained by Data Governance. The owning department reviews this document at the stated cadence and publishes a change note with every revision. Automated reminders are issued fourteen days before any deadline defined in this policy. Costs incurred under this policy are charged to the budget code listed in the summary table unless a project code has been agreed in advance. Approvals may be delegated in writing for a period not exceeding ninety days. Requests for exceptions must be submitted through the internal service desk and will be reviewed within ten working days.
+
+Procedure
+  1. Notify the affected parties at least two working days in advance.
+  2. Complete the checklist and file it with the records team.
+  3. Verify completion and close the ticket with a short summary.
+  4. Record the approval reference in the tracking system.
+  5. Obtain approval from the line manager and, where the amount exceeds the threshold, the department head.
+
+Notes
+Audit evidence is sampled twice a year and findings are reported to the relevant department head. The procedure section below describes the steps in the order they must be performed.
+
+APPENDIX A: STAFF DIRECTORY (escalation contacts)
+  Chen Mbeki               Legal                ext. 7134   office Aster 3.14
+  Chen Varga               Legal                ext. 3070   office Birch 2.07
+  Emeka Kowalski           Legal                ext. 9225   office Dunlin 4.34
+  Emeka Novak              Security             ext. 7864   office Birch 1.05
+  Farid Mbeki              Legal                ext. 6488   office Birch 1.18
+  Greta Adeyemi            Facilities           ext. 6816   office Aster 1.28
+  Greta Kowalski           Security             ext. 8647   office Elder 3.26
+  Greta Mbeki              Procurement          ext. 8511   office Cedar 2.23
+  Greta Novak              Procurement          ext. 8698   office Dunlin 4.09
+  Greta Rahman             Customer Support     ext. 5885   office Birch 1.38
+  Keziah Okafor            Procurement          ext. 4879   office Aster 2.28
+  Maren Kowalski           Security             ext. 8144   office Birch 4.10
+  Nikhil Rahman            Finance              ext. 6294   office Fennel 1.29
+  Olwen Haddad             Customer Support     ext. 8975   office Dunlin 4.04
+  Priya Adeyemi            Facilities           ext. 6229   office Aster 2.34
+  Priya Ferrand            Communications       ext. 7892   office Aster 2.06
+  Quentin Banerjee         Security             ext. 4706   office Elder 2.24
+  Rosa Kowalski            Security             ext. 8866   office Dunlin 3.06
+  Rosa Varga               Security             ext. 2890   office Fennel 1.33
+  Ulla Tanaka              Communications       ext. 4643   office Cedar 4.22
+  Viktor Kowalski          Legal                ext. 4691   office Dunlin 3.16
+  Wanda Adeyemi            Security             ext. 7540   office Aster 1.36
+  Ximena Adeyemi           Finance              ext. 6396   office Birch 3.17
+  Ximena Novak             Data Governance      ext. 5307   office Fennel 2.25

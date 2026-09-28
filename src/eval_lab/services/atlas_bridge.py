@@ -124,9 +124,11 @@ class AtlasBridgeService:
             derivative=derivative,
             maps=planning.get("maps") or {},
             real_bytes=(
-                {"schema_version": planning.get("schema_version"),
-                 "source_arch": planning.get("source_arch"),
-                 "candidates": planning.get("candidates") or []}
+                {
+                    "schema_version": planning.get("schema_version"),
+                    "source_arch": planning.get("source_arch"),
+                    "candidates": planning.get("candidates") or [],
+                }
                 if planning
                 else None
             ),

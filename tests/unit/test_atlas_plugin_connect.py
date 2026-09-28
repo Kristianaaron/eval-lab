@@ -54,9 +54,12 @@ def test_stale_persisted_url_falls_back_to_default(monkeypatch) -> None:
 
     def fake_check(url, timeout=2.0):
         reachable = url.startswith("http://127.0.0.1:8011/")
-        return {"url": url, "reachable": reachable,
-                "http_status": 200 if reachable else None,
-                "error": None if reachable else "refused"}
+        return {
+            "url": url,
+            "reachable": reachable,
+            "http_status": 200 if reachable else None,
+            "error": None if reachable else "refused",
+        }
 
     monkeypatch.setattr(atlas_plugin, "check_atlas", fake_check)
     status = connection_status()

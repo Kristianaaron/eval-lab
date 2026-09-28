@@ -182,9 +182,7 @@ def inspect_checkpoint(path: str | Path, *, memory_gb: float = 256.0) -> Checkpo
     else:
         issues.append(InspectionIssue(level="error", message="config.json not found"))
 
-    shards = sorted(
-        p for p in root.glob("*.safetensors") if not p.name.startswith("._")
-    )
+    shards = sorted(p for p in root.glob("*.safetensors") if not p.name.startswith("._"))
     total_bytes, params, per_dtype, role_bytes, shard_issues = _scan_safetensors(shards)
     issues.extend(shard_issues)
     precision_roles: list[dict[str, object]] = []

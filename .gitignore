@@ -32,3 +32,7 @@ dashboard/web/node_modules/
 .DS_Store
 .idea/
 .vscode/
+
+# fetched perplexity corpora (scripts/fetch_corpora.py)
+/tasks/perplexity_external/
+/configs/suites/perplexity-external.yaml

@@ -85,9 +85,10 @@ def windows(text: str, window_chars: int, stride_chars: int | None = None) -> li
 def _scored_logprobs(result: LogprobResult, scored_from: int) -> tuple[list[float], int]:
     """Log-probs for tokens at/after ``scored_from`` chars, plus scored byte count."""
     if scored_from <= 0:
-        lps = result.scored
-        nbytes = sum(len(t.token.encode("utf-8")) for t in result.tokens if t.logprob is not None)
-        return lps, nbytes
+        all_bytes = sum(
+            len(t.token.encode("utf-8")) for t in result.tokens if t.logprob is not None
+        )
+        return result.scored, all_bytes
     pos = 0
     lps: list[float] = []
     nbytes = 0

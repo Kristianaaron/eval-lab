@@ -55,7 +55,18 @@ def test_eval_config_exposes_runnable_benchmark_presets(tmp_path: Path) -> None:
         "safety",
     } <= domains
 
-    for domain in ("debugging", "retrieval", "structured_output", "health", "finance", "legal", "science", "education", "multilingual", "safety"):
+    for domain in (
+        "debugging",
+        "retrieval",
+        "structured_output",
+        "health",
+        "finance",
+        "legal",
+        "science",
+        "education",
+        "multilingual",
+        "safety",
+    ):
         response = c.post("/api/suites", json={"name": f"Preset {domain}", "domains": [domain]})
         assert response.status_code == 200
         assert response.json()["task_count"] > 0
@@ -139,3 +150,51 @@ def test_comparisons_pareto_and_slices(tmp_path: Path) -> None:
     slices = c.get("/api/comparisons/slices", params={"model": "mock", "axis": "domain"}).json()
     assert slices["model"] == "mock"
     assert isinstance(slices["slices"], dict)
+
+
+def _run_to_completion(c: TestClient, tmp_path: Path, suite_ref: str) -> dict:
+    r = c.post(
+        "/api/eval-jobs",
+        json={
+            "model_asset_id": "mock-deterministic",
+            "model_id": "mock",
+            "harness_id": "auto",
+            "suite_ref": suite_ref,
+            "runs_root": str(tmp_path / "runs"),
+        },
+    )
+    assert r.status_code == 200, r.text
+    job_id = r.json()["job_id"]
+    for _ in range(400):
+        j = c.get(f"/api/eval-jobs/{job_id}").json()
+        if j["state"] in TERMINAL:
+            return j
+        time.sleep(0.05)
+    raise AssertionError("job did not finish")
+
+
+def test_benchmark_groups_and_scorecard_endpoints(tmp_path: Path) -> None:
+    c = _client(tmp_path)
+    groups = c.get("/api/benchmark/groups").json()
+    assert [g["key"] for g in groups] == ["core", "coding_deep", "long_context", "perplexity"]
+    assert all(g["task_count"] > 0 for g in groups)
+    cfg = c.get("/api/eval-config").json()
+    assert cfg["benchmarks"][0]["key"] == "core" and cfg["harnesses"][0]["harness_id"] == "auto"
+
+    job = _run_to_completion(c, tmp_path, "configs/suites/benchmark-perplexity.yaml")
+    assert job["state"] in ("completed", "completed_with_warnings"), job
+    assert len(job["result"]["run_ids"]) == 3
+
+    ppl = c.get("/api/perplexity", params={"model_id": "mock"}).json()
+    assert len(ppl) == 3 and all(p["perplexity"] > 1 for p in ppl)
+    detail = c.get(f"/api/runs/{ppl[0]['run_id']}/perplexity").json()
+    assert detail["per_window"] and detail["perplexity"] == ppl[0]["perplexity"]
+
+    card = c.get("/api/benchmark/scorecard", params={"model_id": "mock"}).json()
+    assert card["model_id"] == "mock" and len(card["perplexity"]) == 3
+    assert card["groups"]["perplexity"]["task_count"] == 3
+    assert "core" in card["missing_groups"]
+
+    board = c.get("/api/benchmark/models").json()
+    assert board[0]["model_id"] == "mock" and board[0]["mean_perplexity"] > 1
+    assert c.get("/api/runs/nope/perplexity").status_code == 404

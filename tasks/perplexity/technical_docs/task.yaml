@@ -1,0 +1,41 @@
+schema_version: "1.0"
+id: perplexity.technical_docs.001
+name: 'Perplexity: Technical documentation'
+description: 'Architecture notes, data contracts and design records of a software project (Markdown prose with tables and YAML).'
+version: 1
+level: model
+status: active
+data_partition: held_out_evaluation
+
+labels:
+  domains: ['long_context']
+  capabilities: ['long_horizon_coherence']
+  modalities: ['text']
+  difficulty: medium
+  trajectory_stages: []
+  failure_modes_targeted: []
+  intervention: ['quantization', 'expert_pruning']
+  atlas_labels: []
+
+input:
+  instruction_file: 'prompt.md'
+  attachments: ['data/corpus.txt']
+  workspace_fixture: null
+  initial_state_hash: null
+
+execution:
+  runner: perplexity
+  sandbox: null
+  network: disabled
+  timeout_seconds: 1800
+  seeds: [0]
+  parameters: {"window_chars": 6000, "max_chars": 400000}
+
+oracle:
+  - type: perplexity
+    weight: 1.0
+    required: false
+    config: {"reference": 1000.0}
+repetitions:
+  default: 1
+  seeds: []
