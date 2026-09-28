@@ -225,6 +225,48 @@ button.link:hover { text-decoration: underline; }
 .bar { background: transparent; border: 1px solid var(--line); border-radius: 0; height: 8px; width: 90px; overflow: hidden; }
 .bar-fill { background: var(--text); height: 100%; transition: width 0.3s; }
 
+/* ---- reticle gauge (concentric HUD rings; every ring is data) ---- */
+.reticle-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; }
+.reticle line { stroke: rgba(var(--text-rgb), 0.22); stroke-width: 1; }
+.reticle line.m { stroke: rgba(var(--text-rgb), 0.36); }
+.reticle line.q { stroke: rgba(var(--text-rgb), 0.55); }
+.reticle line.lit { stroke: var(--text); }
+.reticle line.cross { stroke: rgba(var(--text-rgb), 0.3); stroke-dasharray: 1 2; }
+.reticle .seg-track { fill: none; stroke: rgba(var(--text-rgb), 0.08); stroke-width: 1; }
+.reticle .seg { fill: none; stroke-linecap: butt; cursor: default; transition: opacity 0.4s; }
+.reticle .seg.hollow { stroke: rgba(var(--text-rgb), 0.16) !important; stroke-dasharray: 1.5 1.5; }
+.reticle .seg[role="link"] { cursor: pointer; }
+.reticle .seg.scan { filter: brightness(1.6); }
+.reticle .arc-track { fill: none; stroke: rgba(var(--text-rgb), 0.12); stroke-width: 1; }
+.reticle .arc { fill: none; stroke: var(--text); stroke-width: 1.5; }
+.reticle.accent .arc { stroke: var(--accent); }
+.reticle .arc-end { fill: var(--text); }
+.reticle.accent .arc-end { fill: var(--accent); }
+.reticle .ring-track { fill: none; stroke: rgba(var(--text-rgb), 0.1); stroke-width: 1; stroke-dasharray: 2 2; }
+.reticle .ring { fill: none; stroke: rgba(var(--text-rgb), 0.75); stroke-width: 1; }
+.reticle .sweep { stroke: var(--accent); stroke-width: 1; opacity: 0.7; }
+.reticle .sweep-trail { fill: none; stroke: var(--accent); stroke-width: 1.5; opacity: 0.35; }
+.reticle .core { fill: var(--text); }
+.reticle .core.active { fill: var(--accent); }
+.reticle .core-pulse { fill: none; stroke: var(--accent); stroke-width: 1; animation: reticle-pulse 2.4s ease-out infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes reticle-pulse { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(9); opacity: 0; } }
+.reticle .val { fill: var(--text); font-family: var(--mono); font-size: 13px; }
+.reticle.accent .val { fill: var(--accent); }
+.reticle .sub, .reticle .cap { fill: var(--muted); font-family: var(--mono); font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; }
+.reticle.large .sub { font-size: 9px; }
+.reticle-readout { font-family: var(--mono); font-size: 10.5px; color: var(--muted); display: flex; align-items: center; gap: 6px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reticle-readout.accent { color: var(--text); }
+.reticle-readout-dot { width: 5px; height: 5px; border: 1px solid var(--accent); flex: 0 0 auto; }
+.bm-scan { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10.5px; color: var(--muted); margin-top: 8px; white-space: nowrap; overflow: hidden; }
+.bm-scan > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+.bm-scan.accent { color: var(--text); }
+.reticle-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 12px; font-family: var(--mono); font-size: 9.5px; color: var(--muted); letter-spacing: 0.04em; max-width: 100%; }
+.reticle-legend b { color: var(--text); font-weight: 500; }
+.reticle-legend i { display: inline-block; width: 8px; height: 0; border-top: 1px solid var(--text); vertical-align: middle; margin-right: 5px; }
+.ov-health-body { display: flex; gap: 20px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+.ov-health-body > div:first-child { flex: 1 1 200px; min-width: 0; }
+@media (prefers-reduced-motion: reduce) { .reticle .core-pulse { animation: none; opacity: 0; } .reticle .sweep, .reticle .sweep-trail { opacity: 0; } }
+
 /* ---- gauges & pixel maps ---- */
 .gauge line { stroke: rgba(var(--text-rgb), 0.28); stroke-width: 1; }
 .gauge line.long { stroke: rgba(var(--text-rgb), 0.5); }

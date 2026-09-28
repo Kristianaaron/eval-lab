@@ -5,12 +5,14 @@
   import { get, fmtPassed } from "./lib/api.js";
   import { fmtCount, fmtScore, fmtPct, pad, when } from "./lib/fmt.js";
   import Glyph from "./Glyph.svelte";
-  import Gauge from "./Gauge.svelte";
+  import Reticle from "./Reticle.svelte";
   import PixelMap from "./PixelMap.svelte";
 
   let { modelId = null } = $props();
 
   let groups = $state([]);
+  let activeJobs = $state(0);
+  let scan = $state({});
   let leaderboard = $state([]);
   let cfg = $state(null);
   let model = $state("");
@@ -72,6 +74,7 @@
         get("/api/eval-config").catch(() => null),
       ]);
       groups = g;
+      get("/api/jobs").then((js) => (activeJobs = js.filter((j) => ["queued", "running", "pausing", "paused", "resuming"].includes(j.state)).length)).catch(() => {});
       leaderboard = lb;
       cfg = c;
       if (!model) model = modelId || lb[0]?.model_id || c?.models?.[0]?.model_id || "";
@@ -247,8 +250,19 @@
           {#if card.missing_groups?.length}<div><span>no runs yet</span><b class="accent">{card.missing_groups.map((k) => SHORT[k] ?? k).join(", ")}</b></div>{/if}
         </div>
         <div class="bm-sel-gauges">
-          <Gauge value={card.overall_pass_rate} label={fmtPct(card.overall_pass_rate)} sub="pass" size={84} />
-          <Gauge value={card.overall_score} label={fmtScore(card.overall_score, 2)} sub="score" size={84} accent />
+          <Reticle
+            value={card.overall_score}
+            tickFill={card.overall_pass_rate}
+            label={fmtScore(card.overall_score, 2)}
+            sub="mean score"
+            size={216}
+            ticks={120}
+            accent
+            segments={mapCells.map((m) => ({ id: m.id, label: m.label, value: m.score, href: m.run_id ? `#/explorer/run/${m.run_id}` : null }))}
+            rings={GROUP_ORDER.map((k) => ({ label: SHORT[k], value: card.groups?.[k]?.mean_score ?? null }))}
+            captions={["ticks · pass " + fmtPct(card.overall_pass_rate), `segments · ${fmtCount(card.scored_tasks)} tasks`, "rings · groups, outer → inner", `${fmtCount(card.total_runs)} runs`]}
+            active={activeJobs > 0}
+          />
         </div>
       </div>
       {#if !hasData}
@@ -276,13 +290,27 @@
       <section class="card bm-group">
         <div class="card-strip"><span>{g?.label ?? meta?.name ?? key}</span><span class="mut">{done}/{total} tasks</span></div>
         <div class="bm-group-body">
-          <Gauge value={g?.mean_score} label={fmtScore(g?.mean_score, 2)} sub="score" size={72} />
+          <Reticle
+            value={g?.mean_score}
+            tickFill={g?.pass_rate}
+            label={fmtScore(g?.mean_score, 2)}
+            sub="score"
+            size={96}
+            ticks={72}
+            segments={(meta?.task_ids ?? Object.keys(g?.tasks ?? {})).map((tid) => ({ id: tid, label: tid.replace(/\.\d+$/, ""), value: g?.tasks?.[tid]?.score ?? null, href: g?.tasks?.[tid]?.run_id ? `#/explorer/run/${g.tasks[tid].run_id}` : null }))}
+            sweepPeriodS={18}
+            readout={false}
+            onscan={(r) => {
+              if (scan[key]?.text !== r.text || scan[key]?.hovered !== r.hovered) scan = { ...scan, [key]: r };
+            }}
+          />
           <div class="kv">
             <div><span>mean score</span><b>{fmtScore(g?.mean_score)}</b></div>
             <div><span>pass rate</span><b>{fmtPct(g?.pass_rate)}</b></div>
             {#if key === "perplexity"}<div><span>mean ppl</span><b>{fmtScore(meanPpl, 2)}</b></div>{:else}<div><span>runs</span><b>{fmtCount(done)}</b></div>{/if}
           </div>
         </div>
+        <div class="bm-scan" class:accent={scan[key]?.hovered}><span class="reticle-readout-dot"></span><span>{scan[key]?.text ?? "scanning"}</span></div>
         <div class="bm-meter" title="mean score 0 … 1"><span style={`width:${Math.round((g?.mean_score ?? 0) * 100)}%`}></span></div>
         <details class="bm-tasks">
           <summary><span>tasks</span><span class="mut">{done ? `${done} run` : "no runs"}</span></summary>
