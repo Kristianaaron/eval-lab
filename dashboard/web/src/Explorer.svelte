@@ -1,6 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import { get, fmtPassed } from "./lib/api.js";
+  import Glyph from "./Glyph.svelte";
 
   let reg = $state(null);
   let overview = $state(null);
@@ -50,7 +51,8 @@
   ];
 </script>
 
-<h1>Explorer</h1>
+<h1>explorer</h1>
+<div class="meta-line"><span>runs <b>{reg?.runs?.total ?? "—"}</b></span><span>cebu <b>{reg?.atlas_runs?.length ?? "—"}</b></span><span>experiments <b>{reg?.experiments?.length ?? "—"}</b></span><span>assets <b>{reg?.model_assets?.length ?? "—"}</b></span><span>suites <b>{reg?.suites?.length ?? "—"}</b></span></div>
 <p class="mut">
   Browse every artifact the harness has recorded — runs, Cebu profile exports, experiments,
   model assets, jobs, and suites. Filter the run corpus or drill into any run for its
@@ -130,10 +132,10 @@
       <tbody>
         {#each runs as r (r.run_id)}
           <tr>
-            <td class="mono"><a href="#/explorer/run/{r.run_id}">{r.run_id}</a></td>
+            <td class="mono"><a href="#/explorer/run/{r.run_id}" class="accent">{r.run_id}</a></td>
             <td class="mut">{String(r.created_at ?? "").slice(0, 19).replace("T", " ")}</td>
             <td class="mono">{r.task_id}</td>
-            <td>{r.model_id ?? "—"}</td>
+            <td>{#if r.model_id}<span class="model-mark"><Glyph seed={r.model_id} size={12} />{r.model_id}</span>{:else}—{/if}</td>
             <td class="mut">{r.suite_id ?? "—"}</td>
             <td class="right">{r.aggregate_score?.toFixed(3) ?? "—"}</td>
             <td><span class="badge {fmtPassed(r.passed).cls}">{fmtPassed(r.passed).label}</span></td>

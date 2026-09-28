@@ -12,7 +12,7 @@
   let error = $state(null);
 
   let model = $state("");
-  let harness = $state("direct");
+  let harness = $state("auto");
   let repeat = $state(1);
   let cold = $state(false);
   let domainSearch = $state("");
@@ -94,6 +94,28 @@
     return rows.some((r) => r.domain === d);
   }
 
+  // Standard benchmark groups are plan rows keyed "bench:<key>" so they never
+  // collide with a domain id (e.g. long_context is both a domain and a group).
+  const BENCH = "bench:";
+  function isBench(d) {
+    return typeof d === "string" && d.startsWith(BENCH);
+  }
+  function benchOf(d) {
+    const key = isBench(d) ? d.slice(BENCH.length) : d;
+    return (cfg?.benchmarks ?? []).find((b) => b.key === key);
+  }
+  function hasGroup(key) {
+    return rows.some((r) => r.domain === BENCH + key);
+  }
+  function toggleGroup(group) {
+    if (hasGroup(group.key)) {
+      rows = rows.filter((r) => r.domain !== BENCH + group.key);
+    } else {
+      planHidden = false;
+      rows = [...rows, { domain: BENCH + group.key, kind: "benchmark", label: group.name, jobId: null, suiteRef: group.suite_ref, state: "pending", score: null }];
+    }
+  }
+
   function toggleDomain(d) {
     if (hasDomain(d)) {
       rows = rows.filter((r) => r.domain !== d);
@@ -119,14 +141,17 @@
   }
 
   function domainLabel(domain) {
+    if (isBench(domain)) return benchOf(domain)?.name ?? domain.slice(BENCH.length);
     return DOMAIN_META[domain]?.label ?? domain.replaceAll("_", " ");
   }
 
   function domainDescription(domain) {
+    if (isBench(domain)) return benchOf(domain)?.description ?? "Standard benchmark group.";
     return DOMAIN_META[domain]?.description ?? "Benchmark tasks in this domain.";
   }
 
   function domainTeaching(domain) {
+    if (isBench(domain)) return `Runs the fixed "${domainLabel(domain)}" suite (${benchOf(domain)?.task_count ?? "?"} tasks) with the per-task harness, so every task uses the runner it declares — direct prompt, tool-using agent or perplexity scoring — and the result feeds the Benchmark scorecard and leaderboard.`;
     const group = domainGroup(domain);
     const lessons = {
       agentic: "The model must break a goal into steps, take actions, inspect what happened, and recover when needed.",
@@ -163,6 +188,7 @@
   }
 
   function domainSuccess(domain) {
+    if (isBench(domain)) return "A strong result is comparable across models: the same tasks, the same scorers, and a scorecard entry that can be ranked on the leaderboard.";
     const group = domainGroup(domain);
     if (group === "Agent & tools") return "A strong result uses only necessary actions, valid tool inputs, and grounded observations.";
     if (group === "Build & design") return "A strong result is functional, within scope, and verified against the requested behavior.";
@@ -174,6 +200,7 @@
   }
 
   function domainGroup(domain) {
+    if (isBench(domain)) return "Standard benchmark";
     return DOMAIN_META[domain]?.group ?? "Other";
   }
 
@@ -265,16 +292,20 @@
       // one eval job per selected domain so each row has a real lifecycle
       for (const row of rows) {
         if (row.state !== "pending") continue; // don't duplicate already-launched rows
-        const { suite_ref } = await post("/api/suites", {
-          name: `Eval ${row.domain}`,
-          domains: [row.domain],
-        });
-        row.suiteRef = suite_ref;
+        // benchmark groups ship their own suite file; domain rows build one on demand
+        let suite_ref = row.suiteRef;
+        if (row.kind !== "benchmark") {
+          ({ suite_ref } = await post("/api/suites", {
+            name: `Eval ${row.domain}`,
+            domains: [row.domain],
+          }));
+          row.suiteRef = suite_ref;
+        }
         row.state = "queued";
         const job = await post("/api/eval-jobs", {
           model_asset_id: model,
           model_id: model,
-          harness_id: harness,
+          harness_id: row.kind === "benchmark" ? "auto" : harness,
           suite_ref,
           repeat_count: Number(repeat),
           cold_start: cold,
@@ -376,7 +407,8 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<h1>Evaluation</h1>
+<h1>evaluation</h1>
+{#if !runId && !jobId}<div class="meta-line"><span>model <b>{model || "—"}</b></span><span>harness <b>{harness}</b></span><span>repeats <b>{repeat}</b></span><span>plan <b>{rows.length} row{rows.length === 1 ? "" : "s"}</b></span><span>active <b>{activeCount()}</b></span></div>{/if}
 
 {#if runId}
   <RunDetail runId={runId} />
@@ -395,12 +427,12 @@
     <section class="card eval-toolbar">
       <div class="eval-toolbar-heading">
         <div>
-          <div class="k">Run setup</div>
+          <div class="k">run setup</div>
           <strong>{selectedModel()?.name || "Choose a model"}</strong>
           <span class="mut">{selectedHarness()?.name || "Choose a harness"}</span>
         </div>
         <div class="eval-toolbar-actions">
-          <a class="eval-history-link" href="#/explorer">Benchmark history ↗</a>
+          <a class="eval-history-link" href="#/explorer">explorer/ →</a>
           <span class="eval-readiness {selectedModel()?.runnable ? 'ready' : ''}">
             {selectedModel()?.runnable ? "ready to run" : "check model readiness"}
           </span>
@@ -415,9 +447,28 @@
     </section>
 
     <div class="eval-workspace">
+      <section class="card eval-bench-picker">
+        <div class="eval-section-head">
+          <div><h2>standard benchmarks</h2><p class="mut">Fixed suites that feed the Benchmark scorecard and leaderboard. Each group launches as its own tracked job with the per-task harness.</p></div>
+          <a class="tile-link" href="#/benchmark">benchmark/ →</a>
+        </div>
+        <div class="term"><span class="term-prompt">eval-lab ~ ❯</span> benchmark --model {model || "<model>"}{rows.some((r) => r.kind === "benchmark") ? ` --group ${rows.filter((r) => r.kind === "benchmark").map((r) => r.domain.slice(BENCH.length)).join(",")}` : " --group core,coding_deep,long_context,perplexity"}</div>
+        <div class="eval-bench-cards">
+          {#each cfg.benchmarks ?? [] as g (g.key)}
+            <button type="button" class="eval-bench-card" class:on={hasGroup(g.key)} aria-pressed={hasGroup(g.key)} title={g.suite_ref} onclick={() => toggleGroup(g)}>
+              <span class="eval-bench-name"><span>{hasGroup(g.key) ? "▸ " : ""}{g.name}</span><span class="mono">{g.key}/</span></span>
+              <span class="eval-bench-desc">{g.description}</span>
+              <span class="eval-bench-foot"><span>{g.task_count} task{g.task_count === 1 ? "" : "s"} · auto</span>{#if hasGroup(g.key)}<span class="accent">in plan</span>{:else}<span class="mut">add</span>{/if}</span>
+            </button>
+          {:else}
+            <p class="mut">No standard benchmark groups are configured.</p>
+          {/each}
+        </div>
+      </section>
+
       <section class="card eval-domain-picker">
         <div class="eval-section-head">
-          <div><h2>Choose evaluation domains</h2><p class="mut">Start with a recommendation or browse the full benchmark catalog.</p></div>
+          <div><h2>evaluation domains</h2><p class="mut">Start with a recommendation or browse the full benchmark catalog.</p></div>
           <span class="eval-selection-count">{rows.length} selected</span>
         </div>
         <div class="eval-domain-tools">
@@ -479,18 +530,18 @@
         <button class="eval-plan-reopen" type="button" onclick={() => (planHidden = false)}>View plan · {rows.length}</button>
       {:else}
       <section class="card eval-plan" aria-live="polite">
-        <div class="eval-section-head"><div><h2>Evaluation plan</h2><p class="mut">One session, with a tracked job per domain.</p></div><div class="eval-plan-head-actions"><span class="eval-plan-total">{rows.length}</span><button class="eval-plan-hide" type="button" title="Hide evaluation plan" aria-label="Hide evaluation plan" onclick={() => (planHidden = true)}>×</button></div></div>
+        <div class="eval-section-head"><div><h2>evaluation plan</h2><p class="mut">One session, with a tracked job per suite or domain.</p></div><div class="eval-plan-head-actions"><span class="eval-plan-total">{rows.length}</span><button class="eval-plan-hide" type="button" title="Hide evaluation plan" aria-label="Hide evaluation plan" onclick={() => (planHidden = true)}>×</button></div></div>
         {#if !rows.length}
-          <div class="eval-plan-empty"><p>No domain added</p><span class="mut">Choose a recommended domain or browse all domains above.</span></div>
+          <div class="eval-plan-empty"><p>Nothing planned yet</p><span class="mut">Pick a standard benchmark group or add evaluation domains above.</span></div>
         {:else}
           <div class="eval-rows">
             <div class="eval-row eval-row-labels" aria-hidden="true">
-              <span>Domain</span><span>Progress</span><span>Score</span><span>Status</span><span>Info</span><span></span>
+              <span>Suite / domain</span><span>Progress</span><span>Score</span><span>Status</span><span>Info</span><span></span>
             </div>
             {#each rows as row (row.domain)}
               <div class="eval-row">
                 <span class="eval-row-domain" title={domainDescription(row.domain)}>
-                  {domainLabel(row.domain)}
+                  {domainLabel(row.domain)}{#if row.kind === "benchmark"}<span class="badge type">suite</span>{/if}
                   {#if row.jobId && TERMINAL.has(row.state)}<button class="eval-launch" type="button" title="Open benchmark result" aria-label="Open benchmark result for {domainLabel(row.domain)}" onclick={() => openJobDetail(row.jobId)}><ExternalLink size={13} /></button>{/if}
                 </span>
                 {#if row.state === "evaluating" && row.progress?.total}
@@ -508,7 +559,7 @@
         {/if}
         <div class="eval-plan-footer">
           {#if rows.length}<span class="mut">{completedCount()} complete{activeCount() ? ` · ${activeCount()} active` : ""}</span>{/if}
-          <button class="btn primary" onclick={launch} disabled={running || !rows.length}>{running ? "Launching…" : `Run evaluation${rows.length ? ` · ${rows.length} domain${rows.length === 1 ? "" : "s"}` : ""}`}</button>
+          <button class="btn primary" onclick={launch} disabled={running || !rows.length}>{running ? "Launching…" : `Run evaluation${rows.length ? ` · ${rows.length} job${rows.length === 1 ? "" : "s"}` : ""}`}</button>
         </div>
       </section>
       {/if}

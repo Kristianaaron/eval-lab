@@ -1,6 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import { get, del, fmtBytes, fmtGb } from "./lib/api.js";
+  import Glyph from "./Glyph.svelte";
 
   let assets = $state([]);
   let error = $state(null);
@@ -31,10 +32,11 @@
   }
 </script>
 
-<h1>Models</h1>
+<h1>models</h1>
+<div class="meta-line"><span>assets <b>{assets.length}</b></span><span>runnable <b>{assets.filter((a) => a.runnable).length}</b></span><span>cebu-compatible <b>{assets.filter((a) => a.atlas_compatible).length}</b></span></div>
 
 <div class="toolbar">
-  <a class="btn" href="#/models/register">+ Register model</a>
+  <a class="btn primary" href="#/models/register">+ register model</a>
   <span class="mut">Registered model assets — checkpoints, runnable models, endpoints and derivatives.</span>
 </div>
 
@@ -46,7 +48,7 @@
   {#each assets as a (a.asset_id)}
     <div class="card model-card">
       <div class="mc-head">
-        <a class="mc-name" href="#/model/{a.asset_id}">{a.name}</a>
+        <a class="mc-name" href="#/model/{a.asset_id}"><Glyph seed={a.asset_id} size={11} /><span>{a.name}</span></a>
         <span class="badge {a.runnable ? 'pass' : 'type'}">{a.runnable ? "runnable" : typeLabel(a.asset_type)}</span>
       </div>
       <div class="mc-type mut">{typeLabel(a.asset_type)} · {a.family ?? "—"}</div>

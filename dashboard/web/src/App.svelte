@@ -7,21 +7,14 @@
   import RunDetail from "./RunDetail.svelte";
   import RegisterModel from "./RegisterModel.svelte";
   import Evaluation from "./Evaluation.svelte";
+  import Benchmark from "./Benchmark.svelte";
   import AtlasLab from "./AtlasLab.svelte";
   import AtlasRunDetail from "./AtlasRunDetail.svelte";
   import Experiments from "./Experiments.svelte";
   import Comparisons from "./Comparisons.svelte";
   import Jobs from "./Jobs.svelte";
-  import {
-    LayoutDashboard,
-    Boxes,
-    Gauge,
-    Sparkles,
-    FlaskConical,
-    Scale,
-    ListChecks,
-    FolderSearch,
-  } from "@lucide/svelte";
+  import StatusBar from "./StatusBar.svelte";
+  import Globe from "./Globe.svelte";
 
   function parse(hash) {
     const h = (hash || "").replace(/^#/, "");
@@ -33,6 +26,9 @@
     if (h.startsWith("/evaluation/run/")) return { name: "evaluation", runId: h.slice("/evaluation/run/".length) };
     if (h.startsWith("/evaluation/job/")) return { name: "evaluation", jobId: h.slice("/evaluation/job/".length) };
     if (h === "/evaluation") return { name: "evaluation" };
+    if (h === "/benchmark" || h.startsWith("/benchmark/")) {
+      return { name: "benchmark", modelId: decodeURIComponent(h.slice("/benchmark/".length)) || null };
+    }
     if (h === "/cebu") return { name: "cebu" };
     if (h.startsWith("/cebu/run/")) return { name: "cebu-run", runId: h.slice("/cebu/run/".length) };
     if (h === "/experiments") return { name: "experiments" };
@@ -52,34 +48,37 @@
     return () => window.removeEventListener("hashchange", onHash);
   });
 
+  // Entries are written like paths, in the spirit of a project spine.
   const areas = [
-    { key: "overview", label: "Overview", href: "#/", icon: LayoutDashboard },
-    { key: "models", label: "Models", href: "#/models", icon: Boxes },
-    { key: "explorer", label: "Explorer", href: "#/explorer", icon: FolderSearch },
-    { key: "evaluation", label: "Evaluation", href: "#/evaluation", icon: Gauge },
-    { key: "cebu", label: "Cebu Profiler", href: "#/cebu", icon: Sparkles },
-    { key: "experiments", label: "Experiments", href: "#/experiments", icon: FlaskConical },
-    { key: "comparisons", label: "Comparisons", href: "#/comparisons", icon: Scale },
-    { key: "jobs", label: "Jobs", href: "#/jobs", icon: ListChecks },
+    { key: "overview", label: "overview/", href: "#/" },
+    { key: "models", label: "models/", href: "#/models" },
+    { key: "explorer", label: "explorer/", href: "#/explorer" },
+    { key: "evaluation", label: "evaluation/", href: "#/evaluation" },
+    { key: "benchmark", label: "benchmark/", href: "#/benchmark" },
+    { key: "cebu", label: "cebu/", href: "#/cebu" },
+    { key: "experiments", label: "experiments/", href: "#/experiments" },
+    { key: "comparisons", label: "comparisons/", href: "#/comparisons" },
+    { key: "jobs", label: "jobs/", href: "#/jobs" },
   ];
 </script>
 
 <div class="layout">
   <nav class="side">
-    <a class="brand" href="#/">eval-lab</a>
+    <a class="brand" href="#/">
+      <Globe size={30} points={160} alpha={1} />
+      <span>eval-lab<span class="brand-sub">~ evaluation console</span></span>
+    </a>
     {#each areas as a (a.key)}
       <a
         class="nav"
-        class:active={route.name === a.key || (a.key === "models" && (route.name === "model" || route.name === "register"))}
+        class:active={route.name === a.key || (a.key === "models" && (route.name === "model" || route.name === "register")) || (a.key === "cebu" && route.name === "cebu-run")}
         href={a.href}
       >
-        <svelte:component this={a.icon} size={16} />
         <span>{a.label}</span>
       </a>
     {/each}
     <a class="nav extern" href="http://{location.hostname}:8011/" target="_blank">
-      <Sparkles size={16} />
-      <span>Cebu Profiler &#8599;</span>
+      <span>cebu-profiler ↗</span>
     </a>
   </nav>
 
@@ -98,6 +97,8 @@
       <ModelDetail assetId={route.id} />
     {:else if route.name === "evaluation"}
       <Evaluation runId={route.runId} jobId={route.jobId} />
+    {:else if route.name === "benchmark"}
+      <Benchmark modelId={route.modelId} />
     {:else if route.name === "cebu"}
       <AtlasLab />
     {:else if route.name === "cebu-run"}
@@ -113,3 +114,4 @@
     {/if}
   </main>
 </div>
+<StatusBar />

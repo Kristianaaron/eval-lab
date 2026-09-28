@@ -1,6 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import * as echarts from "echarts";
+  import "./lib/chartTheme.js";
   import { get, fmtPassed } from "./lib/api.js";
 
   let { runId } = $props();
@@ -37,15 +38,15 @@
     const seriesData = telem?.series ?? {};
     const key = Object.keys(seriesData)[0];
     const points = key ? seriesData[key] : [];
-    if (!chart) chart = echarts.init(chartEl);
+    if (!chart) chart = echarts.init(chartEl, "lab");
     let option;
     if (!key || points.length === 0) {
       option = {
-        title: { text: "No telemetry samples", textStyle: { color: "#8b93a3", fontSize: 13 } },
+        title: { text: "no telemetry samples", textStyle: { color: "#8a8780", fontSize: 12 } },
       };
     } else {
       option = {
-        title: { text: key, textStyle: { color: "#8b93a3", fontSize: 13 } },
+        title: { text: key, textStyle: { color: "#8a8780", fontSize: 12 } },
         tooltip: { trigger: "axis" },
         grid: { left: 60, right: 20, top: 40, bottom: 40 },
         xAxis: { type: "category", data: points.map((p) => (p.t_ns / 1e6).toFixed(0)) },
@@ -82,7 +83,7 @@
   <div class="card">Loading…</div>
 {:else}
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-    <button class="link" onclick={() => (window.location.hash = "#/explorer")}>← Explorer</button>
+    <button class="link" onclick={() => (window.location.hash = "#/explorer")}>← explorer/</button>
     <h1 style="margin:0" class="mono">{runId}</h1>
     <span class="badge {fmtPassed(detail.run.passed).cls}">{fmtPassed(detail.run.passed).label}</span>
   </div>
