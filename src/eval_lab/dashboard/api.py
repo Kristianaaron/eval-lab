@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import UTC
 from pathlib import Path
 from typing import Any, cast
 
@@ -1018,6 +1019,92 @@ class DashboardApp:
             if job is None:
                 raise HTTPException(status_code=404, detail=f"eval job not found: {job_id}")
             return job.model_dump(mode="json")
+
+        @app.get("/api/eval-jobs/{job_id}/tree")
+        def eval_job_tree(job_id: str) -> dict[str, Any]:
+            """The job's suite as a task tree with live per-task state.
+
+            Tasks run in suite order, so while a job is active the first
+            ``progress.done`` tasks are finished and ``progress.detail`` names
+            the one being evaluated. Scores come from the run index: the
+            latest run of each task for the job's model since the job started.
+            """
+            from datetime import datetime
+
+            try:
+                job = eval_svc.get(job_id)
+            except ValueError:
+                job = None
+            if job is None:
+                raise HTTPException(status_code=404, detail=f"eval job not found: {job_id}")
+            cfg = job.config
+            suite_ref = str(cfg.get("suite_ref", ""))
+            model_id = str(cfg.get("model_id", ""))
+            try:
+                suite = load_suite_yaml(suite_ref)
+            except Exception as exc:
+                raise HTTPException(status_code=404, detail=f"suite not loadable: {exc}") from exc
+            index = _task_index()
+
+            def _ts(value: object) -> datetime | None:
+                if not value:
+                    return None
+                try:
+                    parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+                except ValueError:
+                    return None
+                return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+
+            since = job.started_at or job.created_at
+            latest: dict[str, dict[str, Any]] = {}
+            for r in self._store.list_runs(limit=100_000):  # newest first
+                tid = str(r.get("task_id") or "")
+                if r.get("model_id") != model_id or tid in latest:
+                    continue
+                created = _ts(r.get("created_at"))
+                if since is not None and created is not None and created < since:
+                    continue
+                latest[tid] = r
+
+            active = job.state.value in ("queued", "running", "pausing", "paused", "resuming")
+            current = job.progress.detail if active else None
+            tasks: list[dict[str, Any]] = []
+            for ref in suite.tasks:
+                spec = index.get(ref.task_id)
+                run = latest.get(ref.task_id)
+                if run is not None:
+                    status = "done"
+                elif current == ref.task_id:
+                    status = "running"
+                else:
+                    status = "pending"
+                score = run.get("aggregate_score") if run else None
+                tasks.append(
+                    {
+                        "task_id": ref.task_id,
+                        "name": spec.name if spec else ref.task_id,
+                        "group": ref.task_id.split(".", 1)[0],
+                        "runner": spec.execution.runner if spec else None,
+                        "status": status,
+                        "run_id": run.get("run_id") if run else None,
+                        "score": float(score) if isinstance(score, (int, float)) else None,
+                        "passed": bool(run.get("passed")) if run else None,
+                    }
+                )
+            return {
+                "job_id": job.job_id,
+                "state": job.state.value,
+                "active": active,
+                "model_id": model_id,
+                "suite_ref": suite_ref,
+                "suite_id": suite.id,
+                "suite_name": suite.name,
+                "current_task": current,
+                "done": job.progress.done,
+                "total": job.progress.total,
+                "created_at": job.created_at.isoformat(),
+                "tasks": tasks,
+            }
 
         @app.post("/api/eval-jobs/{job_id}/cancel")
         def cancel_eval_job(job_id: str) -> dict[str, Any]:

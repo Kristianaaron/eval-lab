@@ -2,7 +2,7 @@
   import { get, fmtBytes, fmtPassed } from "./lib/api.js";
   import { fmtCount, fmtScore, when } from "./lib/fmt.js";
   import Glyph from "./Glyph.svelte";
-  import Dendrite from "./Dendrite.svelte";
+  import JobTree from "./JobTree.svelte";
   import Reticle from "./Reticle.svelte";
 
   let overview = $state(null);
@@ -38,21 +38,13 @@
     <p class="mut">A quick read on model readiness, hardware capacity, and the latest benchmark evidence.</p>
     <div class="term"><span class="term-prompt">eval-lab ~ ❯</span> <a href="#/evaluation">run evaluation</a> · <a href="#/benchmark">benchmark</a> · <a href="#/explorer">explorer</a></div>
   </div>
-  <div class="ov-hero-art">
-    {#if ringRuns.length}
-      <Dendrite
-        points={[...ringRuns].reverse().map((r) => ({ id: r.run_id, label: `${r.model_id ?? "?"} · ${r.task_id}`, value: r.aggregate_score ?? null, group: r.model_id ?? "unknown", href: `#/explorer/run/${r.run_id}` }))}
-        width={520}
-        height={230}
-        seed="overview-runs"
-        title="latest runs grown toward"
-        unit="1 tip = 1 run · column = model · height = score"
-        pulseEveryS={6}
-      />
-    {/if}
-  </div>
 </div>
 {#if error}<div class="card error ov-error">Could not load dashboard data: {error}</div>{/if}
+
+<section class="card ov-live">
+  <div class="card-strip"><span>evaluation nerve</span><span class="mut">latest evaluation job · pulse = task being evaluated</span></div>
+  <JobTree width={1080} height={230} />
+</section>
 
 <div class="ov-bento">
   <section class="card ov-tile ov-health"><div class="ov-tile-head"><span class="k">evaluation health</span><span class="mut">pass rate</span></div><div class="ov-health-body"><div><div class="ov-health-value">{passRate == null ? "—" : `${passRate}%`}</div><div class="mut">pass rate across {fmtCount(overview?.total_runs)} recorded runs</div><div class="ov-meter"><span style={`width:${passRate ?? 0}%`}></span></div><div class="ov-inline"><span>{fmtCount(overview?.scored_runs ?? 0)} scored</span><span>{overview?.avg_aggregate_score != null ? `avg ${overview.avg_aggregate_score.toFixed(3)}` : "awaiting scores"}</span></div></div><Reticle value={overview?.avg_aggregate_score ?? null} tickFill={passRate == null ? null : passRate / 100} label={overview?.avg_aggregate_score != null ? overview.avg_aggregate_score.toFixed(2) : "—"} sub="avg score" size={168} ticks={96} accent segments={[...ringRuns].reverse().map((r) => ({ id: r.run_id, label: `${r.model_id ?? "?"} · ${r.task_id}`, value: r.aggregate_score ?? null, href: `#/explorer/run/${r.run_id}` }))} captions={["ticks · pass rate", `segments · latest ${ringRuns.length} runs`, "sweep reads each run", "score by opacity"]} active={activeJobs.length > 0} /></div></section>

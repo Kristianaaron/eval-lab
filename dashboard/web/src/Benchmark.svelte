@@ -6,13 +6,17 @@
   import { fmtCount, fmtScore, fmtPct, pad, when } from "./lib/fmt.js";
   import Glyph from "./Glyph.svelte";
   import Reticle from "./Reticle.svelte";
-  import Dendrite from "./Dendrite.svelte";
+  import Taxonomy from "./Taxonomy.svelte";
+  import { byDomain } from "./lib/tree.js";
+  import { onDestroy } from "svelte";
   import PixelMap from "./PixelMap.svelte";
 
   let { modelId = null } = $props();
 
   let groups = $state([]);
   let activeJobs = $state(0);
+  let liveTree = $state(null); // /api/eval-jobs/{id}/tree of a running benchmark job for this model
+  let liveTimer = null;
   let scan = $state({});
   let leaderboard = $state([]);
   let cfg = $state(null);
@@ -118,6 +122,46 @@
       windows = { per_window: [] };
     }
   }
+
+  const ACTIVE = ["queued", "running", "pausing", "paused", "resuming"];
+
+  // Track a running benchmark job for the selected model: its current task
+  // drives the pulse in the taxonomy; when it ends the scorecard reloads.
+  async function pollLive() {
+    try {
+      const jobs = await get("/api/eval-jobs");
+      const suites = new Set(groups.map((g) => g.suite_ref));
+      const job = jobs.find((j) => ACTIVE.includes(j.state) && j.config?.model_id === untrack(() => model) && suites.has(j.config?.suite_ref));
+      activeJobs = jobs.filter((j) => ACTIVE.includes(j.state)).length;
+      if (job) {
+        liveTree = await get(`/api/eval-jobs/${encodeURIComponent(job.job_id)}/tree`);
+      } else if (liveTree) {
+        liveTree = null;
+        loadModel(untrack(() => model));
+      }
+    } catch {
+      /* transient */
+    }
+  }
+  onMount(() => {
+    liveTimer = setInterval(pollLive, 1500);
+    pollLive();
+  });
+  onDestroy(() => clearInterval(liveTimer));
+
+  const taxonomy = $derived.by(() => {
+    if (!card) return null;
+    const running = liveTree?.current_task ?? null;
+    const children = GROUP_ORDER.map((key) => {
+      const ids = groupMeta[key]?.task_ids ?? Object.keys(card.groups?.[key]?.tasks ?? {});
+      const tasks = ids.map((tid) => {
+        const t = card.groups?.[key]?.tasks?.[tid];
+        return { task_id: tid, score: t?.score ?? null, passed: t?.passed ?? null, run_id: t?.run_id ?? null, status: tid === running ? "running" : t ? "done" : "pending" };
+      });
+      return { id: `g:${key}`, label: SHORT[key], children: byDomain(tasks, (t) => `${key}:${t.task_id}`, `${key}:`) };
+    }).filter((g) => g.children.length);
+    return { id: "root", label: "benchmark", children };
+  });
 
   function selectModel(id) {
     model = id;
@@ -283,17 +327,8 @@
   </div>
 
   <section class="card bm-growth">
-    <div class="card-strip"><span>growth</span><span class="mut">tip = task · height = score · limb thickness = tasks carried · pulse reads a task</span></div>
-    <Dendrite
-      points={mapCells.map((m) => ({ id: m.id, label: m.id.split(":")[1]?.replace(/\.\d+$/, "") ?? m.id, value: m.score, group: m.id.split(":")[0], href: m.run_id ? `#/explorer/run/${m.run_id}` : null }))}
-      groups={GROUP_ORDER}
-      groupLabels={SHORT}
-      width={820}
-      height={290}
-      seed={`benchmark:${card.model_id}`}
-      title="benchmark grown toward"
-      unit="1 tip = 1 task · height = score"
-    />
+    <div class="card-strip"><span>taxonomy</span><span class="mut">{liveTree ? `evaluating · ${liveTree.done}/${liveTree.total} in ${liveTree.suite_name}` : "benchmark → group → domain → task"}</span></div>
+    {#if taxonomy}<Taxonomy root={taxonomy} width={980} height={300} />{/if}
   </section>
 
   <div class="bm-groups">
