@@ -3,6 +3,7 @@
   import * as echarts from "echarts";
   import "./lib/chartTheme.js";
   import { get, fmtPassed } from "./lib/api.js";
+  import Trajectory from "./Trajectory.svelte";
 
   let { runId } = $props();
 
@@ -61,13 +62,13 @@
     return () => chart?.dispose();
   });
 
-  const tabs = [
+  const tabs = $derived([
     { key: "overview", label: "Overview" },
     { key: "result", label: "Result" },
     { key: "telemetry", label: "Telemetry" },
     { key: "trace", label: `Trace (${trace.length})` },
     { key: "raw", label: "Raw" },
-  ];
+  ]);
 
   function fmt(v) {
     if (v == null || v === "") return "—";
@@ -110,6 +111,12 @@
   </div>
 
   {#if tab === "overview"}
+    {#if trace.some((e) => e.event_type === "agent_turn_start")}
+      <section class="card" style="margin-bottom:16px">
+        <div class="card-strip"><span>trajectory</span><span class="mut">the agent run, replayed from its trace</span></div>
+        <Trajectory events={trace} result={detail.result} />
+      </section>
+    {/if}
     <div class="card" style="margin-bottom:16px">
       <h3>Manifest &amp; identity</h3>
       <table>

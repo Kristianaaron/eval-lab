@@ -55,9 +55,21 @@ new visual identity for the dashboard.
 - New Benchmark page (scorecard, per-window perplexity chart, leaderboard),
   Standard-benchmark launcher on the Evaluation page, perplexity tile on the
   Overview.
-- Visual redesign: bioluminescent dark theme, HUD hairlines and corner
-  brackets, procedural neural-field background, deterministic pixel glyphs for
-  models.
+- Visual system from the owner's reference images (`docs/style-reference/`):
+  black ground, monospace (Söhne Mono when installed), cream hairlines, one
+  accent for markers and failures, every data scale as opacity of the text
+  colour.
+- Reticle gauges: concentric rings where every ring is data (pass-rate ticks,
+  one segment per task, mean-score arc, one ring per group) with a sweep
+  cursor that reads tasks out.
+- Vein visualizations, used only where the data branches:
+  benchmark taxonomy (benchmark → group → domain → task; width = tasks
+  carried, opacity = mean score, tip = task score), the live evaluation nerve
+  on the Overview and job pages (pulse = the task being evaluated, from
+  `/api/eval-jobs/{id}/tree`), and agent trajectories on run pages (trunk =
+  turns, width = context tokens, branches = tool calls up for reads / down
+  for side effects, length = duration, open end = failed call; replays in
+  order).
 
 ## [0.17.2] - 2026-08-08
 

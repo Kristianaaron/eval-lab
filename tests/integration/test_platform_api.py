@@ -198,3 +198,21 @@ def test_benchmark_groups_and_scorecard_endpoints(tmp_path: Path) -> None:
     board = c.get("/api/benchmark/models").json()
     assert board[0]["model_id"] == "mock" and board[0]["mean_perplexity"] > 1
     assert c.get("/api/runs/nope/perplexity").status_code == 404
+
+
+def test_eval_job_tree_reports_suite_tasks_with_scores(tmp_path: Path) -> None:
+    c = _client(tmp_path)
+    job = _run_to_completion(c, tmp_path, "configs/suites/benchmark-perplexity.yaml")
+    tree = c.get(f"/api/eval-jobs/{job['job_id']}/tree").json()
+    assert tree["suite_id"] == "suite.benchmark.perplexity.001"
+    assert tree["active"] is False and tree["current_task"] is None
+    assert [t["task_id"] for t in tree["tasks"]] == [
+        "perplexity.prose_original.001",
+        "perplexity.technical_docs.001",
+        "perplexity.python_source.001",
+    ]
+    assert all(
+        t["status"] == "done" and t["run_id"] and t["score"] is not None for t in tree["tasks"]
+    )
+    assert {t["group"] for t in tree["tasks"]} == {"perplexity"}
+    assert c.get("/api/eval-jobs/nope/tree").status_code == 404

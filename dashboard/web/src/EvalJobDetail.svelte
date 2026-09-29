@@ -1,6 +1,7 @@
 <script>
   import { onDestroy, onMount } from "svelte";
   import { get, post, fmtPassed } from "./lib/api.js";
+  import JobTree from "./JobTree.svelte";
 
   let { jobId, embedded = false } = $props();
 
@@ -62,6 +63,7 @@
       <div class="progress"><div class="bar" style="width:{pct}%"></div></div>
       <div class="mut">{j.progress.done} / {j.progress.total} tasks · current: {j.progress.detail ?? "—"}</div>
     {/if}
+    <div style="margin-top:14px"><JobTree jobId={j.job_id} width={900} height={220} compact /></div>
     {#if j.error}
       <p class="error">{j.error}</p>
     {/if}
