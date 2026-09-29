@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import Glyph from "./Glyph.svelte";
   import Overview from "./Overview.svelte";
   import Explorer from "./Explorer.svelte";
   import Models from "./Models.svelte";
@@ -14,7 +15,6 @@
   import Comparisons from "./Comparisons.svelte";
   import Jobs from "./Jobs.svelte";
   import StatusBar from "./StatusBar.svelte";
-  import Globe from "./Globe.svelte";
 
   function parse(hash) {
     const h = (hash || "").replace(/^#/, "");
@@ -65,7 +65,7 @@
 <div class="layout">
   <nav class="side">
     <a class="brand" href="#/">
-      <Globe size={30} points={160} alpha={1} />
+      <Glyph seed="eval-lab" size={22} />
       <span>eval-lab<span class="brand-sub">~ evaluation console</span></span>
     </a>
     {#each areas as a (a.key)}

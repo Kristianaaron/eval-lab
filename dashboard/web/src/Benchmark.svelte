@@ -6,6 +6,7 @@
   import { fmtCount, fmtScore, fmtPct, pad, when } from "./lib/fmt.js";
   import Glyph from "./Glyph.svelte";
   import Reticle from "./Reticle.svelte";
+  import Dendrite from "./Dendrite.svelte";
   import PixelMap from "./PixelMap.svelte";
 
   let { modelId = null } = $props();
@@ -280,6 +281,20 @@
       {/if}
     </section>
   </div>
+
+  <section class="card bm-growth">
+    <div class="card-strip"><span>growth</span><span class="mut">tip = task · height = score · limb thickness = tasks carried · pulse reads a task</span></div>
+    <Dendrite
+      points={mapCells.map((m) => ({ id: m.id, label: m.id.split(":")[1]?.replace(/\.\d+$/, "") ?? m.id, value: m.score, group: m.id.split(":")[0], href: m.run_id ? `#/explorer/run/${m.run_id}` : null }))}
+      groups={GROUP_ORDER}
+      groupLabels={SHORT}
+      width={820}
+      height={290}
+      seed={`benchmark:${card.model_id}`}
+      title="benchmark grown toward"
+      unit="1 tip = 1 task · height = score"
+    />
+  </section>
 
   <div class="bm-groups">
     {#each GROUP_ORDER as key (key)}
