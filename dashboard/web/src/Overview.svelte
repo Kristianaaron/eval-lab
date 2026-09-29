@@ -2,7 +2,7 @@
   import { get, fmtBytes, fmtPassed } from "./lib/api.js";
   import { fmtCount, fmtScore, when } from "./lib/fmt.js";
   import Glyph from "./Glyph.svelte";
-  import Globe from "./Globe.svelte";
+  import Dendrite from "./Dendrite.svelte";
   import Reticle from "./Reticle.svelte";
 
   let overview = $state(null);
@@ -38,7 +38,19 @@
     <p class="mut">A quick read on model readiness, hardware capacity, and the latest benchmark evidence.</p>
     <div class="term"><span class="term-prompt">eval-lab ~ ❯</span> <a href="#/evaluation">run evaluation</a> · <a href="#/benchmark">benchmark</a> · <a href="#/explorer">explorer</a></div>
   </div>
-  <div class="ov-hero-art"><Globe size={300} /></div>
+  <div class="ov-hero-art">
+    {#if ringRuns.length}
+      <Dendrite
+        points={[...ringRuns].reverse().map((r) => ({ id: r.run_id, label: `${r.model_id ?? "?"} · ${r.task_id}`, value: r.aggregate_score ?? null, group: r.model_id ?? "unknown", href: `#/explorer/run/${r.run_id}` }))}
+        width={520}
+        height={230}
+        seed="overview-runs"
+        title="latest runs grown toward"
+        unit="1 tip = 1 run · column = model · height = score"
+        pulseEveryS={6}
+      />
+    {/if}
+  </div>
 </div>
 {#if error}<div class="card error ov-error">Could not load dashboard data: {error}</div>{/if}
 

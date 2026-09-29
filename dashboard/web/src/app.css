@@ -229,6 +229,21 @@ button.link:hover { text-decoration: underline; }
 .bar { background: transparent; border: 1px solid var(--line); border-radius: 0; height: 8px; width: 90px; overflow: hidden; }
 .bar-fill { background: var(--text); height: 100%; transition: width 0.3s; }
 
+.bm-growth { margin-top: 16px; }
+.bm-growth .dendrite { margin-top: 10px; }
+.ov-hero-art { flex: 0 1 620px; min-width: 0; }
+@media (max-width: 1100px) { .ov-hero-art .dendrite-twin { display: none; } }
+/* ---- growth drawing (dendrite grown toward data points) ---- */
+.dendrite { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.dendrite-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.dendrite-title { color: var(--text); }
+.dendrite-title b { font-weight: 500; }
+.dendrite-body { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; min-width: 0; }
+.dendrite canvas { display: block; max-width: 100%; border: 1px solid var(--line); cursor: crosshair; }
+.dendrite-twin { flex: 1 1 200px; min-width: 180px; max-width: 280px; border: 1px solid var(--line); padding: 10px 12px 12px; }
+.dendrite-read { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-family: var(--mono); font-size: 10.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dendrite-read.accent { color: var(--text); }
+
 /* ---- reticle gauge (concentric HUD rings; every ring is data) ---- */
 .reticle-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; }
 .reticle line { stroke: rgba(var(--text-rgb), 0.22); stroke-width: 1; }
@@ -352,7 +367,7 @@ button.link:hover { text-decoration: underline; }
 .ov-empty { padding: 12px 0 4px; }
 .ov-ppl-val { text-align: right; white-space: nowrap; font-size: 12.5px; }
 .ov-ppl-val small { display: block; color: var(--muted); font-size: 10px; }
-@media (max-width: 1050px) { .ov-bento { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ov-health, .ov-kpis, .ov-hardware, .ov-models, .ov-runs, .ov-ppl { grid-column: span 1; } .ov-hero-art .globe { width: 200px !important; height: 200px !important; } }
+@media (max-width: 1050px) { .ov-bento { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ov-health, .ov-kpis, .ov-hardware, .ov-models, .ov-runs, .ov-ppl { grid-column: span 1; } .ov-hero-art .dendrite canvas { width: 100% !important; height: auto !important; } }
 @media (max-width: 680px) { .ov-header { align-items: flex-start; flex-direction: column-reverse; } .ov-bento { grid-template-columns: 1fr; } .ov-health, .ov-kpis, .ov-hardware, .ov-models, .ov-runs, .ov-ppl { grid-column: span 1; } }
 
 .cta-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 900px; margin: 0 auto 24px; }
