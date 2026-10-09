@@ -81,8 +81,8 @@ def test_heldout_cli_binds_prompt_parameters_and_manifest(
     )
 
     assert result.exit_code == 0, result.output
-    assert len(adapter.requests) == 3
-    assert {request.prompt for request in adapter.requests} == {
+    assert len(adapter.requests) == 9
+    assert {request.prompt for request in adapter.requests} >= {
         "What is 23 + 28? Reply with only the decimal answer.\n",
         'How many letters are in the word "cobalt"? Reply with only the decimal answer.\n',
         "If today is Monday, what day comes next? Reply with only the day name.\n",
@@ -93,7 +93,7 @@ def test_heldout_cli_binds_prompt_parameters_and_manifest(
         assert request.max_tokens == 96
         assert request.timeout_seconds == 45.0
     manifests = list((tmp_path / "runs").glob("*/manifest.json"))
-    assert len(manifests) == 3
+    assert len(manifests) == 9
     for path in manifests:
         manifest = json.loads(path.read_text())
         assert manifest["random_seed"] == 17

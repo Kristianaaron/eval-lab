@@ -8,9 +8,9 @@ from __future__ import annotations
 
 # Side-effect registration of deterministic and advanced scorers.
 import eval_lab.scorers.aggregate  # noqa: F401
-import eval_lab.scorers.perplexity  # noqa: F401
 import eval_lab.scorers.artifact  # noqa: F401
 import eval_lab.scorers.deterministic  # noqa: F401
+import eval_lab.scorers.perplexity  # noqa: F401
 import eval_lab.scorers.trajectory  # noqa: F401
 import eval_lab.scorers.unit_test  # noqa: F401
 import eval_lab.scorers.visual  # noqa: F401

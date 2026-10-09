@@ -33,7 +33,7 @@ oracle:
   - type: regex
     weight: 1.0
     required: true
-    config: {"pattern": "ocean|sea|water", "flags": "i"}
+    config: {"pattern": "ocean|sea|water"}
 repetitions:
   default: 1
   seeds: []
