@@ -35,6 +35,8 @@ class GenerationRequest:
     stop: list[str] = field(default_factory=list)
     seed: int | None = None
     structured_schema: dict[str, Any] | None = None
+    logprobs: bool = False
+    top_logprobs: int = 0
     messages: list[dict[str, Any]] | None = None
 
 

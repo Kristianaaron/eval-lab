@@ -1,13 +1,25 @@
 schema_version: "1.0"
 id: suite.atlas-glm52-heldout.001
 name: Atlas GLM-5.2 held-out smoke
-description: Small, direct-only held-out suite for the Atlas GLM candidate canary.
-version: 1
+description: Direct-only held-out suite for the Atlas GLM-5.2 candidate run.
+version: 2
 family: atlas-glm52-heldout
 tasks:
   - task_id: atlas.glm52heldout.math.sum.001
     weight: 1.0
-  - task_id: atlas.glm52heldout.reasoning.letters.001
+  - task_id: atlas.glm52heldout.formal_arithmetic.001
     weight: 1.0
-  - task_id: atlas.glm52heldout.general.weekday.001
+  - task_id: atlas.glm52heldout.reasoning_letters.001
+    weight: 1.0
+  - task_id: atlas.glm52heldout.general_weekday.001
+    weight: 1.0
+  - task_id: atlas.glm52heldout.code_reverse.001
+    weight: 1.0
+  - task_id: atlas.glm52heldout.factual_capital.001
+    weight: 1.0
+  - task_id: atlas.glm52heldout.safety_refusal.001
+    weight: 1.0
+  - task_id: atlas.glm52heldout.long_context_retrieve.001
+    weight: 1.0
+  - task_id: atlas.glm52heldout.creative_poem.001
     weight: 1.0

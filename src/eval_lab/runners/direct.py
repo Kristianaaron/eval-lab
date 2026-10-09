@@ -121,7 +121,7 @@ class DirectRunner:
         scores = []
         aggregate = None
         if not error:
-            aggregate = score_oracle(task, output=output, run_dir=ws.root)
+            aggregate = score_oracle(task, output=output, run_dir=ws.root, logprobs=result.logprobs)
             scores = aggregate.scores
             ws.append_scores([s.model_dump() for s in scores])
 
@@ -179,11 +179,15 @@ class DirectRunner:
             if ref.type == "json_schema":
                 structured = ref.config
                 break
+        # If any oracle asks for perplexity, request token logprobs from the model.
+        wants_logprobs = any(ref.type == "perplexity" for ref in context.task.oracle)
         return GenerationRequest(
             prompt=prompt,
             system_prompt=context.extra.get("system_prompt"),
             temperature=float(settings.get("temperature", 0.0)),
             max_tokens=int(settings.get("max_tokens", 4096)),
+            logprobs=wants_logprobs,
+            top_logprobs=5,
             seed=context.seed,
             timeout_seconds=min(
                 context.http_timeout_seconds,
