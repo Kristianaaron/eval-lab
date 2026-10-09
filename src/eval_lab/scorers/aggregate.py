@@ -78,7 +78,9 @@ def score_oracle(
     for ref in task.oracle:
         cls = get_scorer(ref.type)
         inst = _instantiate(cls, ref.config)
-        result = inst.score(output=output, task=task, run_dir=run_dir, logprobs=logprobs)
+        # Only the perplexity scorer accepts token logprobs.
+        extra = {"logprobs": logprobs} if ref.type == "perplexity" else {}
+        result = inst.score(output=output, task=task, run_dir=run_dir, **extra)
         result.required = bool(ref.required)
         weight_map[ref.type] = float(ref.weight)
         req[ref.type] = bool(ref.required)

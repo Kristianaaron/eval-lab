@@ -15,10 +15,9 @@ import math
 import time
 import uuid
 from pathlib import Path
-from typing import Any
 
-from eval_lab.adapters.base import GenerationRequest, ModelAdapter
-from eval_lab.runners.direct import RunContext, RunResult, DirectRunner
+from eval_lab.adapters.base import GenerationRequest
+from eval_lab.runners.direct import DirectRunner, RunContext, RunResult
 from eval_lab.schemas.models import TaskSpec
 from eval_lab.scorers.aggregate import score_oracle
 from eval_lab.storage.artifacts import RunWorkspace
