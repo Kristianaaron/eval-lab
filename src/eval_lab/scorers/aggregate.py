@@ -69,6 +69,7 @@ def score_oracle(
     output: str,
     run_dir: Any = None,
     required_map: dict[str, bool] | None = None,
+    logprobs: Any = None,
 ) -> AggregateScore:
     """Run every oracle scorer ref on a task against ``output``."""
     scores: list[ScoreResult] = []
@@ -77,7 +78,7 @@ def score_oracle(
     for ref in task.oracle:
         cls = get_scorer(ref.type)
         inst = _instantiate(cls, ref.config)
-        result = inst.score(output=output, task=task, run_dir=run_dir)
+        result = inst.score(output=output, task=task, run_dir=run_dir, logprobs=logprobs)
         result.required = bool(ref.required)
         weight_map[ref.type] = float(ref.weight)
         req[ref.type] = bool(ref.required)

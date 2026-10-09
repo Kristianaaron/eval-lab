@@ -87,6 +87,9 @@ class OpenAICompatibleAdapter(ModelAdapter):
         }
         if request.stop:
             payload["stop"] = request.stop
+        if request.logprobs:
+            payload["logprobs"] = True
+            payload["top_logprobs"] = max(1, int(request.top_logprobs))
         if request.seed is not None:
             payload["seed"] = request.seed
         if request.structured_schema:
@@ -126,6 +129,9 @@ def _parse_choice(data: dict[str, Any]) -> GenerationResult:
     message = choice.get("message") or {}
     result.text = message.get("content") or ""
     result.finish_reason = choice.get("finish_reason") or "stop"
+    logprobs_data = choice.get("logprobs")
+    if isinstance(logprobs_data, dict):
+        result.logprobs = logprobs_data.get("content")
     for tc in message.get("tool_calls") or []:
         fn = (tc.get("function") or {}).get("name")
         result.tool_calls.append(
