@@ -111,7 +111,7 @@ All suites load via `load_suite_yaml`; every referenced `task_id` resolves to a 
 
 ## 5. Validation evidence (ONE-OFF loader scan)
 
-Run with the repo venv (`/home/kristianaaron/tmp/eval-lab/.venv/bin/python`), using only existing `eval_lab` code (`load_task_yaml`, `load_suite_yaml`, `check_fixture_references`, `eval_lab.config.labels.unknown`):
+Run with the repo venv (`~/tmp/eval-lab/.venv/bin/python`), using only existing `eval_lab` code (`load_task_yaml`, `load_suite_yaml`, `check_fixture_references`, `eval_lab.config.labels.unknown`):
 
 ```
 TOTAL task.yaml loaded: 38

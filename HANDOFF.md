@@ -4,7 +4,7 @@
 
 ## 1. Live state right now
 - Dashboard/GUI running on the host, latest code:
-  `http://100.96.194.44:8100` (tailnet IP), HTTP same port.
+  `http://<tailnet-host>:8100` (tailnet IP), HTTP same port.
 - Server launched: `nohup .venv/bin/python -m eval_lab.cli.main serve --host 0.0.0.0 --port 8100`
   (log `/tmp/eval-lab-dash.log`). Restart after any backend change:
   `pkill -f "eval_lab.cli.main serve"` then re-run.
@@ -67,9 +67,9 @@ Goal to resume: **finish the Atlas ML-compression workflow and make its
 recommendation surface trustworthy for a non-ML user.**
 
 ### Live environment
-- Dashboard: `http://100.96.194.44:8100` (tailnet) / same port on the host.
+- Dashboard: `http://<tailnet-host>:8100` (tailnet) / same port on the host.
   Managed process **name `atlas-gui`** (restart via `hub restart atlas-gui`;
-  auto `restart on-failure`). cwd `/home/kristianaaron/tmp/eval-lab`.
+  auto `restart on-failure`). cwd `~/tmp/eval-lab`.
 - **Real GLM-5.2-NVFP4 checkpoint connected**: external 931G G-Drive mounted at
   `/media/glm52/models/nvidia/GLM-5.2-NVFP4` (47 shards, 464.8 GB, vocab 154,820,
   78 layers, 256 routed experts, top-8). Sudo password used to mount is
@@ -118,5 +118,5 @@ recommendation surface trustworthy for a non-ML user.**
 - `eval-lab` (GUI/backend) — this HANDOFF.
 - `model-atlas` — compression engine (`src/model_atlas`); own HANDOFF.md has the
   Milestone-E frontier, protection demo, and precision census (`850e5a2`).
-- Blueprints: `/home/kristianaaron/tmp/m3blueprint/`.
+- Blueprints: `~/tmp/m3blueprint/`.
 
