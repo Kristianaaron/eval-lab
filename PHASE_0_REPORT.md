@@ -11,7 +11,7 @@ proceeding to Phase 1 automatically.
 
 ## 1. What was built
 
-Repository scaffold at `/home/kristianaaron/tmp/eval-lab`:
+Repository scaffold at `~/tmp/eval-lab`:
 
 | Deliverable | Location |
 |-------------|----------|
@@ -102,7 +102,7 @@ enforces uniqueness per object.)
   Phase 1 concern.
 - Label canonicalization resolves case and `_`/`-` separators to canonical
   spellings; unknown canonical forms raise.
-- Repo lives at `/home/kristianaaron/tmp/eval-lab`; not yet pushed to a remote.
+- Repo lives at `~/tmp/eval-lab`; not yet pushed to a remote.
 
 ## 7. Blocking requirements for Phase 1
 
